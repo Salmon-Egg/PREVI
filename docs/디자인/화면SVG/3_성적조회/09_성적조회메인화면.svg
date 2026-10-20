@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 402 874" width="402" height="874" style="background-color: #F4F6F5; font-family: 'Noto Sans KR', sans-serif;">
+  <!-- 헤더 -->
+  <path d="M28 48 L18 58 L28 68" stroke="#121714" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <text x="52" y="62" font-size="20" font-weight="800" fill="#121714">성적 조회</text>
+
+  <!-- 메인 카드 컨테이너 -->
+  <rect x="20" y="80" width="362" height="760" rx="24" fill="#FFFFFF"/>
+
+  <!-- 요약 요점 카드 (상단) -->
+  <rect x="36" y="96" width="330" height="72" rx="16" fill="#E2F2EA"/>
+  <!-- 전체 평점 평균 -->
+  <text x="52" y="124" font-size="13" font-weight="500" fill="#0C6B3F">전체 평점 평균</text>
+  <text x="52" y="152" font-size="22" font-weight="800" fill="#0C6B3F">3.88 <tspan font-size="14" font-weight="400" fill="#656E69">/ 4.5</tspan></text>
+  <!-- 총 취득학점 -->
+  <text x="230" y="124" font-size="13" font-weight="500" fill="#0C6B3F">총 취득학점</text>
+  <text x="230" y="152" font-size="22" font-weight="800" fill="#0C6B3F">121 <tspan font-size="14" font-weight="400" fill="#656E69">학점</tspan></text>
+
+  <!-- 4학년 1학기 (펼침 상태 카드) -->
+  <rect x="36" y="184" width="330" height="220" rx="16" fill="#F4F9F6" stroke="#0C6B3F" stroke-width="1.5"/>
+  <text x="52" y="214" font-size="16" font-weight="700" fill="#121714">4학년 1학기</text>
+  <text x="270" y="214" font-size="13" font-weight="700" fill="#0C6B3F">4.0 / 4.5</text>
+  <path d="M336 206 L342 212 L348 206" stroke="#0C6B3F" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+  <!-- 과목 리스트 -->
+  <line x1="52" y1="230" x2="350" y2="230" stroke="#E2F2EA" stroke-width="1"/>
+  <text x="52" y="258" font-size="14" font-weight="600" fill="#121714">캡스톤디자인I (3학점)</text>
+  <rect x="300" y="242" width="44" height="24" rx="6" fill="#E2F2EA"/>
+  <text x="322" y="259" font-size="13" font-weight="700" fill="#0C6B3F" text-anchor="middle">A+</text>
+
+  <line x1="52" y1="280" x2="350" y2="280" stroke="#E2F2EA" stroke-width="1"/>
+  <text x="52" y="308" font-size="14" font-weight="600" fill="#121714">소프트웨어공학 (3학점)</text>
+  <rect x="300" y="292" width="44" height="24" rx="6" fill="#E2F2EA"/>
+  <text x="322" y="309" font-size="13" font-weight="700" fill="#0C6B3F" text-anchor="middle">A0</text>
+
+  <line x1="52" y1="330" x2="350" y2="330" stroke="#E2F2EA" stroke-width="1"/>
+  <text x="52" y="358" font-size="14" font-weight="600" fill="#121714">인공지능개론 (3학점)</text>
+  <rect x="300" y="342" width="44" height="24" rx="6" fill="#FDF1E7"/>
+  <text x="322" y="359" font-size="13" font-weight="700" fill="#C85A17" text-anchor="middle">B+</text>
+
+  <!-- 접힘 학기 카드들 -->
+  <rect x="36" y="418" width="330" height="54" rx="16" fill="#F4F6F5"/>
+  <text x="52" y="450" font-size="15" font-weight="700" fill="#121714">3학년 2학기</text>
+  <path d="M336 450 L342 444 L348 450" stroke="#656E69" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+  <rect x="36" y="484" width="330" height="54" rx="16" fill="#F4F6F5"/>
+  <text x="52" y="516" font-size="15" font-weight="700" fill="#121714">3학년 1학기</text>
+  <path d="M336 516 L342 510 L348 516" stroke="#656E69" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+  <rect x="36" y="550" width="330" height="54" rx="16" fill="#F4F6F5"/>
+  <text x="52" y="582" font-size="15" font-weight="700" fill="#121714">2학년 2학기</text>
+  <path d="M336 582 L342 576 L348 582" stroke="#656E69" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+  <!-- 하단 성적 수정 버튼 -->
+  <rect x="36" y="760" width="330" height="52" rx="26" fill="#0C6B3F"/>
+  <text x="201" y="792" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">✏️ 성적 수정하기</text>
+
+  <rect x="136" y="828" width="130" height="5" rx="2.5" fill="#121714"/>
+</svg>

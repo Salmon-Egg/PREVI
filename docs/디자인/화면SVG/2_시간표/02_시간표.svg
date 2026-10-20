@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 402 874" width="402" height="874" style="background-color: #F1F3F2; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', 'Noto Sans KR', sans-serif;">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.04"/>
+    </filter>
+  </defs>
+
+  <!-- 배경 카드 -->
+  <rect x="0" y="0" width="402" height="874" rx="40" fill="#F1F3F2"/>
+
+  <!-- 상단 헤더 -->
+  <g transform="translate(20, 28)">
+    <!-- 뒤로가기 아이콘 -->
+    <path d="M4 14 L12 6 M4 14 L12 22" stroke="#121714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    
+    <!-- 타이틀 -->
+    <text x="28" y="20" font-size="18" font-weight="800" fill="#0C6B3F">2026학년도 2학기 시간표</text>
+    
+    <!-- 우측 수정(펜) 아이콘 -->
+    <g transform="translate(332, 2)">
+      <path d="M13.5 2.5 a2.121 2.121 0 0 1 3 3 L6.5 15.5 L2 17 L3.5 12.5 Z M10.5 5.5 L13.5 8.5" stroke="#121714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
+  </g>
+
+  <!-- 시간표 메인 카드 -->
+  <g transform="translate(20, 68)" filter="url(#shadow)">
+    <rect x="0" y="0" width="362" height="760" rx="22" fill="#FFFFFF"/>
+
+    <!-- 요일 헤더 (월/화/수/목/금) -->
+    <g transform="translate(0, 0)">
+      <rect x="0" y="0" width="362" height="38" rx="22" fill="#F1F3F2"/>
+      <text x="24" y="24" font-size="11" font-weight="700" fill="#656E69" text-anchor="middle">시</text>
+      <text x="82" y="24" font-size="12" font-weight="800" fill="#121714" text-anchor="middle">월</text>
+      <text x="148" y="24" font-size="12" font-weight="800" fill="#121714" text-anchor="middle">화</text>
+      <text x="214" y="24" font-size="12" font-weight="800" fill="#121714" text-anchor="middle">수</text>
+      <text x="280" y="24" font-size="12" font-weight="800" fill="#121714" text-anchor="middle">목</text>
+      <text x="338" y="24" font-size="12" font-weight="800" fill="#121714" text-anchor="middle">금</text>
+    </g>
+
+    <!-- 시간표 그리드 격자선 -->
+    <g transform="translate(0, 38)" stroke="#F1F3F2" stroke-width="1">
+      <line x1="44" y1="80" x2="362" y2="80"/>
+      <line x1="44" y1="160" x2="362" y2="160"/>
+      <line x1="44" y1="240" x2="362" y2="240"/>
+      <line x1="44" y1="320" x2="362" y2="320"/>
+      <line x1="44" y1="400" x2="362" y2="400"/>
+      <line x1="44" y1="480" x2="362" y2="480"/>
+      <line x1="44" y1="560" x2="362" y2="560"/>
+      <line x1="44" y1="640" x2="362" y2="640"/>
+
+      <line x1="44" y1="0" x2="44" y2="720"/>
+      <line x1="116" y1="0" x2="116" y2="720"/>
+      <line x1="182" y1="0" x2="182" y2="720"/>
+      <line x1="248" y1="0" x2="248" y2="720"/>
+      <line x1="314" y1="0" x2="314" y2="720"/>
+    </g>
+
+    <!-- 시간 라벨 (09 ~ 17시) -->
+    <g transform="translate(8, 38)" font-size="10" font-weight="700" fill="#656E69">
+      <text x="16" y="30" text-anchor="middle">09</text>
+      <text x="16" y="110" text-anchor="middle">10</text>
+      <text x="16" y="190" text-anchor="middle">11</text>
+      <text x="16" y="270" text-anchor="middle">12</text>
+      <text x="16" y="350" text-anchor="middle">13</text>
+      <text x="16" y="430" text-anchor="middle">14</text>
+      <text x="16" y="510" text-anchor="middle">15</text>
+      <text x="16" y="590" text-anchor="middle">16</text>
+      <text x="16" y="670" text-anchor="middle">17</text>
+    </g>
+
+    <!-- 수강 과목 블록 -->
+    <g transform="translate(44, 38)">
+      <!-- 캡스톤디자인2 (월) -->
+      <g transform="translate(2, 4)">
+        <rect x="0" y="0" width="68" height="192" rx="8" fill="#E9F3EE" stroke="#0C6B3F" stroke-width="1.2"/>
+        <text x="6" y="20" font-size="11" font-weight="800" fill="#0C6B3F">캡스톤</text>
+        <text x="6" y="36" font-size="11" font-weight="800" fill="#0C6B3F">디자인2</text>
+        <text x="6" y="58" font-size="9" font-weight="600" fill="#656E69">북304</text>
+        <text x="6" y="74" font-size="9" font-weight="500" fill="#656E69">김서경</text>
+      </g>
+
+      <!-- 인공지능개론 (화) -->
+      <g transform="translate(74, 324)">
+        <rect x="0" y="0" width="62" height="116" rx="8" fill="#E9F3EE" stroke="#0C6B3F" stroke-width="1.2"/>
+        <text x="6" y="18" font-size="10" font-weight="800" fill="#0C6B3F">인공지능</text>
+        <text x="6" y="32" font-size="10" font-weight="800" fill="#0C6B3F">개론</text>
+        <text x="6" y="52" font-size="9" font-weight="600" fill="#656E69">유담102</text>
+      </g>
+
+      <!-- 인공지능개론 (목) -->
+      <g transform="translate(206, 324)">
+        <rect x="0" y="0" width="62" height="116" rx="8" fill="#E9F3EE" stroke="#0C6B3F" stroke-width="1.2"/>
+        <text x="6" y="18" font-size="10" font-weight="800" fill="#0C6B3F">인공지능</text>
+        <text x="6" y="32" font-size="10" font-weight="800" fill="#0C6B3F">개론</text>
+        <text x="6" y="52" font-size="9" font-weight="600" fill="#656E69">유담102</text>
+      </g>
+
+      <!-- 웹프로그래밍 (수) -->
+      <g transform="translate(140, 84)">
+        <rect x="0" y="0" width="62" height="232" rx="8" fill="#FFF1E6" stroke="#B93C0A" stroke-width="1.2"/>
+        <text x="6" y="20" font-size="11" font-weight="800" fill="#B93C0A">웹프로</text>
+        <text x="6" y="36" font-size="11" font-weight="800" fill="#B93C0A">그래밍</text>
+        <text x="6" y="58" font-size="9" font-weight="600" fill="#121714">정보201</text>
+        <text x="6" y="74" font-size="9" font-weight="500" fill="#656E69">이이철</text>
+      </g>
+
+      <!-- 서경인성리더십 (금) -->
+      <g transform="translate(272, 404)">
+        <rect x="0" y="0" width="44" height="152" rx="8" fill="#FFF1E6" stroke="#B93C0A" stroke-width="1.2"/>
+        <text x="4" y="18" font-size="10" font-weight="800" fill="#B93C0A">서경인성</text>
+        <text x="4" y="32" font-size="10" font-weight="800" fill="#B93C0A">리더십</text>
+        <text x="4" y="52" font-size="9" font-weight="600" fill="#121714">청운홀</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- 하단 바 -->
+  <rect x="136" y="860" width="130" height="4" rx="2" fill="#121714"/>
+</svg>

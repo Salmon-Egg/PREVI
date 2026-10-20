@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 402 874" width="402" height="874" style="background-color: #F1F3F2; font-family: 'Noto Sans KR', sans-serif;">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.04"/>
+    </filter>
+  </defs>
+
+  <rect x="0" y="0" width="402" height="874" rx="40" fill="#F1F3F2"/>
+
+  <!-- 상단 헤더 -->
+  <g transform="translate(20, 28)">
+    <path d="M4 14 L12 6 M4 14 L12 22" stroke="#121714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="28" y="20" font-size="18" font-weight="800" fill="#0C6B3F">장학금 내역</text>
+  </g>
+
+  <!-- 메인 그룹 카드 -->
+  <g transform="translate(20, 68)" filter="url(#shadow)">
+    <rect x="0" y="0" width="362" height="760" rx="22" fill="#FFFFFF"/>
+
+    <!-- 요약 탭 칩 -->
+    <g transform="translate(18, 20)">
+      <rect x="0" y="0" width="158" height="42" rx="12" fill="#E9F3EE"/>
+      <text x="79" y="26" font-size="13" font-weight="800" fill="#0C6B3F" text-anchor="middle">✓ 신청 완료 1건</text>
+
+      <rect x="168" y="0" width="158" height="42" rx="12" fill="#FFF1E6"/>
+      <text x="247" y="26" font-size="13" font-weight="800" fill="#B93C0A" text-anchor="middle">! 미신청/신청가능 2건</text>
+    </g>
+
+    <!-- 장학금 목록 리스트 -->
+    <g transform="translate(18, 78)">
+      
+      <!-- [1] 신청 완료 건 (초록색 박스) -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="326" height="96" rx="16" fill="#E9F3EE" stroke="#0C6B3F" stroke-width="1.2"/>
+        
+        <!-- 상태 태그 -->
+        <rect x="14" y="14" width="68" height="22" rx="6" fill="#0C6B3F"/>
+        <text x="48" y="29" font-size="11" font-weight="800" fill="#FFFFFF" text-anchor="middle">신청 완료</text>
+
+        <!-- 장학금명 & 금액 -->
+        <text x="14" y="56" font-size="15" font-weight="800" fill="#121714">2026-2학기 성적우수 장학금 (A종)</text>
+        
+        <!-- 하단 정보 이동 (신청일자) -->
+        <text x="14" y="78" font-size="11" font-weight="600" fill="#0C6B3F">2026.09.15 신청 완료 (수업료 전액 감면)</text>
+      </g>
+
+      <!-- [2] 미신청 건 1 (주황색 박스 - D-DAY) -->
+      <g transform="translate(0, 108)">
+        <rect x="0" y="0" width="326" height="96" rx="16" fill="#FFF1E6" stroke="#B93C0A" stroke-width="1.2"/>
+        
+        <!-- 상태 태그 -->
+        <rect x="14" y="14" width="56" height="22" rx="6" fill="#B93C0A"/>
+        <text x="42" y="29" font-size="11" font-weight="800" fill="#FFFFFF" text-anchor="middle">미신청</text>
+
+        <!-- 장학금명 -->
+        <text x="14" y="56" font-size="15" font-weight="800" fill="#121714">2026-2학기 국가장학금 2차</text>
+        
+        <!-- 하단 정보 이동 (마감 정보) -->
+        <text x="14" y="78" font-size="11" font-weight="800" fill="#B93C0A">마감: 오늘 18:00 마감!</text>
+      </g>
+
+      <!-- [3] 미신청 건 2 (주황색 박스 - D-12) -->
+      <g transform="translate(0, 216)">
+        <rect x="0" y="0" width="326" height="96" rx="16" fill="#FFF1E6" stroke="#B93C0A" stroke-width="1.2"/>
+        
+        <!-- 상태 태그 -->
+        <rect x="14" y="14" width="56" height="22" rx="6" fill="#B93C0A"/>
+        <text x="42" y="29" font-size="11" font-weight="800" fill="#FFFFFF" text-anchor="middle">미신청</text>
+
+        <!-- 장학금명 -->
+        <text x="14" y="56" font-size="15" font-weight="800" fill="#121714">2026 서경 AI 마일리지 장학금</text>
+        
+        <!-- 하단 정보 이동 (마감 정보) -->
+        <text x="14" y="78" font-size="11" font-weight="700" fill="#B93C0A">마감: D-12 (10/22까지)</text>
+      </g>
+
+    </g>
+  </g>
+
+  <rect x="136" y="860" width="130" height="4" rx="2" fill="#121714"/>
+</svg>

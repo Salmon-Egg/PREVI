@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 402 874" width="402" height="874" style="background-color: #F4F6F5; font-family: 'Noto Sans KR', sans-serif;">
+  <!-- 헤더 -->
+  <path d="M28 48 L18 58 L28 68" stroke="#121714" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <text x="52" y="62" font-size="20" font-weight="800" fill="#121714">성적 수정 모드</text>
+
+  <!-- 메인 카드 컨테이너 -->
+  <rect x="20" y="80" width="362" height="760" rx="24" fill="#FFFFFF"/>
+
+  <!-- 상단 요약 카드 (수정 중) -->
+  <rect x="36" y="96" width="330" height="72" rx="16" fill="#FFFBF7" stroke="#C85A17" stroke-width="1"/>
+  <text x="52" y="124" font-size="13" font-weight="500" fill="#C85A17">✏️ 성적 편집 중</text>
+  <text x="52" y="152" font-size="13" font-weight="400" fill="#656E69">과목 삭제 또는 항목 추가 후 완료 버튼을 눌러주세요.</text>
+
+  <!-- 4학년 1학기 (수정 모드 - 삭제 버튼 추가) -->
+  <rect x="36" y="184" width="330" height="260" rx="16" fill="#F4F9F6" stroke="#0C6B3F" stroke-width="1.5"/>
+  <text x="52" y="214" font-size="16" font-weight="700" fill="#121714">4학년 1학기</text>
+  
+  <!-- 과목 1 (+ 삭제 버튼) -->
+  <line x1="52" y1="230" x2="350" y2="230" stroke="#E2F2EA" stroke-width="1"/>
+  <text x="52" y="258" font-size="14" font-weight="600" fill="#121714">캡스톤디자인I (3학점)</text>
+  <circle cx="334" cy="254" r="11" fill="#B93C0A"/>
+  <line x1="328" y1="254" x2="340" y2="254" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- 과목 2 (+ 삭제 버튼) -->
+  <line x1="52" y1="280" x2="350" y2="280" stroke="#E2F2EA" stroke-width="1"/>
+  <text x="52" y="308" font-size="14" font-weight="600" fill="#121714">소프트웨어공학 (3학점)</text>
+  <circle cx="334" cy="304" r="11" fill="#B93C0A"/>
+  <line x1="328" y1="304" x2="340" y2="304" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- 과목 3 (+ 삭제 버튼) -->
+  <line x1="52" y1="330" x2="350" y2="330" stroke="#E2F2EA" stroke-width="1"/>
+  <text x="52" y="358" font-size="14" font-weight="600" fill="#121714">인공지능개론 (3학점)</text>
+  <circle cx="334" cy="354" r="11" fill="#B93C0A"/>
+  <line x1="328" y1="354" x2="340" y2="354" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- 과목 추가 버튼 -->
+  <rect x="52" y="384" width="298" height="40" rx="8" fill="#FFFFFF" stroke="#0C6B3F" stroke-width="1" stroke-dasharray="4 4"/>
+  <text x="201" y="409" font-size="13" font-weight="700" fill="#0C6B3F" text-anchor="middle">+ 과목 추가하기</text>
+
+  <!-- 접힘 학기들 -->
+  <rect x="36" y="458" width="330" height="54" rx="16" fill="#F4F6F5"/>
+  <text x="52" y="490" font-size="15" font-weight="700" fill="#121714">3학년 2학기</text>
+
+  <rect x="36" y="524" width="330" height="54" rx="16" fill="#F4F6F5"/>
+  <text x="52" y="556" font-size="15" font-weight="700" fill="#121714">3학년 1학기</text>
+
+  <!-- 맨 아래: 수정 완료하기 버튼 -->
+  <rect x="36" y="760" width="330" height="52" rx="26" fill="#0C6B3F"/>
+  <text x="201" y="792" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">수정 완료하기</text>
+
+  <rect x="136" y="828" width="130" height="5" rx="2.5" fill="#121714"/>
+</svg>

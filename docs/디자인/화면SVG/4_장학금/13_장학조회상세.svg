@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 402 874" width="402" height="874" style="font-family: 'Noto Sans KR', sans-serif;">
+  
+  <!-- ==================== BACKGROUND (기존 장학금 목록 화면) ==================== -->
+  <rect width="402" height="874" fill="#F4F6F5"/>
+  <path d="M28 48 L18 58 L28 68" stroke="#121714" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <text x="52" y="62" font-size="20" font-weight="800" fill="#121714">장학금 안내</text>
+  <rect x="20" y="80" width="362" height="760" rx="24" fill="#FFFFFF"/>
+  <rect x="36" y="96" width="158" height="42" rx="12" fill="#E2F2EA"/>
+  <rect x="206" y="96" width="160" height="42" rx="12" fill="#FDF1E7"/>
+  <rect x="36" y="154" width="330" height="172" rx="16" fill="#F4F9F6" stroke="#0C6B3F" stroke-width="1.5"/>
+
+  <!-- ==================== DIMMED BACKDROP ==================== -->
+  <rect width="402" height="874" fill="#000000" opacity="0.5"/>
+
+  <!-- ==================== NEW WINDOW / POPUP MODAL (새 창) ==================== -->
+  <rect x="16" y="90" width="370" height="710" rx="20" fill="#FFFFFF" stroke="#0C6B3F" stroke-width="2"/>
+
+  <!-- 1. 새 창 브라우저 헤더 바 -->
+  <rect x="16" y="90" width="370" height="54" rx="20" fill="#E2F2EA"/>
+  <rect x="16" y="124" width="370" height="20" fill="#E2F2EA"/>
+  
+  <!-- 헤더 아이콘 & '장학금 안내' 타이틀 -->
+  <circle cx="42" cy="117" r="12" fill="#0C6B3F"/>
+  <path d="M38 117 L46 117 M43 113 L46 117 L43 121" stroke="#FFFFFF" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="62" y="123" font-size="16" font-weight="800" fill="#0C6B3F">장학금 안내</text>
+
+  <!-- 닫기 (X) 버튼 -->
+  <circle cx="360" cy="117" r="14" fill="#FFFFFF"/>
+  <path d="M354 111 L366 123 M366 111 L354 123" stroke="#121714" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- 2. AI 핵심 요약 배너 -->
+  <rect x="28" y="154" width="346" height="66" rx="12" fill="#F4F9F6" stroke="#0C6B3F" stroke-width="1"/>
+  <text x="40" y="176" font-size="12" font-weight="800" fill="#0C6B3F">✨ AI 핵심 요약</text>
+  <text x="120" y="176" font-size="12" font-weight="700" fill="#B93C0A">⏰ 오늘 18:00 마감</text>
+  <text x="40" y="198" font-size="12" font-weight="400" fill="#121714">소프트웨어학과 4학년 대상 · 소득분위 8구간 이하 신청 가능</text>
+
+  <!-- 3. 학교 웹 공지사항 본문 내용 -->
+  <rect x="28" y="230" width="346" height="470" rx="10" fill="#FAFAFA" stroke="#E9F3EE" stroke-width="1"/>
+  
+  <!-- 웹 공지사항 헤더 -->
+  <text x="40" y="258" font-size="15" font-weight="800" fill="#121714">[장학] 2026학년도 2학기</text>
+  <text x="40" y="280" font-size="15" font-weight="800" fill="#121714">국가장학금 2차 신청 안내</text>
+  <text x="40" y="302" font-size="11" font-weight="400" fill="#656E69">작성일 : 2026.10.09 | 작성자 : 학생지원팀</text>
+  <line x1="40" y1="312" x2="362" y2="312" stroke="#E9F3EE" stroke-width="1.5"/>
+
+  <!-- 웹 공지사항 글 본문 -->
+  <text x="40" y="336" font-size="13" font-weight="700" fill="#121714">1. 신청 대상</text>
+  <text x="40" y="356" font-size="12" font-weight="400" fill="#656E69">- 재학생, 복학생, 신입생, 편입생 등</text>
+  <text x="40" y="374" font-size="12" font-weight="400" fill="#656E69">- 직전학기 12학점 이상 이수 및 B학점 이상</text>
+
+  <text x="40" y="406" font-size="13" font-weight="700" fill="#121714">2. 신청 기간 및 방법</text>
+  <text x="40" y="426" font-size="12" font-weight="400" fill="#656E69">- 기간 : 2026.10.09(금) ~ 오늘 18:00 마감</text>
+  <text x="40" y="444" font-size="12" font-weight="400" fill="#656E69">- 방법 : 한국장학재단 홈페이지 및 서경대 종합정보시스템</text>
+
+  <text x="40" y="476" font-size="13" font-weight="700" fill="#121714">3. 제출 서류</text>
+  <text x="40" y="496" font-size="12" font-weight="400" fill="#656E69">- 가구원 정보제공 동의서 및 가족관계증명서</text>
+
+  <!-- AI 요약 주의 안내문 -->
+  <rect x="40" y="525" width="322" height="52" rx="8" fill="#FFFBF7" stroke="#C85A17" stroke-width="1"/>
+  <text x="50" y="545" font-size="11" font-weight="700" fill="#C85A17">⚠️ AI 요약 정보 유의사항</text>
+  <text x="50" y="563" font-size="10" font-weight="400" fill="#656E69">본 요약은 1~3항 공지를 바탕으로 생성되었습니다.</text>
+  <text x="50" y="575" font-size="10" font-weight="400" fill="#656E69">실제 신청 전 학교의 전체 공지사항을 반드시 확인해주세요.</text>
+
+  <!-- 4. 새 창 하단 액션 버튼 바 -->
+  <!-- 공지사항 연결 버튼 -->
+  <rect x="28" y="718" width="180" height="48" rx="24" fill="#0C6B3F"/>
+  <text x="118" y="747" font-size="13" font-weight="700" fill="#FFFFFF" text-anchor="middle">📢 공지사항 가기</text>
+
+  <!-- 투두 체크 완료 버튼 -->
+  <rect x="216" y="718" width="158" height="48" rx="24" fill="#FFFFFF" stroke="#0C6B3F" stroke-width="1.5"/>
+  <text x="295" y="747" font-size="13" font-weight="700" fill="#0C6B3F" text-anchor="middle">☑️ 신청 완료 체크</text>
+
+  <!-- 하단 인디케이터 바 -->
+  <rect x="136" y="828" width="130" height="5" rx="2.5" fill="#FFFFFF"/>
+
+</svg>

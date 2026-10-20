@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 402 874" width="402" height="874" style="background-color: #F1F3F2; font-family: 'Noto Sans KR', sans-serif;">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.04"/>
+    </filter>
+  </defs>
+
+  <!-- 프레임 (전체 배경) -->
+  <rect x="0" y="0" width="402" height="874" rx="40" fill="#F1F3F2"/>
+
+  <!-- [1] 상단 헤더 -->
+  <g transform="translate(20, 28)">
+    <path d="M4 14 L12 6 M4 14 L12 22" stroke="#121714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="28" y="20" font-size="18" font-weight="800" fill="#0C6B3F">학적 정보 변경</text>
+  </g>
+
+  <!-- [2] 메인 카드 컨테이너 -->
+  <g transform="translate(20, 68)" filter="url(#shadow)">
+    <rect x="0" y="0" width="362" height="760" rx="22" fill="#FFFFFF"/>
+
+    <!-- 입력 폼 1: 주전공 -->
+    <g transform="translate(18, 24)">
+      <text x="0" y="14" font-size="13" font-weight="800" fill="#121714">주전공 *</text>
+      <rect x="0" y="22" width="326" height="46" rx="12" fill="#F1F3F2" stroke="#E9F3EE" stroke-width="1.2"/>
+      <text x="16" y="50" font-size="14" font-weight="700" fill="#121714">소프트웨어학과</text>
+      <text x="302" y="50" font-size="12" fill="#656E69" text-anchor="end">▾</text>
+    </g>
+
+    <!-- 입력 폼 2: 복수/부전공 선택 -->
+    <g transform="translate(18, 108)">
+      <text x="0" y="14" font-size="13" font-weight="800" fill="#121714">복수 / 부전공 선택</text>
+      <rect x="0" y="22" width="326" height="46" rx="12" fill="#F1F3F2"/>
+      <text x="16" y="50" font-size="14" font-weight="700" fill="#0C6B3F">경영학부 (부전공)</text>
+      <text x="302" y="50" font-size="12" fill="#656E69" text-anchor="end">▾</text>
+    </g>
+
+    <!-- 입력 폼 3: 학적 상태 변경 선택 칩 ('기타 변동' 삭제로 3개 배치) -->
+    <g transform="translate(18, 192)">
+      <text x="0" y="14" font-size="13" font-weight="800" fill="#121714">학적 상태 변경 *</text>
+      
+      <g transform="translate(0, 24)">
+        <!-- 재학 (선택 상태) -->
+        <rect x="0" y="0" width="102" height="40" rx="10" fill="#E9F3EE" stroke="#0C6B3F" stroke-width="1.5"/>
+        <text x="51" y="25" font-size="14" font-weight="800" fill="#0C6B3F" text-anchor="middle">재학</text>
+
+        <!-- 휴학 -->
+        <rect x="112" y="0" width="102" height="40" rx="10" fill="#F1F3F2"/>
+        <text x="163" y="25" font-size="14" font-weight="600" fill="#656E69" text-anchor="middle">휴학</text>
+
+        <!-- 복학 -->
+        <rect x="224" y="0" width="102" height="40" rx="10" fill="#F1F3F2"/>
+        <text x="275" y="25" font-size="14" font-weight="600" fill="#656E69" text-anchor="middle">복학</text>
+      </g>
+    </g>
+
+    <!-- 입력 폼 4: 학년 / 학기 입력 -->
+    <g transform="translate(18, 282)">
+      <text x="0" y="14" font-size="13" font-weight="800" fill="#121714">현재 학년 및 이수 학기 *</text>
+      <g transform="translate(0, 22)">
+        <rect x="0" y="0" width="158" height="46" rx="12" fill="#F1F3F2"/>
+        <text x="16" y="28" font-size="14" font-weight="700" fill="#121714">4학년</text>
+        <text x="142" y="28" font-size="12" fill="#656E69" text-anchor="end">▾</text>
+
+        <rect x="168" y="0" width="158" height="46" rx="12" fill="#F1F3F2"/>
+        <text x="184" y="28" font-size="14" font-weight="700" fill="#121714">2학기</text>
+        <text x="310" y="28" font-size="12" fill="#656E69" text-anchor="end">▾</text>
+      </g>
+    </g>
+
+    <!-- 하단 버튼 영역 -->
+    <g transform="translate(18, 680)">
+      <rect x="0" y="0" width="326" height="52" rx="16" fill="#0C6B3F"/>
+      <text x="163" y="31" font-size="15" font-weight="800" fill="#FFFFFF" text-anchor="middle">학적 정보 변경하기</text>
+    </g>
+  </g>
+
+  <!-- 하단 홈 제스처 바 -->
+  <rect x="136" y="860" width="130" height="4" rx="2" fill="#121714"/>
+</svg>

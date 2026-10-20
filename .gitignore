@@ -1,0 +1,26 @@
+# 비밀 설정값 — 절대 올리지 않기
+.env
+.env.*
+!.env.example
+
+# 설치하면 생기는 파일 (각자 다시 설치하면 됨)
+node_modules/
+.expo/
+dist/
+web-build/
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# AI 모델 파일 (너무 큼)
+*.gguf
+*.safetensors
+server/ai/models/
+
+# 컴퓨터가 자동으로 만드는 파일
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log

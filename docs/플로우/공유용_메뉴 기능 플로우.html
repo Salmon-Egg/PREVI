@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>메뉴 기능 플로우</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f8f7; --card:#ffffff; --ink:#121714; --sub:#56605a; --muted:#8a928d;
+  --line:#e3e6e4; --line-strong:#c9cfcb;
+  --key-bg:#e9f3ee; --key-ink:#0c6b3f; --key-line:#b7d8c6;
+  --ai-bg:#e3f4e8; --ai-ink:#1d6b33; --ai-line:#a9d8b6;
+  --ad-bg:#fbf0dc; --ad-ink:#7a5205; --ad-line:#ecd29a;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#111412; --card:#191d1a; --ink:#eef1ef; --sub:#b4bcb7; --muted:#7e8781;
+    --line:#2a302c; --line-strong:#3a423d;
+    --key-bg:#173526; --key-ink:#8fd6ae; --key-line:#25573c;
+    --ai-bg:#183420; --ai-ink:#93d8a4; --ai-line:#285a35;
+    --ad-bg:#3a2c0f; --ad-ink:#f0c879; --ad-line:#5e4818;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;line-height:1.5;padding:32px 16px 48px}
+.wrap{max-width:880px;margin:0 auto}
+h1{font-size:24px;font-weight:700;margin-bottom:6px}
+.lead{color:var(--sub);font-size:14px;margin-bottom:24px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 22px;margin-bottom:20px}
+h2{font-size:17px;font-weight:700;margin-bottom:4px}
+.desc{font-size:13px;color:var(--sub);margin-bottom:14px}
+.grp{font-size:12px;color:var(--muted);margin:16px 0 4px;font-weight:500}
+.grp:first-of-type{margin-top:0}
+.r{display:grid;grid-template-columns:180px 20px 1fr;gap:8px;align-items:start;padding:9px 0;border-top:1px solid var(--line)}
+.k{font-size:13px;font-weight:500;padding:6px 10px;border-radius:8px;background:var(--key-bg);color:var(--key-ink);border:1px solid var(--key-line)}
+.a{color:var(--muted);padding-top:5px;text-align:center}
+.f{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.s{border:1px solid var(--line-strong);border-radius:8px;padding:4px 9px;background:var(--card)}
+.s b,.id{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;font-weight:400;color:var(--muted);margin-right:5px}
+.x{color:var(--muted)}
+.o{font-size:12.5px;color:var(--sub)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--sub);margin-bottom:6px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+.sc{padding:12px 0;border-top:1px solid var(--line)}
+.sc:first-of-type{border-top:none}
+.t{font-size:14px;font-weight:500;margin-bottom:8px}
+.u{border:1px solid var(--line-strong);border-radius:8px;padding:4px 9px;background:var(--card)}
+.ai{border-radius:8px;padding:4px 9px;background:var(--ai-bg);color:var(--ai-ink);border:1px solid var(--ai-line)}
+.ad{border-radius:8px;padding:4px 9px;background:var(--ad-bg);color:var(--ad-ink);border:1px solid var(--ad-line)}
+.foot{font-size:12px;color:var(--muted);text-align:center;margin-top:8px}
+@media (max-width:600px){
+  .r{grid-template-columns:1fr;gap:6px}
+  .a{display:none}
+  .k{justify-self:start}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>서경 AI 비서 · 메뉴 기능 플로우</h1>
+<p class="lead">홈의 각 진입점에서 어떤 화면으로 이동하는지, 그리고 AI 비서가 메뉴 사이를 어떻게 자동으로 이어 주는지 정리했습니다. 화면 번호는 메뉴 구성 문서와 같습니다.</p>
+
+<section class="card">
+<h2>1. 화면 이동 지도</h2>
+<p class="desc">어디를 누르면 어디로 가는지</p>
+
+<p class="grp">처음 실행</p>
+<div class="r"><div class="k">앱 첫 실행</div><span class="a">→</span><div class="f"><span class="s"><b>M-1</b>로그인</span><span class="x">→</span><span class="s"><b>M-2</b>처음 설정·동의</span><span class="x">→</span><span class="s">홈</span></div></div>
+
+<p class="grp">홈 상단 · 비서 영역</p>
+<div class="r"><div class="k">캐릭터 · 질문창 · 추천 질문</div><span class="a">→</span><div class="f"><span class="s"><b>H-2</b>채팅 답변</span><span class="x">→</span><span class="o">다음 행동 버튼: 할 일 등록 · 해당 화면 이동</span></div></div>
+<div class="r"><div class="k">오늘 챙길 일 · 항목</div><span class="a">→</span><div class="f"><span class="s"><b>T-2</b>할 일 상세</span><span class="x">→</span><span class="o">신청 링크 · 채팅으로 묻기 · 완료 체크 →</span><span class="s"><b>T-3</b>완료 기록</span></div></div>
+<div class="r"><div class="k">오늘 챙길 일 · 전체보기</div><span class="a">→</span><div class="f"><span class="s"><b>T-1</b>할 일 목록</span><span class="x">→</span><span class="s"><b>T-2</b>할 일 상세</span></div></div>
+<div class="r"><div class="k">다음 일정 카드</div><span class="a">→</span><div class="f"><span class="s"><b>A-2</b>학사 일정</span></div></div>
+<div class="r"><div class="k">알림 아이콘</div><span class="a">→</span><div class="f"><span class="s"><b>T-4</b>알림 센터</span><span class="x">→</span><span class="s"><b>T-2</b>할 일 상세</span></div></div>
+<div class="r"><div class="k">프로필 아이콘</div><span class="a">→</span><div class="f"><span class="s"><b>M-3</b>마이페이지</span><span class="x">→</span><span class="s"><b>M-4</b>학적 변경</span><span class="s"><b>M-5</b>AI 비서 설정</span></div></div>
+
+<p class="grp">메뉴 4칸</p>
+<div class="r"><div class="k">내 학업</div><span class="a">→</span><div class="f"><span class="s"><b>L-1</b>메인</span><span class="x">→</span><span class="s"><b>L-2</b>졸업 요건</span><span class="s"><b>L-3</b>시간표 → L-4~7</span><span class="s"><b>L-8</b>성적 → L-9 → L-10</span></div></div>
+<div class="r"><div class="k">장학금</div><span class="a">→</span><div class="f"><span class="s"><b>S-1</b>맞춤 장학금</span><span class="x">→</span><span class="s"><b>S-2</b>공지 상세</span><span class="x">→</span><span class="o">신청 완료 체크 →</span><span class="s"><b>S-3</b>신청 내역</span></div></div>
+<div class="r"><div class="k">학사 행정</div><span class="a">→</span><div class="f"><span class="s"><b>A-1</b>나에게 해당하는 공지</span><span class="s"><b>A-2</b>학사 일정</span><span class="s"><b>A-3</b>휴·복학 안내</span></div></div>
+<div class="r"><div class="k">캠퍼스 생활</div><span class="a">→</span><div class="f"><span class="s"><b>C-1</b>분실물 센터</span><span class="x">→</span><span class="s"><b>C-2</b>제보</span><span class="s"><b>C-3</b>분실 신고</span><span class="s"><b>C-4</b>상세 → C-5 수령</span></div></div>
+</section>
+
+<section class="card">
+<h2>2. AI 비서가 메뉴를 이어 주는 흐름</h2>
+<p class="desc">학생이 한 화면에서 행동하면, 비서가 다른 메뉴에 결과를 만들어 줍니다.</p>
+<div class="legend"><span><i class="sw" style="border:1px solid var(--line-strong);background:var(--card)"></i>학생 화면</span><span><i class="sw" style="background:var(--ai-bg);border:1px solid var(--ai-line)"></i>AI 비서가 자동 처리</span><span><i class="sw" style="background:var(--ad-bg);border:1px solid var(--ad-line)"></i>관리자</span></div>
+
+<div class="sc"><p class="t">① 성적 입력 → 장학금 발견</p><div class="f"><span class="u">L-10 성적 입력</span><span class="x">→</span><span class="ai">자격 재계산</span><span class="x">→</span><span class="u">홈 브리핑 "신청 가능 1건"</span><span class="x">→</span><span class="u">S-2 공지 요약</span><span class="x">→</span><span class="u">신청 완료 체크</span><span class="x">→</span><span class="u">S-3 신청 내역</span></div></div>
+<div class="sc"><p class="t">② 졸업 마감 챙기기</p><div class="f"><span class="ai">학사요람·성적 대조</span><span class="x">→</span><span class="u">오늘 챙길 일 "심사 신청 D-DAY"</span><span class="x">→</span><span class="u">T-2 할 일 상세</span><span class="x">→</span><span class="u">H-2 채팅으로 묻기</span><span class="x">→</span><span class="u">신청 후 T-3 완료</span></div></div>
+<div class="sc"><p class="t">③ 휴학 결정</p><div class="f"><span class="u">M-4 학적 → 휴학</span><span class="x">→</span><span class="ai">관련 규정 찾기</span><span class="x">→</span><span class="u">A-3 휴·복학 안내</span><span class="x">→</span><span class="ai">복학 기한 등록</span><span class="x">→</span><span class="u">T-1 할 일 목록</span></div></div>
+<div class="sc"><p class="t">④ 분실물 찾기 (부가)</p><div class="f"><span class="u">C-3 분실 신고</span><span class="x">+</span><span class="ad">AD-7 습득물 등록</span><span class="x">→</span><span class="ai">매칭 92%</span><span class="x">→</span><span class="u">T-4 알림</span><span class="x">→</span><span class="u">C-4 상세 → C-5 수령 신청</span><span class="x">→</span><span class="ad">AD-6 승인</span></div></div>
+<div class="sc"><p class="t">⑤ 챗봇이 모르는 질문</p><div class="f"><span class="u">H-2 "근거 문서가 없어요"</span><span class="x">→</span><span class="ai">미응답 질문 기록</span><span class="x">→</span><span class="ad">AD-2 확인</span><span class="x">→</span><span class="ad">AD-3 문서 추가</span><span class="x">→</span><span class="u">같은 질문에 답변</span></div></div>
+</section>
+
+<p class="foot">서경 AI 비서 기획 · 2026-10-16</p>
+</div>
+</body>
+</html>

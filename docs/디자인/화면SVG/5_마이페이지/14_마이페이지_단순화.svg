@@ -1,0 +1,159 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 402 874" width="402" height="874" style="background-color: #F1F3F2; font-family: 'Noto Sans KR', sans-serif;">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.04"/>
+    </filter>
+  </defs>
+
+  <!-- 전체 프레임 (배경: #F1F3F2) -->
+  <rect x="0" y="0" width="402" height="874" rx="40" fill="#F1F3F2"/>
+
+  <!-- [1] 상단 헤더: 타이틀 -->
+  <g transform="translate(20, 28)">
+    <text x="0" y="20" font-size="20" font-weight="900" fill="#0C6B3F">마이페이지</text>
+  </g>
+
+  <!-- [2] 메인 카드 컨테이너 -->
+  <g transform="translate(20, 64)" filter="url(#shadow)">
+    <rect x="0" y="0" width="362" height="768" rx="22" fill="#FFFFFF"/>
+
+    <!-- 1. 프로필 카드 (연필 ✏️ 수정 아이콘) -->
+    <g transform="translate(18, 18)">
+      <rect x="0" y="0" width="326" height="116" rx="16" fill="#E9F3EE"/>
+      
+      <!-- 프로필 아바타 -->
+      <circle cx="44" cy="44" r="28" fill="#0C6B3F"/>
+      <text x="44" y="52" font-size="20" font-weight="800" fill="#FFFFFF" text-anchor="middle">홍</text>
+
+      <!-- 사용자 이름 & 학과 정보 -->
+      <text x="86" y="38" font-size="18" font-weight="800" fill="#121714">홍길동</text>
+      
+      <!-- 학적 정보 + ✏️ 수정 아이콘 -->
+      <g transform="translate(86, 48)">
+        <text x="0" y="14" font-size="12" font-weight="700" fill="#0C6B3F">소프트웨어학과 4학년 재학</text>
+        
+        <!-- 연필(✏️) 아이콘 버튼 -->
+        <g transform="translate(152, -2)">
+          <circle cx="10" cy="10" r="10" fill="#FFFFFF"/>
+          <path d="M6 14 L13 7 L15 9 L8 16 Z M13 5 L15 3 L17 5 L15 7 Z" fill="#0C6B3F"/>
+        </g>
+      </g>
+
+      <!-- 취득 학점 요약 바 (% 수치 삭제 완료) -->
+      <g transform="translate(18, 86)">
+        <rect x="0" y="0" width="290" height="16" rx="8" fill="#FFFFFF"/>
+        <rect x="0" y="0" width="270" height="16" rx="8" fill="#0C6B3F"/>
+        <text x="145" y="12" font-size="10" font-weight="800" fill="#FFFFFF" text-anchor="middle">졸업까지 121 / 130 학점</text>
+      </g>
+    </g>
+
+    <!-- 구분선 -->
+    <line x1="18" y1="150" x2="344" y2="150" stroke="#F1F3F2" stroke-width="1.5"/>
+
+    <!-- 2. PDF 기반 세분화 설정 메뉴 영역 -->
+    <g transform="translate(18, 160)">
+      
+      <!-- (1) 알림 설정 섹션 (PDF 8p) -->
+      <g transform="translate(0, 0)">
+        <text x="0" y="14" font-size="12" font-weight="800" fill="#0C6B3F">알림 설정</text>
+
+        <!-- 알림 받기 전체 토글 -->
+        <g transform="translate(0, 22)">
+          <text x="0" y="18" font-size="14" font-weight="700" fill="#121714">알림 받기</text>
+          <text x="0" y="34" font-size="10" fill="#656E69">끄면 모든 알림이 오지 않아요</text>
+          <rect x="276" y="6" width="50" height="26" rx="13" fill="#0C6B3F"/>
+          <circle cx="313" cy="19" r="10" fill="#FFFFFF"/>
+        </g>
+
+        <!-- 마감 임박 / AI 브리핑 시간 -->
+        <g transform="translate(0, 68)">
+          <text x="0" y="18" font-size="13" font-weight="700" fill="#121714">마감 임박 및 브리핑 알림</text>
+          <text x="314" y="18" font-size="12" font-weight="700" fill="#0C6B3F" text-anchor="end">오전 8:00 ›</text>
+        </g>
+
+        <!-- 방해 금지 시간 -->
+        <g transform="translate(0, 102)">
+          <text x="0" y="18" font-size="13" font-weight="700" fill="#121714">방해 금지 시간</text>
+          <text x="314" y="18" font-size="12" font-weight="700" fill="#656E69" text-anchor="end">22:00 - 07:00 ›</text>
+        </g>
+      </g>
+
+      <line x1="0" y1="138" x2="326" y2="138" stroke="#F1F3F2" stroke-width="1"/>
+
+      <!-- (2) 화면 설정 섹션 (PDF 9p) -->
+      <g transform="translate(0, 150)">
+        <text x="0" y="14" font-size="12" font-weight="800" fill="#0C6B3F">화면 설정</text>
+
+        <!-- 다크 모드 토글 -->
+        <g transform="translate(0, 22)">
+          <text x="0" y="18" font-size="14" font-weight="700" fill="#121714">다크 모드</text>
+          <text x="0" y="34" font-size="10" fill="#656E69">어두운 테마를 적용합니다</text>
+          <rect x="276" y="6" width="50" height="26" rx="13" fill="#E9F3EE"/>
+          <circle cx="289" cy="19" r="10" fill="#FFFFFF"/>
+        </g>
+
+        <!-- 글자 크기 선택 칩 -->
+        <g transform="translate(0, 68)">
+          <text x="0" y="20" font-size="14" font-weight="700" fill="#121714">글자 크기</text>
+          
+          <g transform="translate(206, 0)">
+            <rect x="0" y="0" width="56" height="30" rx="8" fill="#0C6B3F"/>
+            <text x="28" y="19" font-size="11" font-weight="800" fill="#FFFFFF" text-anchor="middle">표준</text>
+
+            <rect x="62" y="0" width="56" height="30" rx="8" fill="#F1F3F2"/>
+            <text x="90" y="19" font-size="11" font-weight="600" fill="#656E69" text-anchor="middle">크게</text>
+          </g>
+        </g>
+      </g>
+
+      <line x1="0" y1="264" x2="326" y2="264" stroke="#F1F3F2" stroke-width="1"/>
+
+      <!-- (3) 계정 관리 섹션 (PDF 9p) -->
+      <g transform="translate(0, 276)">
+        <text x="0" y="14" font-size="12" font-weight="800" fill="#0C6B3F">계정 관리</text>
+
+        <!-- 비밀번호 변경 -->
+        <g transform="translate(0, 24)">
+          <text x="0" y="18" font-size="14" font-weight="700" fill="#121714">비밀번호 변경</text>
+          <text x="314" y="18" font-size="14" font-weight="700" fill="#656E69" text-anchor="end">›</text>
+        </g>
+
+        <!-- 로그아웃 -->
+        <g transform="translate(0, 60)">
+          <text x="0" y="18" font-size="14" font-weight="700" fill="#121714">로그아웃</text>
+          <text x="314" y="18" font-size="14" font-weight="700" fill="#656E69" text-anchor="end">›</text>
+        </g>
+
+        <!-- 계정 삭제 및 탈퇴 -->
+        <g transform="translate(0, 96)">
+          <text x="0" y="18" font-size="14" font-weight="700" fill="#B93C0A">계정 삭제 및 탈퇴</text>
+          <text x="0" y="34" font-size="10" fill="#B93C0A">모든 개인 설정 및 AI 브리핑 기록이 삭제됩니다</text>
+          <text x="314" y="22" font-size="14" font-weight="700" fill="#B93C0A" text-anchor="end">›</text>
+        </g>
+      </g>
+
+      <line x1="0" y1="426" x2="326" y2="426" stroke="#F1F3F2" stroke-width="1"/>
+
+      <!-- (4) 서비스 정보 섹션 (PDF 3p) -->
+      <g transform="translate(0, 438)">
+        <text x="0" y="14" font-size="12" font-weight="800" fill="#0C6B3F">서비스 정보</text>
+
+        <!-- 이용약관 -->
+        <g transform="translate(0, 24)">
+          <text x="0" y="18" font-size="14" font-weight="700" fill="#121714">이용약관 및 개인정보 처리방침</text>
+          <text x="314" y="18" font-size="14" font-weight="700" fill="#656E69" text-anchor="end">›</text>
+        </g>
+
+        <!-- 앱 버전 -->
+        <g transform="translate(0, 60)">
+          <text x="0" y="18" font-size="14" font-weight="700" fill="#121714">현재 앱 버전</text>
+          <text x="314" y="18" font-size="13" font-weight="800" fill="#0C6B3F" text-anchor="end">v2.4.1</text>
+        </g>
+      </g>
+
+    </g>
+  </g>
+
+  <!-- 하단 홈 제스처 바 -->
+  <rect x="136" y="860" width="130" height="4" rx="2" fill="#121714"/>
+</svg>

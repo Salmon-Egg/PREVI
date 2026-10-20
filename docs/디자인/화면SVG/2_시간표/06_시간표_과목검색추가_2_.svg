@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 402 874" width="402" height="874" style="background-color: #F1F3F2; font-family: 'Noto Sans KR', sans-serif;">
+  <defs>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.04"/>
+    </filter>
+    <filter id="modalShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="#000000" flood-opacity="0.20"/>
+    </filter>
+  </defs>
+
+  <!-- [바탕 화면: 기존 수강 과목 편집 레이아웃] -->
+  <rect x="0" y="0" width="402" height="874" rx="40" fill="#F1F3F2"/>
+
+  <!-- 상단 헤더 -->
+  <g transform="translate(20, 28)">
+    <path d="M4 14 L12 6 M4 14 L12 22" stroke="#121714" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="28" y="20" font-size="18" font-weight="800" fill="#0C6B3F">수강 과목 편집</text>
+  </g>
+
+  <!-- 메인 콘텐츠 카드 -->
+  <g transform="translate(20, 68)" filter="url(#shadow)">
+    <rect x="0" y="0" width="362" height="760" rx="22" fill="#FFFFFF"/>
+
+    <g transform="translate(18, 18)">
+      <rect x="0" y="0" width="326" height="54" rx="14" fill="#E9F3EE"/>
+      <text x="16" y="24" font-size="12" font-weight="700" fill="#656E69">2026학년도 2학기</text>
+      <text x="16" y="42" font-size="14" font-weight="800" fill="#121714">현재 수강 등록: <tspan fill="#0C6B3F">총 4과목 (12학점)</tspan></text>
+    </g>
+
+    <g transform="translate(18, 86)">
+      <rect x="0" y="0" width="326" height="44" rx="12" fill="#0C6B3F"/>
+      <text x="163" y="27" font-size="14" font-weight="800" fill="#FFFFFF" text-anchor="middle">+ 과목 추가하기</text>
+    </g>
+
+    <line x1="18" y1="146" x2="344" y2="146" stroke="#F1F3F2" stroke-width="1.5"/>
+
+    <g transform="translate(18, 158)">
+      <text x="0" y="16" font-size="14" font-weight="800" fill="#121714">수강 과목 목록</text>
+      <g transform="translate(0, 28)">
+        <rect x="0" y="0" width="326" height="92" rx="14" fill="#F1F3F2"/>
+        <rect x="12" y="12" width="34" height="20" rx="6" fill="#E9F3EE"/>
+        <text x="29" y="26" font-size="10" font-weight="800" fill="#0C6B3F" text-anchor="middle">전필</text>
+        <text x="52" y="27" font-size="14" font-weight="800" fill="#121714">캡스톤디자인 II</text>
+        <text x="210" y="27" font-size="11" font-weight="600" fill="#656E69">3학점 · CS0401</text>
+        <text x="12" y="52" font-size="12" font-weight="600" fill="#121714">월 02,03 / 수 01</text>
+        <text x="12" y="70" font-size="11" fill="#656E69">담당교수: 김서경 교수님</text>
+      </g>
+    </g>
+
+    <g transform="translate(18, 688)">
+      <rect x="0" y="0" width="326" height="52" rx="16" fill="#0C6B3F"/>
+      <text x="163" y="31" font-size="15" font-weight="800" fill="#FFFFFF" text-anchor="middle">수강 과목 변경사항 저장하기</text>
+    </g>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- [4] 과목 검색 팝업 - 검색 결과 완료 상태 -->
+  <!-- ========================================== -->
+
+  <!-- 반투명 배경 (Dim Overlay) -->
+  <rect x="0" y="0" width="402" height="874" rx="40" fill="#121714" fill-opacity="0.48"/>
+
+  <!-- 검색 팝업 카드 모달 -->
+  <g transform="translate(28, 170)" filter="url(#modalShadow)">
+    <rect x="0" y="0" width="346" height="500" rx="24" fill="#FFFFFF"/>
+
+    <!-- 모달 타이틀 & 닫기 버튼 -->
+    <text x="20" y="38" font-size="18" font-weight="800" fill="#121714">과목 검색으로 추가</text>
+    <text x="316" y="36" font-size="18" font-weight="700" fill="#656E69" text-anchor="middle">✕</text>
+
+    <!-- 검색 입력 필드 (검색어 '빅데이터' 입력 완료 상태) -->
+    <g transform="translate(20, 54)">
+      <rect x="0" y="0" width="306" height="46" rx="12" fill="#FFFFFF" stroke="#0C6B3F" stroke-width="1.8"/>
+      <text x="16" y="28" font-size="14" font-weight="700" fill="#121714">빅데이터</text>
+      <!-- 지우기 아이콘 -->
+      <circle cx="282" cy="23" r="9" fill="#F1F3F2"/>
+      <text x="282" y="27" font-size="10" font-weight="700" fill="#656E69" text-anchor="middle">✕</text>
+    </g>
+
+    <!-- 검색 결과 건수 안내 -->
+    <g transform="translate(20, 116)">
+      <text x="0" y="14" font-size="13" font-weight="800" fill="#121714">검색 결과 <tspan fill="#0C6B3F">2건</tspan></text>
+    </g>
+
+    <!-- 검색 결과 리스트 -->
+    <g transform="translate(20, 140)">
+      
+      <!-- 검색 결과 1: 빅데이터분석 (전선) -->
+      <g transform="translate(0, 0)">
+        <rect x="0" y="0" width="306" height="96" rx="14" fill="#E9F3EE" stroke="#0C6B3F" stroke-width="1.2"/>
+        
+        <rect x="12" y="12" width="34" height="20" rx="6" fill="#FFFFFF"/>
+        <text x="29" y="26" font-size="10" font-weight="800" fill="#0C6B3F" text-anchor="middle">전선</text>
+        
+        <text x="52" y="27" font-size="14" font-weight="800" fill="#121714">빅데이터분석</text>
+        <text x="12" y="52" font-size="11" font-weight="600" fill="#0C6B3F">3학점 · CS0355 · 수 05,06,07</text>
+        <text x="12" y="72" font-size="11" fill="#656E69">담당교수: 박데이터 교수님</text>
+
+        <!-- 추가하기 버튼 -->
+        <g transform="translate(224, 52)">
+          <rect x="0" y="0" width="70" height="32" rx="10" fill="#0C6B3F"/>
+          <text x="35" y="20" font-size="12" font-weight="800" fill="#FFFFFF" text-anchor="middle">+ 추가</text>
+        </g>
+      </g>
+
+      <!-- 검색 결과 2: 빅데이터개론 (교양) -->
+      <g transform="translate(0, 108)">
+        <rect x="0" y="0" width="306" height="96" rx="14" fill="#F8FAFA" stroke="#E9F3EE" stroke-width="1.2"/>
+        
+        <rect x="12" y="12" width="34" height="20" rx="6" fill="#E9F3EE"/>
+        <text x="29" y="26" font-size="10" font-weight="800" fill="#0C6B3F" text-anchor="middle">교양</text>
+        
+        <text x="52" y="27" font-size="14" font-weight="800" fill="#121714">빅데이터개론</text>
+        <text x="12" y="52" font-size="11" font-weight="600" fill="#656E69">2학점 · GE0302 · 목 01,02</text>
+        <text x="12" y="72" font-size="11" fill="#656E69">담당교수: 정정보 교수님</text>
+
+        <!-- 추가하기 버튼 -->
+        <g transform="translate(224, 52)">
+          <rect x="0" y="0" width="70" height="32" rx="10" fill="#0C6B3F"/>
+          <text x="35" y="20" font-size="12" font-weight="800" fill="#FFFFFF" text-anchor="middle">+ 추가</text>
+        </g>
+      </g>
+
+      <!-- 검색 결과 3: 금융빅데이터응용 (전선) -->
+      <g transform="translate(0, 216)">
+        <rect x="0" y="0" width="306" height="96" rx="14" fill="#F8FAFA" stroke="#E9F3EE" stroke-width="1.2"/>
+        
+        <rect x="12" y="12" width="34" height="20" rx="6" fill="#E9F3EE"/>
+        <text x="29" y="26" font-size="10" font-weight="800" fill="#0C6B3F" text-anchor="middle">전선</text>
+        
+        <text x="52" y="27" font-size="14" font-weight="800" fill="#121714">금융빅데이터응용</text>
+        <text x="12" y="52" font-size="11" font-weight="600" fill="#656E69">3학점 · CS0388 · 화 02,03,04</text>
+        <text x="12" y="72" font-size="11" fill="#656E69">담당교수: 이금융 교수님</text>
+
+        <g transform="translate(224, 52)">
+          <rect x="0" y="0" width="70" height="32" rx="10" fill="#0C6B3F"/>
+          <text x="35" y="20" font-size="12" font-weight="800" fill="#FFFFFF" text-anchor="middle">+ 추가</text>
+        </g>
+      </g>
+
+    </g>
+  </g>
+
+  <!-- 하단 홈 제스처 바 -->
+  <rect x="136" y="860" width="130" height="4" rx="2" fill="#121714"/>
+</svg>

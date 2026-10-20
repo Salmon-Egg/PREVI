@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 402 874" width="402" height="874" style="font-family: 'Noto Sans KR', sans-serif;">
+  <!-- 배경 (1번 화면 Dimmed) -->
+  <rect width="402" height="874" fill="#F4F6F5"/>
+  <rect width="402" height="874" fill="#000000" opacity="0.5"/>
+
+  <!-- POPUP MODAL CONTAINER -->
+  <rect x="16" y="240" width="370" height="580" rx="24" fill="#FFFFFF" stroke="#0C6B3F" stroke-width="2"/>
+
+  <!-- 모달 헤더 -->
+  <text x="40" y="284" font-size="18" font-weight="800" fill="#121714">성적 항목 추가/수정</text>
+  <circle cx="354" cy="278" r="14" fill="#F4F6F5"/>
+  <path d="M348 272 L360 284 M360 272 L348 284" stroke="#121714" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- 입력 필드 1: 학기 선택 -->
+  <text x="40" y="330" font-size="13" font-weight="700" fill="#656E69">이수 학기</text>
+  <rect x="40" y="340" width="322" height="48" rx="12" fill="#FAFAFA" stroke="#E2F2EA" stroke-width="1.5"/>
+  <text x="56" y="370" font-size="14" font-weight="600" fill="#121714">4학년 1학기</text>
+  <path d="M338 360 L344 366 L350 360" stroke="#0C6B3F" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+  <!-- 입력 필드 2: 과목명 -->
+  <text x="40" y="414" font-size="13" font-weight="700" fill="#656E69">과목명</text>
+  <rect x="40" y="424" width="322" height="48" rx="12" fill="#FAFAFA" stroke="#E2F2EA" stroke-width="1.5"/>
+  <text x="56" y="454" font-size="14" font-weight="400" fill="#121714">예: 모바일앱프로그래밍</text>
+
+  <!-- 입력 필드 3: 학점 & 성적 (2열 배치) -->
+  <text x="40" y="498" font-size="13" font-weight="700" fill="#656E69">학점 (이수 단위)</text>
+  <rect x="40" y="508" width="150" height="48" rx="12" fill="#FAFAFA" stroke="#E2F2EA" stroke-width="1.5"/>
+  <text x="56" y="538" font-size="14" font-weight="600" fill="#121714">3 학점</text>
+  <path d="M166 528 L172 534 L178 528" stroke="#0C6B3F" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+  <text x="212" y="498" font-size="13" font-weight="700" fill="#656E69">취득 성적</text>
+  <rect x="212" y="508" width="150" height="48" rx="12" fill="#FAFAFA" stroke="#0C6B3F" stroke-width="1.5"/>
+  <text x="228" y="538" font-size="14" font-weight="700" fill="#0C6B3F">A+ (4.5)</text>
+  <path d="M338 528 L344 534 L350 528" stroke="#0C6B3F" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+  <!-- 안내 문구 -->
+  <rect x="40" y="580" width="322" height="42" rx="8" fill="#F4F9F6"/>
+  <text x="52" y="605" font-size="11" font-weight="500" fill="#0C6B3F">💡 직접 수정/입력한 성적은 졸업 학점 계산에 반영돼요.</text>
+
+  <!-- 하단 저장 버튼 -->
+  <rect x="40" y="740" width="322" height="52" rx="26" fill="#0C6B3F"/>
+  <text x="201" y="772" font-size="15" font-weight="700" fill="#FFFFFF" text-anchor="middle">저장하기</text>
+
+  <rect x="136" y="828" width="130" height="5" rx="2.5" fill="#FFFFFF"/>
+</svg>

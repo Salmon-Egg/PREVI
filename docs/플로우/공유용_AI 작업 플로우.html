@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI 작업 플로우</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f7f8f7; --card:#ffffff; --ink:#121714; --sub:#56605a; --muted:#8a928d;
+  --line:#e3e6e4; --line-strong:#c9cfcb; --line-stronger:#9aa29d;
+  --in-bg:#f3f5f4;
+  --ai-bg:#e3f4e8; --ai-ink:#1d6b33; --ai-line:#a9d8b6;
+  --cd-bg:#fbf0dc; --cd-ink:#7a5205; --cd-line:#ecd29a;
+  --sec-auto:#1d6b33; --sec-req:#2a5fb0; --sec-adm:#7a5205;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#111412; --card:#191d1a; --ink:#eef1ef; --sub:#b4bcb7; --muted:#7e8781;
+    --line:#2a302c; --line-strong:#3a423d; --line-stronger:#5b645e;
+    --in-bg:#202521;
+    --ai-bg:#183420; --ai-ink:#93d8a4; --ai-line:#285a35;
+    --cd-bg:#3a2c0f; --cd-ink:#f0c879; --cd-line:#5e4818;
+    --sec-auto:#93d8a4; --sec-req:#8fb6f0; --sec-adm:#f0c879;
+  }
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans KR",-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;line-height:1.5;padding:32px 16px 48px}
+.wrap{max-width:880px;margin:0 auto}
+h1{font-size:24px;font-weight:700;margin-bottom:6px}
+.lead{color:var(--sub);font-size:14px;margin-bottom:16px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 14px;font-size:12px;color:var(--sub);margin-bottom:24px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 22px 6px;margin-bottom:20px}
+h2{font-size:17px;font-weight:700;margin-bottom:2px}
+h2 small{font-size:13px;font-weight:400;color:var(--sub);margin-left:8px}
+.bar{display:inline-block;width:4px;height:16px;border-radius:2px;margin-right:8px;vertical-align:-2px}
+.row{padding:11px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:none}
+.tt{font-size:14px;font-weight:500;margin-bottom:7px}
+.tt b{font-family:ui-monospace,Menlo,Consolas,monospace;font-weight:400;font-size:12px;color:var(--muted);margin-right:8px}
+.tt em{font-style:normal;font-weight:400;color:var(--muted);font-size:12px;margin-left:4px}
+.f{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;line-height:1.4}
+.p{border-radius:8px;padding:4px 9px;display:inline-block}
+.tg{border:1px dashed var(--line-stronger);color:var(--sub)}
+.in{background:var(--in-bg);border:1px solid var(--line);color:var(--sub)}
+.ai{background:var(--ai-bg);border:1px solid var(--ai-line);color:var(--ai-ink)}
+.cd{background:var(--cd-bg);border:1px solid var(--cd-line);color:var(--cd-ink)}
+.sc{border:1.5px solid var(--line-stronger);color:var(--ink);font-weight:500}
+.x{color:var(--muted)}
+.note{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 22px;font-size:13.5px;color:var(--sub)}
+.note h3{font-size:15px;color:var(--ink);margin-bottom:8px}
+.note li{margin:4px 0 4px 18px}
+.note b{color:var(--ink);font-weight:500}
+.foot{font-size:12px;color:var(--muted);text-align:center;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>서경 AI 비서 · AI 작업 플로우</h1>
+<p class="lead">AI가 작동하는 21곳을 정리했습니다. 모든 흐름은 <b>시작 → 받는 정보 → AI가 하는 일 → (코드가 하는 일) → 보이는 화면</b> 순서로 읽습니다. 화면 번호는 메뉴 구성 문서와 같습니다.</p>
+<div class="legend">
+  <span><i class="p tg">시작</i></span>
+  <span><i class="p in">받는 정보</i></span>
+  <span><i class="p ai">AI가 하는 일</i></span>
+  <span><i class="p cd">코드가 하는 일</i></span>
+  <span><i class="p sc">보이는 화면</i></span>
+</div>
+
+<section class="card">
+<h2><i class="bar" style="background:var(--sec-auto)"></i>자동<small>학생이 모르는 사이에 · 매일 아침, 정보가 바뀔 때</small></h2>
+<div class="row"><p class="tt"><b>1</b>공지 해석</p><div class="f"><span class="p tg">새 공지 등록</span><span class="x">→</span><span class="p in">공지 원문</span><span class="x">→</span><span class="p ai">대상·조건·마감·서류 뽑기 + 3줄 요약</span><span class="x">→</span><span class="p sc">A-1 공지 · S-2 AI 요약</span></div></div>
+<div class="row"><p class="tt"><b>2</b>대상 분류</p><div class="f"><span class="p tg">공지 해석 끝</span><span class="x">→</span><span class="p in">정리된 공지</span><span class="x">→</span><span class="p ai">학년·학적·학과 대상 분류</span><span class="x">→</span><span class="p sc">A-1 나에게 해당 · A-2 학년별 일정</span></div></div>
+<div class="row"><p class="tt"><b>3</b>자격·요건 판정</p><div class="f"><span class="p tg">매일 아침 · 성적·학적 변경</span><span class="x">→</span><span class="p in">규정 조건 + 내 정보</span><span class="x">→</span><span class="p ai">규정 문장을 비교할 수 있는 조건으로 변환</span><span class="x">→</span><span class="p cd">대조 · 학점 계산</span><span class="x">→</span><span class="p sc">S-1 판정 · L-2 남은 요건</span></div></div>
+<div class="row"><p class="tt"><b>4</b>우선순위 정하기</p><div class="f"><span class="p tg">판정 끝</span><span class="x">→</span><span class="p in">할 일 후보</span><span class="x">→</span><span class="p cd">D-day 계산</span><span class="x">→</span><span class="p ai">놓쳤을 때 피해 크기 판단 → 순서</span><span class="x">→</span><span class="p sc">오늘 챙길 일 · T-1</span></div></div>
+<div class="row"><p class="tt"><b>5</b>브리핑 문장</p><div class="f"><span class="p tg">정렬 끝</span><span class="x">→</span><span class="p in">상위 할 일 3개</span><span class="x">→</span><span class="p ai">말풍선 한 줄 · 메뉴 칸 상태 문구 작성</span><span class="x">→</span><span class="p sc">홈</span></div></div>
+<div class="row"><p class="tt"><b>6</b>근거 설명</p><div class="f"><span class="p tg">할 일 생성</span><span class="x">→</span><span class="p in">조건 + 내 정보</span><span class="x">→</span><span class="p ai">"왜 나에게 해당하는지" 작성</span><span class="x">→</span><span class="p sc">T-2 · S-1</span></div></div>
+<div class="row"><p class="tt"><b>7</b>추천 질문</p><div class="f"><span class="p tg">홈 열 때</span><span class="x">→</span><span class="p in">학년 · 학적 · 이번 주 일정</span><span class="x">→</span><span class="p ai">지금 궁금할 질문 3개 고르기</span><span class="x">→</span><span class="p sc">홈 하단 · H-1</span></div></div>
+<div class="row"><p class="tt"><b>8</b>알림</p><div class="f"><span class="p tg">마감 전날·당일 · 새 판정</span><span class="x">→</span><span class="p in">할 일</span><span class="x">→</span><span class="p ai">짧은 알림 문장 작성</span><span class="x">→</span><span class="p cd">설정 시간에 발송</span><span class="x">→</span><span class="p sc">T-4 · 푸시</span></div></div>
+<div class="row"><p class="tt"><b>9</b>분실물 매칭<em>(부가)</em></p><div class="f"><span class="p tg">습득물 등록</span><span class="x">→</span><span class="p in">습득물 + 분실 신고들</span><span class="x">→</span><span class="p ai">설명 유사도 비교</span><span class="x">→</span><span class="p cd">일치율 점수 계산</span><span class="x">→</span><span class="p sc">T-4 알림 · C-1 배너</span></div></div>
+</section>
+
+<section class="card">
+<h2><i class="bar" style="background:var(--sec-req)"></i>요청 시<small>학생이 누르거나 물을 때</small></h2>
+<div class="row"><p class="tt"><b>10</b>의도 파악</p><div class="f"><span class="p tg">질문 입력</span><span class="x">→</span><span class="p in">질문 문장</span><span class="x">→</span><span class="p ai">내 정보 질문 · 문서 질문 · 분실물 중 분류</span><span class="x">→</span><span class="p in">11 또는 12로</span></div></div>
+<div class="row"><p class="tt"><b>11</b>문서 근거 답변</p><div class="f"><span class="p tg">문서 질문</span><span class="x">→</span><span class="p ai">관련 문단 검색</span><span class="x">→</span><span class="p ai">근거로 답 작성 + 출처</span><span class="x">→</span><span class="p sc">H-2</span><span class="x">·</span><span class="p in">근거 없으면 "모른다" → 19로</span></div></div>
+<div class="row"><p class="tt"><b>12</b>내 상황 답변</p><div class="f"><span class="p tg">내 정보 질문</span><span class="x">→</span><span class="p in">3번 계산 결과</span><span class="x">→</span><span class="p ai">쉬운 문장 + 요약 카드로 작성</span><span class="x">→</span><span class="p sc">H-2</span></div></div>
+<div class="row"><p class="tt"><b>13</b>다음 행동 버튼</p><div class="f"><span class="p tg">답변 생성</span><span class="x">→</span><span class="p in">답변 내용</span><span class="x">→</span><span class="p ai">맞는 버튼 고르기 (알림 받기 · 신청 페이지 · 화면 이동)</span><span class="x">→</span><span class="p sc">H-2</span><span class="x">→</span><span class="p sc">누르면 T-1 등록</span></div></div>
+<div class="row"><p class="tt"><b>14</b>맥락 이어받기</p><div class="f"><span class="p tg">T-2 "채팅으로 묻기"</span><span class="x">→</span><span class="p in">할 일 내용 · 근거</span><span class="x">→</span><span class="p ai">대화의 첫 맥락으로 설정</span><span class="x">→</span><span class="p sc">H-2 설명 없이 바로 질문</span></div></div>
+<div class="row"><p class="tt"><b>15</b>학적 변경 안내</p><div class="f"><span class="p tg">M-4 휴학으로 변경</span><span class="x">→</span><span class="p in">새 학적 상태</span><span class="x">→</span><span class="p ai">관련 규정 검색 · 요약 (장학금 영향, 복학 기한)</span><span class="x">→</span><span class="p sc">A-3 안내</span><span class="x">+</span><span class="p sc">T-1 기한 등록</span></div></div>
+<div class="row"><p class="tt"><b>16</b>사진 분석<em>(부가)</em></p><div class="f"><span class="p tg">C-2 사진 업로드</span><span class="x">→</span><span class="p in">사진</span><span class="x">→</span><span class="p ai">분류·색상·특징 추출</span><span class="x">+</span><span class="p ai">이름·학번·카드번호 찾아 가림</span><span class="x">→</span><span class="p sc">C-2 자동 입력 · AD-7</span></div></div>
+<div class="row"><p class="tt"><b>17</b>분실 신고 정리<em>(부가)</em></p><div class="f"><span class="p tg">C-3 자유 입력</span><span class="x">→</span><span class="p in">설명 문장</span><span class="x">→</span><span class="p ai">물건·색상·장소·시간 뽑기</span><span class="x">→</span><span class="p sc">C-3 정리된 신고</span><span class="x">→</span><span class="p in">9번 매칭으로</span></div></div>
+<div class="row"><p class="tt"><b>18</b>본인 확인 질문<em>(부가)</em></p><div class="f"><span class="p tg">C-5 수령 신청</span><span class="x">→</span><span class="p in">습득자 메모</span><span class="x">→</span><span class="p ai">확인 질문 생성</span><span class="x">→</span><span class="p in">학생 답변</span><span class="x">→</span><span class="p ai">메모와 대조</span><span class="x">→</span><span class="p sc">AD-6 일치 여부</span></div></div>
+</section>
+
+<section class="card">
+<h2><i class="bar" style="background:var(--sec-adm)"></i>관리자<small>학생지원팀</small></h2>
+<div class="row"><p class="tt"><b>19</b>미응답 질문 분석</p><div class="f"><span class="p tg">챗봇 미응답 · "아쉬워요"</span><span class="x">→</span><span class="p in">쌓인 질문들</span><span class="x">→</span><span class="p ai">비슷한 질문 묶기 · 원인 4가지 분류</span><span class="x">→</span><span class="p cd">횟수 세기</span><span class="x">→</span><span class="p sc">AD-2</span></div></div>
+<div class="row"><p class="tt"><b>20</b>문서 학습</p><div class="f"><span class="p tg">AD-3 문서 업로드</span><span class="x">→</span><span class="p in">PDF · 공지</span><span class="x">→</span><span class="p ai">문단 나누기 · 검색용 저장 · 요약</span><span class="x">→</span><span class="p sc">11번 답변 · 1번 해석에 바로 반영</span></div></div>
+<div class="row"><p class="tt"><b>21</b>발송 대상 해석</p><div class="f"><span class="p tg">AD-4 대상 문장 입력</span><span class="x">→</span><span class="p in">"3학년 이상, 소득 8분위 이하"</span><span class="x">→</span><span class="p ai">검색 조건으로 변환</span><span class="x">→</span><span class="p cd">대상 학생 수 계산</span><span class="x">→</span><span class="p sc">해당 학생 홈 브리핑</span></div></div>
+</section>
+
+<div class="note">
+<h3>흐름끼리 이어지는 곳</h3>
+<ul>
+<li><b>1 → 2 → 3 → 4 → 5</b>: 매일 아침 한 번에 이어서 돌고, 그 결과가 홈 화면이 됩니다.</li>
+<li><b>10 → 11 또는 12</b>: 질문이 들어오면 10번이 처리 경로를 정합니다.</li>
+<li><b>3 → 12</b>: 내 상황 질문에는 아침에 계산해 둔 결과로 답합니다.</li>
+<li><b>11 → 19 → 20 → 11</b>: 모르는 질문은 관리자가 문서를 보강하면 다음부터 답합니다.</li>
+<li><b>17 → 9</b>: 정리된 분실 신고는 자동 매칭으로 넘어갑니다.</li>
+<li>학점 합산, D-day 계산, 시간 중복 확인처럼 <b>숫자가 틀리면 안 되는 일은 AI가 아니라 코드</b>가 처리합니다.</li>
+</ul>
+</div>
+
+<p class="foot">서경 AI 비서 기획 · 2026-10-16</p>
+</div>
+</body>
+</html>
