@@ -57,6 +57,12 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 | `POST /chat` | 챗봇에게 질문 | H-1, H-2 |
 | `GET /conversations` · `GET /conversations/{id}` | 대화 목록·내용 | H-3 |
 | `GET /notifications` · `PATCH /notifications/{id}` | 받은 알림·읽음 처리 | T-4 |
+| `DELETE /me` | 계정 삭제 (성적 포함 모든 데이터) | M-3 |
+| `PATCH /conversations/{id}` | 대화 고정 `{ "pinned": true }` | H-3 |
+
+> MVP 뼈대(10/23)에서 더한 것: `DELETE /me`, `PATCH /conversations/{id}`, `GET /conversations?q=` 검색,
+> `GET /me`의 `completed_requirements`, `GET /notices/{id}`의 `eligibility`·`todo_id`·`applied`(S-2 판정·신청 완료 체크용),
+> 처음 쓰는 학생은 `GET /me`·`/home`이 `404 NO_PROFILE` → 앱이 처음 설정(M-2)으로 보냄. (조장 확인 필요)
 
 ---
 
