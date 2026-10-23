@@ -91,8 +91,13 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 
 ### 홈 `GET /home`
 
+- `today_todos`: 급한 순 최대 9개 (홈 카드가 3개씩 3쪽)
+- `unread_notifications`: 안 읽은 알림 수 (종 아이콘 빨간 점)
+
 ```json
 {
+  "nickname": "홍길동",
+  "unread_notifications": 2,
   "briefing": "오늘 마감 2개, 장학금 1개 신청 가능해요",
   "today_todos": [
     { "id": 31, "type": "graduation", "title": "졸업작품 심사 신청", "due_date": "2026-10-20", "d_day": 0 }
@@ -101,7 +106,8 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
   "menu_status": {
     "study": "졸업까지 9학점",
     "scholarship": "신청 가능 1건 · 오늘 마감",
-    "admin": "새 공지 2건"
+    "admin": "새 공지 2건",
+    "campus": "준비 중"
   },
   "suggested_questions": ["졸업까지 뭐가 남았어?", "장학금 신청 마감 언제야?", "수강 정정이 뭐야?"]
 }

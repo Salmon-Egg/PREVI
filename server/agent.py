@@ -167,6 +167,7 @@ def recalc(uid: str) -> dict:
         "scholarship": (f"신청 가능 {len(eligible)}건" + (" · 오늘 마감" if eligible_today else "")) if eligible
                        else f"확인 필요 {checks}건" if checks else "새 장학 공지 없음",
         "admin": f"새 공지 {new_notices}건" if new_notices else "새 공지 없음",
+        "campus": "준비 중",  # 분실물(최후순위)을 만들면 '비슷한 습득물 1건' 같은 문구로
     }
     db.run(
         """insert into briefings (user_id, date, text, menu_status, suggested_questions) values (%s, %s, %s, %s, %s)

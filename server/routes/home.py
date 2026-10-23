@@ -37,10 +37,13 @@ def home(uid: str = Depends(current_user)):
         b = db.one("select * from briefings where user_id = %s and date = %s", [uid, today])
     todos = db.all_rows(
         """select * from todos where user_id = %s and not done and (due_date is null or due_date >= %s)
-           order by priority desc, due_date nulls last limit 3""",
+           order by priority desc, due_date nulls last limit 9""",  # 홈 카드 3개씩 3쪽
         [uid, today],
     )
+    unread = db.one("select count(*) as n from notifications where user_id = %s and not read", [uid])["n"]
     return {
+        "nickname": p["nickname"],  # "안녕하세요, 홍길동님!"
+        "unread_notifications": unread,  # 홈 종 아이콘의 빨간 점
         "briefing": b["text"],
         "today_todos": [todo_shape(t, today) for t in todos],
         "next_event": next_event(p["grade"], today),

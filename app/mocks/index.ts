@@ -18,6 +18,10 @@ const todos: TodoDetail[] = [
   { id: 32, type: 'scholarship', title: '서경 AI 마일리지 장학금 신청', due_date: d(12), d_day: 12, done: false,
     reason: '신청 조건을 모두 충족해요. 4학년 (대상 2·3·4학년) ✓ · 직전 학기 평점 4.0 (기준 3.0 이상) ✓', link: null,
     source: { kind: 'notice', id: 104 }, done_at: null },
+  { id: 33, type: 'deadline', title: '동계 계절학기 수강신청', due_date: d(14), d_day: 14, done: false,
+    reason: '학적·학년이 공지 대상에 해당해요.', link: null, source: { kind: 'notice', id: 106 }, done_at: null },
+  { id: 34, type: 'deadline', title: '캡스톤 영수증 제출', due_date: d(6), d_day: 6, done: false,
+    reason: '채팅에서 알림을 받기로 한 일이에요.', link: null, source: null, done_at: null },
 ];
 
 const scholarships: Scholarship[] = [
@@ -46,10 +50,12 @@ const notifications: Notification[] = [
 ];
 
 const home = (): Home => ({
+  nickname: me.nickname,
+  unread_notifications: notifications.filter((n) => !n.read).length,
   briefing: '오늘 마감인 일 1개, 신청 가능한 장학금 1개가 있어요',
-  today_todos: todos.filter((t) => !t.done),
+  today_todos: todos.filter((t) => !t.done).sort((a, b) => (a.d_day ?? 99) - (b.d_day ?? 99)),
   next_event: { id: 2, title: '중간고사 성적 확인', start_date: d(4), d_day: 4 },
-  menu_status: { study: '졸업까지 9학점', scholarship: '신청 가능 1건', admin: '새 공지 2건' },
+  menu_status: { study: '졸업까지 9학점', scholarship: '신청 가능 1건', admin: '새 공지 2건', campus: '준비 중' },
   suggested_questions: ['졸업까지 뭐가 남았어?', '졸업작품 심사 신청은 언제까지야?', '장학금 신청 마감 언제야?'],
 });
 

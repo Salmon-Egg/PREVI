@@ -27,7 +27,8 @@ app/
 │  ├─ _layout.tsx        로그인 전: login만 / 로그인 후: (main) 화면들
 │  ├─ login.tsx          M-1
 │  └─ (main)/
-│     ├─ index.tsx       홈 (캐릭터·브리핑, 오늘 챙길 일, 메뉴 3칸, 질문창)
+│     ├─ index.tsx       홈 = 피그마 seokyeong_ui_home 1 (인사·캐릭터, 오늘 챙길 일 3개씩 넘겨 보기, 메뉴 4칸, 아래 질문창)
+│     ├─ campus.tsx      캠퍼스 생활 (분실물 자리, 지금은 준비 중)
 │     ├─ onboarding.tsx  M-2 처음 설정
 │     ├─ todos/          T-1 목록, [id] T-2 상세, done T-3
 │     ├─ notifications   T-4 알림 센터
