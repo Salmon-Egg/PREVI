@@ -25,11 +25,24 @@ const todos: TodoDetail[] = [
 ];
 
 const scholarships: Scholarship[] = [
+  { notice_id: 101, title: '2026-2학기 성적우수 장학금 (A종)', deadline: `${d(-30)}T18:00:00+09:00`, verdict: 'eligible',
+    reasons: ['직전 학기 평점 4.0 (기준 3.5 이상) ✓'], applied: true, applied_at: '2026-09-15T10:00:00+09:00' },
+  { notice_id: 102, title: '2026-2학기 국가장학금 2차 신청 안내', deadline: `${d(0)}T23:59:00+09:00`, verdict: 'check',
+    reasons: ['소득분위 8구간 이하 — 앱이 알 수 없어 직접 확인이 필요해요'], applied: false, applied_at: null },
   { notice_id: 104, title: '서경 AI 마일리지 장학금 신청 안내', deadline: `${d(12)}T18:00:00+09:00`, verdict: 'eligible',
-    reasons: ['4학년 (대상 2·3·4학년) ✓', '직전 학기 평점 4.0 (기준 3.0 이상) ✓'], applied: false },
-  { notice_id: 102, title: '2026-2학기 국가장학금 2차 신청 안내', deadline: `${d(0)}T18:00:00+09:00`, verdict: 'check',
-    reasons: ['소득분위 8구간 이하 — 앱이 알 수 없어 직접 확인이 필요해요'], applied: false },
+    reasons: ['4학년 (대상 2·3·4학년) ✓', '직전 학기 평점 4.0 (기준 3.0 이상) ✓'], applied: false, applied_at: null },
 ];
+
+const NOTICE_BODY = `1. 신청 대상
+- 재학생, 복학생, 신입생, 편입생 등
+- 직전학기 12학점 이상 이수 및 B학점 이상
+
+2. 신청 기간 및 방법
+- 기간 : 오늘 18:00 마감
+- 방법 : 한국장학재단 홈페이지 및 서경대 종합정보시스템
+
+3. 제출 서류
+- 가구원 정보제공 동의서 및 가족관계증명서`;
 
 const grades: GradeTerm[] = [
   { term: '4-1', gpa: 4.0, items: [
@@ -40,8 +53,14 @@ const grades: GradeTerm[] = [
 ];
 
 const timetable: TimetableEntry[] = [
-  { id: 1, course_id: 3, course_name: '캡스톤디자인II', credits: 3, times: [{ day: '월', start: '10:00', end: '12:00' }, { day: '수', start: '09:00', end: '10:00' }] },
-  { id: 2, course_id: 14, course_name: '서경인성리더십', credits: 1, times: [{ day: '금', start: '12:00', end: '13:00' }] },
+  { id: 1, course_id: 1, course_name: '캡스톤디자인II', code: 'CS0401', credits: 3, category: '전필', professor: '김서경', room: '북304',
+    times: [{ day: '월', start: '10:00', end: '12:00' }, { day: '수', start: '09:00', end: '10:00' }] },
+  { id: 2, course_id: 4, course_name: '금융빅데이터응용', code: 'CS0388', credits: 3, category: '전선', professor: '이금융', room: '정보202',
+    times: [{ day: '화', start: '10:00', end: '12:00' }] },
+  { id: 3, course_id: 3, course_name: '빅데이터분석', code: 'CS0355', credits: 3, category: '전선', professor: '박데이터', room: '정보301',
+    times: [{ day: '수', start: '13:00', end: '16:00' }] },
+  { id: 4, course_id: 16, course_name: '서경인성리더십', code: 'GE0101', credits: 1, category: '교양', professor: '서경인', room: '청운홀',
+    times: [{ day: '금', start: '12:00', end: '13:00' }] },
 ];
 
 const notifications: Notification[] = [
@@ -91,8 +110,9 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
     case 'GET /notices': return scholarships.map((s) => ({ id: s.notice_id, title: s.title, category: '장학', deadline: s.deadline, posted_at: null, summary: [s.reasons[0]] }));
     case 'GET /notices/:id': {
       const s = scholarships.find((x) => x.notice_id === id) ?? scholarships[0];
-      return { id, title: s.title, category: '장학', deadline: s.deadline, posted_at: null, summary: ['대상: 재학생', '마감: ' + s.deadline?.slice(0, 10)],
-        documents: ['신청서'], url: null, eligibility: { verdict: s.verdict, reasons: s.reasons }, todo_id: 32, applied: s.applied };
+      return { id, title: s.title, category: '장학', deadline: s.deadline, posted_at: '2026-10-09T09:00:00+09:00',
+        summary: ['소프트웨어학과 4학년 대상 · 소득분위 8구간 이하 신청 가능'], body: NOTICE_BODY,
+        documents: ['신청서'], url: null, eligibility: { verdict: s.verdict, reasons: s.reasons }, todo_id: s.applied ? null : 32, applied: s.applied };
     }
     case 'GET /calendar': return [{ id: 2, title: '중간고사 성적 확인', start_date: d(4), end_date: d(6), description: null, d_day: 4 }];
     case 'GET /graduation':
@@ -102,9 +122,18 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
     case 'GET /grades': return grades;
     case 'POST /grades': case 'PUT /grades/:id': case 'DELETE /grades/:id':
       return { item: body, recalculated: { remaining_total: 9, new_eligible_scholarships: 0 } };
-    case 'GET /courses': return [{ id: 13, name: '모바일앱디자인', credits: 3, area: '교양 선택', times: [{ day: '금', start: '10:00', end: '13:00' }] }];
+    case 'GET /courses': return [
+      { id: 15, name: '모바일앱디자인', code: 'DS0201', credits: 3, area: '교양 선택', category: '일선', professor: '최디자인', room: '예지301', times: [{ day: '금', start: '10:00', end: '13:00' }] },
+      { id: 14, name: '빅데이터개론', code: 'GE0302', credits: 2, area: '교양 선택', category: '교양', professor: '정정보', room: '청운201', times: [{ day: '목', start: '09:00', end: '11:00' }] },
+    ];
     case 'GET /timetable': return timetable;
-    case 'POST /timetable': case 'DELETE /timetable/:id': return {};
+    case 'POST /timetable':
+      if (body.course_id === 15) {
+        const { ApiError } = await import('../lib/api');
+        throw new ApiError(409, 'TIME_CONFLICT', '강의 시간 중복 (금요일 04교시)\n기존 수강 과목 [서경인성리더십]과 수업 시간대가 서로 겹칩니다.');
+      }
+      return {};
+    case 'DELETE /timetable/:id': return {};
     case 'POST /chat': return chatReply(body.text);
     case 'GET /conversations': return [{ id: 1, title: '졸업까지 뭐가 남았어?', pinned: false, updated_at: '2026-10-23T10:00:00+09:00' }];
     case 'GET /conversations/:id': return { id, title: '대화', pinned: false, updated_at: '', messages: [] };

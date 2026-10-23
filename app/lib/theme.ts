@@ -4,6 +4,7 @@ export const color = {
   primarySoft: '#E9F3EE',
   primaryLight: '#17A05D', // 피그마 홈: D-DAY 배지, 진행 점, '오늘 마감' 글자
   homeBg: '#F3F8F4', // 피그마 홈 배경
+  warmSoft: '#FFF1E8', // 시안: 교양 과목 칸, 미신청 장학 카드, 주의 상자
   ink: '#121714',
   inkSub: '#656E69',
   surface: '#F1F3F2',

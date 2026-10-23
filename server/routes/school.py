@@ -39,7 +39,7 @@ def get_notice(notice_id: int, uid: str = Depends(current_user)):
                   [uid, notice_id])
     applied = db.one("select 1 from scholarship_applications where user_id = %s and notice_id = %s", [uid, notice_id])
     return {
-        "id": n["id"], "title": n["title"], "category": n["category"], "summary": n["summary"],
+        "id": n["id"], "title": n["title"], "category": n["category"], "summary": n["summary"], "body": n["body"],
         "deadline": n["deadline"], "documents": n["documents"], "url": n["url"], "posted_at": n["posted_at"],
         "eligibility": e, "todo_id": todo and todo["id"], "applied": applied is not None,  # S-2 신청 완료 체크용
     }
@@ -49,10 +49,11 @@ def get_notice(notice_id: int, uid: str = Depends(current_user)):
 def scholarships(uid: str = Depends(current_user)):
     rows = db.all_rows(
         """select e.notice_id, n.title, n.deadline, e.verdict, e.reasons,
-                  exists (select 1 from scholarship_applications a where a.user_id = e.user_id and a.notice_id = e.notice_id) as applied
+                  a.applied_at is not null as applied, a.applied_at
            from eligibility e join notices n on n.id = e.notice_id
-           where e.user_id = %s and (n.deadline is null or n.deadline >= now())
-           order by case e.verdict when 'eligible' then 0 when 'check' then 1 else 2 end, n.deadline""",
+           left join scholarship_applications a on a.user_id = e.user_id and a.notice_id = e.notice_id
+           where e.user_id = %s and (n.deadline is null or n.deadline >= now() or a.applied_at is not null)
+           order by a.applied_at is null, case e.verdict when 'eligible' then 0 when 'check' then 1 else 2 end, n.deadline""",
         [uid],
     )
     return rows
@@ -91,5 +92,8 @@ def graduation(uid: str = Depends(current_user)):
 
 @router.get("/courses")
 def courses(q: str = "", _: str = Depends(current_user)):
-    return db.all_rows("select id, name, credits, area, times from courses where name like %s order by name limit 30",
-                       [f"%{q}%"])
+    return db.all_rows(
+        """select id, name, code, credits, area, category, professor, room, times from courses
+           where name like %s or code ilike %s order by name limit 30""",  # 과목명 또는 과목코드로 검색
+        [f"%{q}%", f"%{q}%"],
+    )

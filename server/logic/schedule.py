@@ -11,14 +11,24 @@ def _min(hhmm: str) -> int:
     return int(h) * 60 + int(m)
 
 
-def find_conflict(new_times: list[dict], entries: list[dict]) -> str | None:
-    """새 과목 시간이 기존 시간표와 겹치면 '화 10:30~12:00 소프트웨어공학' 같은 문장, 아니면 None."""
+def find_conflict(new_times: list[dict], entries: list[dict]) -> dict | None:
+    """새 과목 시간이 기존 시간표와 겹치면 {course_name, day, start, end}(겹치는 구간), 아니면 None."""
     for e in entries:
         for a in e["times"]:
             for b in new_times:
                 if a["day"] == b["day"] and _min(a["start"]) < _min(b["end"]) and _min(b["start"]) < _min(a["end"]):
-                    return f"{a['day']} {a['start']}~{a['end']} {e['course_name']}"
+                    start = max(a["start"], b["start"])
+                    end = min(a["end"], b["end"])
+                    return {"course_name": e["course_name"], "day": a["day"], "start": start, "end": end}
     return None
+
+
+def periods(start: str, end: str) -> str:
+    """'10:00','13:00' → '02, 03, 04교시' (01교시 = 09:00). 정시가 아니면 '10:30~12:00'."""
+    s, e = _min(start), _min(end)
+    if s % 60 or e % 60 or s < 9 * 60:
+        return f"{start}~{end}"
+    return ", ".join(f"{h - 8:02d}" for h in range(s // 60, e // 60)) + "교시"
 
 
 def credit_limit(last_gpa: float | None) -> int:

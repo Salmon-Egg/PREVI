@@ -19,6 +19,9 @@ npx expo start              → 휴대폰 Expo Go로 QR 찍기, 또는 w 눌러 
 
 휴대폰에서 내 PC 서버에 붙으려면 `EXPO_PUBLIC_API_URL`을 `localhost` 대신 PC의 IP로 바꿉니다.
 
+**다른 와이파이·데이터로 휴대폰에서 보기 (예시 데이터 모드)**: `npx expo start --tunnel ngrok`
+→ 뜨는 `https://…exp.direct` 주소를 휴대폰 인터넷 창에서 열면 웹으로 보이고, QR은 Expo Go 앱으로 찍으면 됩니다. PC가 켜져 있는 동안만 열립니다.
+
 ## 폴더
 
 ```
@@ -32,13 +35,16 @@ app/
 │     ├─ onboarding.tsx  M-2 처음 설정
 │     ├─ todos/          T-1 목록, [id] T-2 상세, done T-3
 │     ├─ notifications   T-4 알림 센터
-│     ├─ study/          L-1 내 학업(졸업·시간표·성적 탭), graduation L-2, add-course L-4~7, grade-edit L-10
-│     ├─ scholarships/   S-1, applications S-3
-│     ├─ notices/[id]    S-2 공지 상세 (판정·신청 완료 체크)
+│     ├─ study/          index L-1(졸업 | 시간표 = 시안 02 | 성적 = 시안 09), graduation L-2,
+│     │                  timetable-edit 시안 03~08, grades-edit 시안 10, grade-edit 시안 11
+│     ├─ scholarships/   index 시안 12 (+ 비서 판정), applications S-3
+│     ├─ notices/[id]    시안 13 공지 상세 (AI 요약·판정·원문·신청 완료 체크)
 │     ├─ office/         A-1 공지, calendar A-2, leave A-3
 │     ├─ chat/           H-1·H-2 채팅, history H-3
-│     └─ me/             M-3, status M-4, assistant M-5
+│     └─ me/             index 시안 14, status 시안 15·16, assistant M-5
 ├─ components/ui.tsx     공통 부품: 카드, D-day 배지, 판정 배지, 출처, 로딩·오류·빈 화면, 알림창
+├─ components/form.tsx   입력 부품: 드롭다운, 선택 버튼 묶음, 팝업(Sheet), 확인 창(Confirm)
+├─ components/TimetableGrid.tsx · GradesView.tsx   시간표 표(시안 02), 성적 보기·수정(시안 09·10)
 ├─ lib/
 │  ├─ api.ts             서버 부르기는 이 파일만 (토큰 자동 첨부, mock 전환, useApi 훅)
 │  ├─ session.ts         로그인 상태 (Supabase 또는 가상 학생)

@@ -33,8 +33,12 @@ create table profiles (
 create table courses (
   id         bigint generated always as identity primary key,
   name       text not null,
+  code       text,                          -- 과목코드 (예: CS0401)
   credits    int not null,
   area       text not null,                 -- 전공 / 교양 필수 / 교양 선택 ...
+  category   text,                          -- 시간표 배지: 전필 / 전선 / 교양 / 일선
+  professor  text,
+  room       text,                          -- 강의실 (예: 북304)
   department text,
   times      jsonb not null default '[]',   -- [{"day":"화","start":"10:30","end":"12:00"}]
   created_at timestamptz not null default now()
@@ -56,7 +60,11 @@ create table timetable (
   user_id     uuid not null references profiles(user_id) on delete cascade,
   course_id   bigint references courses(id) on delete set null,  -- 직접 입력이면 null
   course_name text not null,
+  code        text,
   credits     int not null,
+  category    text,                           -- 전필 / 전선 / 교양 / 일선 (직접 입력은 전공 / 교양)
+  professor   text,
+  room        text,
   times       jsonb not null default '[]',
   created_at  timestamptz not null default now()
 );

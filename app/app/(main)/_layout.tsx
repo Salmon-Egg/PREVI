@@ -16,7 +16,7 @@ export default function MainLayout() {
     <Stack
       screenOptions={{
         headerTintColor: color.ink,
-        headerTitleStyle: { fontWeight: '700' },
+        headerTitleStyle: { fontWeight: '800', color: color.primary }, // 시안: 화면 제목은 초록
         headerShadowVisible: false,
         headerBackButtonDisplayMode: 'minimal',
         contentStyle: { backgroundColor: color.bg },

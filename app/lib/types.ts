@@ -58,6 +58,7 @@ export type NoticeItem = {
 };
 
 export type NoticeDetail = NoticeItem & {
+  body: string;
   documents: string[];
   url: string | null;
   eligibility: { verdict: Verdict; reasons: string[] } | null;
@@ -72,6 +73,7 @@ export type Scholarship = {
   verdict: Verdict;
   reasons: string[];
   applied: boolean;
+  applied_at: string | null;
 };
 
 export type Application = { notice_id: number; title: string; applied_at: string };
@@ -97,8 +99,14 @@ export type GradeItem = { id: number; term: string; course_name: string; credits
 export type GradeTerm = { term: string; gpa: number | null; items: GradeItem[] };
 
 export type ClassTime = { day: string; start: string; end: string };
-export type Course = { id: number; name: string; credits: number; area: string; times: ClassTime[] };
-export type TimetableEntry = { id: number; course_id: number | null; course_name: string; credits: number; times: ClassTime[] };
+export type Course = {
+  id: number; name: string; code: string | null; credits: number; area: string;
+  category: string | null; professor: string | null; room: string | null; times: ClassTime[];
+};
+export type TimetableEntry = {
+  id: number; course_id: number | null; course_name: string; code: string | null; credits: number;
+  category: string | null; professor: string | null; room: string | null; times: ClassTime[];
+};
 
 export type ChatCard = { image_url: string | null; title: string; lines: string[]; link: string | null };
 export type ChatAction =

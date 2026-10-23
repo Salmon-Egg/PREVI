@@ -162,6 +162,7 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 ```
 
 목록(`GET /notices`)은 `id`, `title`, `category`, `deadline`, `posted_at`, `summary`의 첫 줄만 줍니다.
+상세(`GET /notices/{id}`)는 위에 더해 `body`(공지 원문, 시안 13), `eligibility`, `todo_id`, `applied`를 줍니다.
 
 ### 장학금 `GET /scholarships`
 
@@ -173,10 +174,13 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
     "deadline": "2026-10-30T18:00:00+09:00",
     "verdict": "eligible",
     "reasons": ["직전 학기 평점 4.0 (기준 3.5 이상) ✓", "재학생 ✓"],
-    "applied": false
+    "applied": false,
+    "applied_at": null
   }
 ]
 ```
+
+- 신청 완료한 장학금은 마감이 지나도 목록에 남고 맨 위에 옴 (시안 12 "신청 완료" 카드)
 
 - `verdict`: `eligible`(신청 가능) · `ineligible`(조건 미충족) · `check`(확인 필요: 소득분위처럼 앱이 모르는 조건이 있을 때)
 
@@ -223,17 +227,22 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 ### 과목 검색 `GET /courses?q=소프트`
 
 ```json
-[ { "id": 40, "name": "소프트웨어공학", "credits": 3, "area": "전공", "times": [ { "day": "화", "start": "10:30", "end": "12:00" } ] } ]
+[ { "id": 40, "name": "빅데이터분석", "code": "CS0355", "credits": 3, "area": "전공", "category": "전선",
+    "professor": "박데이터", "room": "정보301", "times": [ { "day": "수", "start": "13:00", "end": "16:00" } ] } ]
 ```
+
+- `q`는 과목명 또는 과목코드. 시간은 교시 단위로 넣고(01교시 = 09:00~10:00), 앱이 "수 05,06,07"로 보여 줌
 
 ### 시간표 `GET /timetable` · `POST /timetable`
 
 ```json
-{ "id": 3, "course_name": "소프트웨어공학", "credits": 3, "times": [ { "day": "화", "start": "10:30", "end": "12:00" } ] }
+{ "id": 3, "course_id": 40, "course_name": "빅데이터분석", "code": "CS0355", "credits": 3, "category": "전선",
+  "professor": "박데이터", "room": "정보301", "times": [ { "day": "수", "start": "13:00", "end": "16:00" } ] }
 ```
 
-- `POST`는 과목 검색 결과 `{ "course_id": 40 }` 또는 직접 입력 `{ "course_name": "...", "credits": 3, "times": [...] }`
+- `POST`는 과목 검색 결과 `{ "course_id": 40 }` 또는 직접 입력 `{ "course_name": "...", "credits": 3, "category": "전공" | "교양", "room": "...", "professor": "...", "times": [...] }`
 - 시간이 겹치면 `409` + `TIME_CONFLICT`, 학기 학점 상한을 넘으면 `409` + `CREDIT_LIMIT` (L-7 화면)
+- `TIME_CONFLICT`의 `message`는 두 줄: `"강의 시간 중복 (금요일 04교시)\n기존 수강 과목 [서경인성리더십]과 수업 시간대가 서로 겹칩니다."` (시안 08 그대로)
 
 ### 챗봇 `POST /chat`
 

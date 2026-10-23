@@ -58,8 +58,11 @@ def test_target_match():
 
 def test_conflict_and_limits():
     entries = [{"course_name": "서경인성리더십", "times": [{"day": "금", "start": "12:00", "end": "13:00"}]}]
-    assert schedule.find_conflict([{"day": "금", "start": "10:00", "end": "13:00"}], entries) == "금 12:00~13:00 서경인성리더십"
+    hit = schedule.find_conflict([{"day": "금", "start": "10:00", "end": "13:00"}], entries)
+    assert hit == {"course_name": "서경인성리더십", "day": "금", "start": "12:00", "end": "13:00"}
     assert schedule.find_conflict([{"day": "금", "start": "13:00", "end": "14:00"}], entries) is None
+    assert schedule.periods("10:00", "13:00") == "02, 03, 04교시"
+    assert schedule.periods("10:30", "12:00") == "10:30~12:00"
     assert schedule.credit_limit(4.0) == 21 and schedule.credit_limit(3.9) == 19
 
 

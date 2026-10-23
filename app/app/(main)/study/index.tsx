@@ -1,15 +1,18 @@
-// L-1 내 학업 메인: 졸업 요건 요약 + 시간표(L-3) / 성적(L-8, L-9) 탭
+// L-1 내 학업: 졸업 요건 요약 + 탭 [졸업 | 시간표(시안 02) | 성적(시안 09)]
+import { Feather } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Body, Button, Card, confirmAsk, Row, Screen, StateView, Sub, Title } from '../../../components/ui';
-import { api, useApi } from '../../../lib/api';
+import { GradesView } from '../../../components/GradesView';
+import { TimetableGrid } from '../../../components/TimetableGrid';
+import { Body, Card, Row, Screen, StateView, Sub } from '../../../components/ui';
+import { useApi } from '../../../lib/api';
+import { semesterLabel } from '../../../lib/format';
 import { color } from '../../../lib/theme';
-import type { GradeTerm, Graduation, TimetableEntry } from '../../../lib/types';
+import type { Graduation, TimetableEntry } from '../../../lib/types';
 
 const TABS = ['졸업', '시간표', '성적'] as const;
-const DAYS = ['월', '화', '수', '목', '금'];
 
 export default function Study() {
   const [tab, setTab] = useState<(typeof TABS)[number]>('졸업');
@@ -28,10 +31,10 @@ export default function Study() {
         )}
       </StateView>
 
-      <View style={{ flexDirection: 'row', backgroundColor: color.surface, borderRadius: 12, padding: 4 }}>
+      <View style={st.tabs}>
         {TABS.map((t) => (
-          <Pressable key={t} onPress={() => setTab(t)} style={{ flex: 1, padding: 8, borderRadius: 9, backgroundColor: tab === t ? color.bg : undefined }}>
-            <Text style={{ textAlign: 'center', fontWeight: '700', color: tab === t ? color.ink : color.inkSub }}>{t}</Text>
+          <Pressable key={t} onPress={() => setTab(t)} style={[st.tab, tab === t && st.tabOn]}>
+            <Text style={[st.tabText, tab === t && { color: color.ink }]}>{t}</Text>
           </Pressable>
         ))}
       </View>
@@ -45,74 +48,31 @@ export default function Study() {
         </Card>
       ))}
       {tab === '시간표' && <Timetable />}
-      {tab === '성적' && <Grades />}
+      {tab === '성적' && <GradesView />}
     </Screen>
   );
 }
 
+/** 시안 02: 학기 제목 + 연필(편집) + 주간 표 */
 function Timetable() {
   const { data, error, loading, reload } = useApi<TimetableEntry[]>('/timetable');
-
-  function remove(e: TimetableEntry) {
-    api.del(`/timetable/${e.id}`).then(reload);
-  }
-
   return (
     <StateView loading={loading} error={error} empty={!data} onRetry={reload}>
-      {DAYS.map((day) => {
-        const items = (data ?? []).flatMap((e) => e.times.filter((t) => t.day === day).map((t) => ({ e, t })));
-        return (
-          <Row key={day} style={{ alignItems: 'flex-start' }}>
-            <Text style={{ width: 24, fontWeight: '700', color: color.inkSub, paddingTop: 10 }}>{day}</Text>
-            <View style={{ flex: 1, gap: 6 }}>
-              {items.length === 0 && <Sub style={{ paddingTop: 10 }}>수업 없음</Sub>}
-              {items.sort((a, b) => a.t.start.localeCompare(b.t.start)).map(({ e, t }) => (
-                <Card key={`${e.id}-${t.start}`} onPress={() => confirmAsk(e.course_name, '시간표에서 뺄까요?', '빼기', () => remove(e))}>
-                  <Body style={{ fontWeight: '600' }}>{e.course_name}</Body>
-                  <Sub>{t.start}~{t.end} · {e.credits}학점</Sub>
-                </Card>
-              ))}
-            </View>
-          </Row>
-        );
-      })}
-      <Sub>이번 학기 {(data ?? []).reduce((n, e) => n + e.credits, 0)}학점</Sub>
-      <Button label="+ 과목 추가하기" onPress={() => router.push('/study/add-course')} />
+      <Row style={{ justifyContent: 'space-between' }}>
+        <Text style={st.sectionTitle}>{semesterLabel()} 시간표</Text>
+        <Pressable accessibilityLabel="시간표 편집" onPress={() => router.push('/study/timetable-edit')}>
+          <Feather name="edit-2" size={22} color={color.ink} />
+        </Pressable>
+      </Row>
+      <TimetableGrid entries={data ?? []} />
     </StateView>
   );
 }
 
-function Grades() {
-  const { data, error, loading, reload } = useApi<GradeTerm[]>('/grades');
-  const [editing, setEditing] = useState(false);
-
-  async function remove(id: number) {
-    await api.del(`/grades/${id}`);
-    reload();
-  }
-
-  return (
-    <StateView loading={loading} error={error} empty={!data?.length} emptyText="입력한 성적이 없어요" onRetry={reload}>
-      {data?.map((term) => (
-        <Card key={term.term}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <Title>{term.term.replace('-', '학년 ')}학기</Title>
-            <Body style={{ fontWeight: '700' }}>{term.gpa ?? '-'} / 4.5</Body>
-          </Row>
-          {term.items.map((g) => (
-            <Row key={g.id} style={{ justifyContent: 'space-between', paddingVertical: 4 }}>
-              <Pressable style={{ flex: 1 }} disabled={!editing}
-                onPress={() => router.push({ pathname: '/study/grade-edit', params: { ...g, id: String(g.id), credits: String(g.credits) } })}>
-                <Body>{g.course_name} <Sub>({g.credits}학점 · {g.area})</Sub></Body>
-              </Pressable>
-              <Body style={{ fontWeight: '700' }}>{g.grade}</Body>
-              {editing && <Pressable onPress={() => remove(g.id)}><Text style={{ color: color.alert, marginLeft: 12 }}>삭제</Text></Pressable>}
-            </Row>
-          ))}
-        </Card>
-      ))}
-      {editing && <Button label="+ 과목 추가하기" kind="ghost" onPress={() => router.push('/study/grade-edit')} />}
-      <Button label={editing ? '수정 완료하기' : '성적 수정하기'} onPress={() => setEditing(!editing)} />
-    </StateView>
-  );
-}
+const st = StyleSheet.create({
+  tabs: { flexDirection: 'row', backgroundColor: color.surface, borderRadius: 12, padding: 4 },
+  tab: { flex: 1, padding: 8, borderRadius: 9 },
+  tabOn: { backgroundColor: '#fff' },
+  tabText: { textAlign: 'center', fontWeight: '700', color: color.inkSub },
+  sectionTitle: { fontSize: 18, fontWeight: '800', color: color.primary },
+});

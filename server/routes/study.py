@@ -10,7 +10,7 @@ from auth import current_user
 from db import Json
 from errors import ApiError, not_found
 from logic.grades import by_term, last_term
-from logic.schedule import credit_limit, find_conflict
+from logic.schedule import credit_limit, find_conflict, periods
 
 router = APIRouter()
 Grade = Literal["A+", "A0", "B+", "B0", "C+", "C0", "D+", "D0", "F", "P"]
@@ -67,38 +67,50 @@ class TimetableIn(BaseModel):
     course_id: int | None = None  # 과목 검색으로 추가
     course_name: str | None = None  # 또는 직접 입력
     credits: int | None = Field(default=None, ge=0, le=9)
+    category: Literal["전공", "교양"] | None = None  # 직접 입력의 과목 구분
     times: list[Time] | None = None
+    room: str | None = None
+    professor: str | None = None
+
+
+TT_COLS = "id, course_id, course_name, code, credits, category, professor, room, times"
 
 
 @router.get("/timetable")
 def list_timetable(uid: str = Depends(current_user)):
-    return db.all_rows("select id, course_id, course_name, credits, times from timetable where user_id = %s order by id", [uid])
+    return db.all_rows(f"select {TT_COLS} from timetable where user_id = %s order by id", [uid])
 
 
 @router.post("/timetable", status_code=201)
 def add_timetable(body: TimetableIn, uid: str = Depends(current_user)):
     if body.course_id:
-        c = db.one("select id, name, credits, times from courses where id = %s", [body.course_id])
+        c = db.one("select * from courses where id = %s", [body.course_id])
         if not c:
             raise not_found("과목")
-        name, credits, times = c["name"], c["credits"], c["times"]
+        new = {k: c[k] for k in ("code", "credits", "category", "professor", "room", "times")} | {"course_name": c["name"]}
     elif body.course_name and body.credits is not None and body.times:
-        name, credits, times = body.course_name, body.credits, [t.model_dump() for t in body.times]
+        new = {"course_name": body.course_name, "code": None, "credits": body.credits, "category": body.category,
+               "professor": body.professor, "room": body.room, "times": [t.model_dump() for t in body.times]}
     else:
         raise ApiError(400, "BAD_REQUEST", "과목을 고르거나 과목명·학점·시간을 입력해 주세요")
 
     entries = list_timetable(uid)
-    conflict = find_conflict(times, entries)
-    if conflict:
-        raise ApiError(409, "TIME_CONFLICT", f"{conflict}과(와) 시간이 겹쳐요")
+    hit = find_conflict(new["times"], entries)
+    if hit:  # 앱 L-7 "수강 과목 등록 불가" 창에 그대로 보여 줌
+        raise ApiError(409, "TIME_CONFLICT",
+                       f"강의 시간 중복 ({hit['day']}요일 {periods(hit['start'], hit['end'])})\n"
+                       f"기존 수강 과목 [{hit['course_name']}]과 수업 시간대가 서로 겹칩니다.")
     limit = credit_limit(last_term(agent.grades_of(uid))[0])
-    total = sum(e["credits"] for e in entries) + credits
+    total = sum(e["credits"] for e in entries) + new["credits"]
     if total > limit:
         raise ApiError(409, "CREDIT_LIMIT", f"이번 학기 최대 {limit}학점까지 신청할 수 있어요 (지금 {total}학점)")
 
-    row = db.one("insert into timetable (user_id, course_id, course_name, credits, times) values (%s, %s, %s, %s, %s) "
-                 "returning id, course_id, course_name, credits, times",
-                 [uid, body.course_id, name, credits, Json(times)])
+    row = db.one(
+        f"""insert into timetable (user_id, course_id, course_name, code, credits, category, professor, room, times)
+            values (%s, %s, %s, %s, %s, %s, %s, %s, %s) returning {TT_COLS}""",
+        [uid, body.course_id, new["course_name"], new["code"], new["credits"], new["category"],
+         new["professor"], new["room"], Json(new["times"])],
+    )
     agent.recalc(uid)
     return row
 
