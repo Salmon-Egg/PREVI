@@ -1,0 +1,22 @@
+서경 AI 비서 MVP 링크
+
+[MVP 보기 (휴대폰·PC 브라우저)]
+http://0djqt5g-anonymous-8090.exp.direct
+
+- 예시 데이터 모드라 서버 없이 화면이 다 돌아감
+- 들어가서 가상 학생 4명 중 한 명을 골라 로그인 (홍길동 = 4학년)
+- 주의: 만든 사람 PC에서 Expo 서버(npx expo start --tunnel ngrok --port 8090)가
+  켜져 있는 동안만 열림. 안 열리면 서버가 꺼진 것
+- Expo Go 앱으로 열려면 같은 서버에서 뜨는 QR을 찍기
+
+[레포]
+https://github.com/Salmon-Egg/front-back-kick
+
+[작업 보드]
+https://github.com/users/Salmon-Egg/projects/2/views/1
+
+[내 PC에서 직접 켜기]
+cd app
+npm install
+copy .env.example .env   (EXPO_PUBLIC_USE_MOCK=1)
+npx expo start           → w 누르면 웹, QR은 Expo Go
