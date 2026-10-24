@@ -94,17 +94,29 @@ const chatReply = (text: string): ChatReply => ({
 
 export async function mockFetch(method: string, path: string, body?: any): Promise<unknown> {
   await new Promise((r) => setTimeout(r, 200)); // 로딩 화면 확인용
-  const [p] = path.split('?');
+  const [p, qs] = path.split('?');
+  const q = new URLSearchParams(qs);
   const id = Number(p.split('/')[2]);
   const key = `${method} ${p.replace(/\/\d+$/, '/:id')}`;
   switch (key) {
     case 'GET /me': return me;
-    case 'PUT /me': return Object.assign(me, body);
+    case 'PUT /me': return Object.assign(me, body, body.notify && { notify: { ...me.notify, ...body.notify } }); // 서버처럼 notify는 합치기
+    case 'DELETE /me': return undefined;
     case 'GET /home': return home();
-    case 'GET /todos': return todos;
+    case 'GET /todos':
+      return todos.filter((t) => (!q.has('done') || String(t.done) === q.get('done')) && (!q.get('type') || t.type === q.get('type')));
     case 'GET /todos/:id': return todos.find((t) => t.id === id);
-    case 'PATCH /todos/:id': return Object.assign(todos.find((t) => t.id === id)!, body);
-    case 'POST /todos': return { id: Date.now(), ...body, d_day: null, done: false };
+    case 'PATCH /todos/:id': {
+      const t = Object.assign(todos.find((x) => x.id === id)!, body, { done_at: body.done ? new Date().toISOString() : null });
+      const s = t.type === 'scholarship' && scholarships.find((x) => x.notice_id === t.source?.id);
+      if (s) Object.assign(s, { applied: t.done, applied_at: t.done_at }); // 서버처럼 신청 내역에 기록
+      return t;
+    }
+    case 'POST /todos': {
+      const t: TodoDetail = { id: Date.now(), type: 'deadline', link: null, reason: '직접 등록한 일이에요.', source: null, ...body, d_day: null, done: false, done_at: null };
+      todos.push(t);
+      return t;
+    }
     case 'GET /scholarships': return scholarships;
     case 'GET /scholarship-applications': return [];
     case 'GET /notices': return scholarships.map((s) => ({ id: s.notice_id, title: s.title, category: '장학', deadline: s.deadline, posted_at: null, summary: [s.reasons[0]] }));
