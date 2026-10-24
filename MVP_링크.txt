@@ -1,11 +1,17 @@
 서경 AI 비서 MVP 링크
 
-[MVP 보기 (휴대폰·PC 브라우저)]
-http://0djqt5g-anonymous-8090.exp.direct
+[MVP 보기 (휴대폰·PC 브라우저) — FE 1~35번 완성본]
+https://claude.ai/artifact/KSy1QoVa8q13N759se35Pp
 
-- 예시 데이터 모드라 서버 없이 화면이 다 돌아감
+- 예시 데이터 모드라 서버 없이 화면이 다 돌아감 (PC가 꺼져 있어도 열림)
 - 들어가서 가상 학생 4명 중 한 명을 골라 로그인 (홍길동 = 4학년)
-- 주의: 만든 사람 PC에서 Expo 서버(npx expo start --tunnel ngrok --port 8090)가
+- 공유받은 사람만 열림. 안 열리면 만든 사람에게 공유 요청
+- 링크가 안 될 때: demo/시연_사이트_열기.bat 더블클릭 → http://localhost:8095
+  (demo/index.html이 없으면 app 폴더에서 npm run build:demo로 먼저 만들기)
+
+[이전 MVP 뼈대 보기 (예전 버전)]
+http://0djqt5g-anonymous-8090.exp.direct
+- 만든 사람 PC에서 Expo 서버(npx expo start --tunnel ngrok --port 8090)가
   켜져 있는 동안만 열림. 안 열리면 서버가 꺼진 것
 - Expo Go 앱으로 열려면 같은 서버에서 뜨는 QR을 찍기
 
