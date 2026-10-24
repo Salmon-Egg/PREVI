@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# 시연 사이트 빌드 중간 결과 (scripts/build-demo.mjs)
+dist-demo/

@@ -1,3 +1,4 @@
+// ▶ FE 23번에 해당하는 부분: L-8 성적 조회 / L-9 수정 모드 공통 화면
 // 성적 보기 (시안 09) / 수정 모드 (시안 10). 내 학업 탭과 성적 수정 화면이 같이 씀.
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';

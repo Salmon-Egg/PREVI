@@ -1,22 +1,28 @@
 // 홈 (피그마 seokyeong_ui_home 1 기준)
-// 인사·캐릭터 → 오늘 챙길 일(3개씩 넘겨 보기) → 어떤 도움이 필요하신가요?(4칸) → 아래 질문창
+// 인사·캐릭터 → 오늘 챙길 일(3개씩 넘겨 보기 + 다음 일정 카드) → 어떤 도움이 필요하신가요?(3칸/4칸 + 비서 한 줄) → 아래 질문창 + 추천 질문
+// ▶ FE 1번에 해당하는 부분: 홈 허브 + 상단 알림·프로필 아이콘 (메뉴별 화면은 Stack으로 쌓임)
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { StateView } from '../../components/ui';
+import { Character, StateView } from '../../components/ui';
 import { useApi } from '../../lib/api';
+import { LOST_ENABLED } from '../../lib/config';
+import { onPushReceived } from '../../lib/push';
 import { color } from '../../lib/theme';
 import type { Home as HomeData, Todo } from '../../lib/types';
 
-const MENUS: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; href: Href }[] = [
-  { label: '내 학업', icon: 'book-open-variant', href: '/study' },
-  { label: '장학금', icon: 'school-outline', href: '/scholarships' },
-  { label: '학사 행정', icon: 'file-document-outline', href: '/office' },
-  { label: '캠퍼스 생활', icon: 'map-marker-outline', href: '/campus' },
+// ▶ FE 14번에 해당하는 부분: 메뉴 칸. status는 GET /home의 menu_status 키 (칸마다 비서 한 줄)
+// 기본 3칸, 분실물이 완성되면(LOST_ENABLED) 캠퍼스 생활까지 4칸 (작업 리스트 결정 7)
+const ALL_MENUS: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; href: Href; status: keyof HomeData['menu_status'] }[] = [
+  { label: '내 학업', icon: 'book-open-variant', href: '/study', status: 'study' },
+  { label: '장학금', icon: 'school-outline', href: '/scholarships', status: 'scholarship' },
+  { label: '학사 행정', icon: 'file-document-outline', href: '/office', status: 'admin' },
+  { label: '캠퍼스 생활', icon: 'map-marker-outline', href: '/campus', status: 'campus' },
 ];
+const MENUS = LOST_ENABLED ? ALL_MENUS : ALL_MENUS.slice(0, 3);
 
 const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -32,9 +38,13 @@ export default function Home() {
   const { data, error, loading, reload } = useApi<HomeData>('/home');
   const [page, setPage] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
+  // ▶ FE 5번에 해당하는 부분: 앱 사용 중 푸시를 받으면 홈(알림 점·오늘 챙길 일)을 다시 불러옴
+  useEffect(() => onPushReceived(reload), [reload]);
 
-  const pages: Todo[][] = [];
+  // ▶ FE 13번에 해당하는 부분: 오늘 챙길 일(D-day 순) 3개씩 한 쪽 + 마지막 쪽은 다음 일정 카드 (피그마 홈: 다음 일정 → A-2)
+  const pages: (Todo[] | 'event')[] = [];
   for (let i = 0; i < (data?.today_todos.length ?? 0); i += 3) pages.push(data!.today_todos.slice(i, i + 3));
+  if (data?.next_event) pages.push('event');
 
   return (
     <SafeAreaView style={st.safe} edges={['top']}>
@@ -62,16 +72,16 @@ export default function Home() {
         <StateView loading={loading} error={error} empty={!data} onRetry={reload}>
           {data && (
             <>
-              {/* 인사 + 캐릭터. 인사 아래 문장은 비서 브리핑 */}
+              {/* ▶ FE 12번에 해당하는 부분: 캐릭터 + 브리핑 말풍선 → 누르면 H-2 채팅 (브리핑 내용을 이어서 물어봄) */}
               <View style={st.hero}>
                 <View style={{ flex: 1, gap: 10 }}>
                   <Text style={st.hello}>안녕하세요,{'\n'}{data.nickname || '서경인'}님!</Text>
-                  <Text style={st.briefing}>{data.briefing}</Text>
+                  <Text style={st.helloSub}>오늘도 서경 AI와{'\n'}편리한 캠퍼스 생활을 시작해요.</Text>
                 </View>
-                <Pressable onPress={() => router.push('/chat')} style={st.character}>
-                  <View style={st.bubble}><Text style={st.bubbleText}>필요한 정보,{'\n'}바로 찾아드릴게요!</Text></View>
-                  {/* 캐릭터 이미지 자리: 피그마 코끼리 이미지를 assets/character.png로 받아서 교체 */}
-                  <Text style={{ fontSize: 76 }}>🐘</Text>
+                <Pressable accessibilityLabel="오늘 브리핑 자세히 묻기" style={st.character}
+                  onPress={() => router.push({ pathname: '/chat', params: { q: '오늘 내가 챙길 일 자세히 알려줘' } })}>
+                  <View style={st.bubble}><Text style={st.bubbleText}>{data.briefing || '필요한 정보,\n바로 찾아드릴게요!'}</Text></View>
+                  <Character size={124} />
                 </Pressable>
               </View>
 
@@ -92,7 +102,9 @@ export default function Home() {
                       onScroll={(e) => cardWidth && setPage(Math.round(e.nativeEvent.contentOffset.x / cardWidth))} scrollEventThrottle={16}>
                       {pages.map((items, p) => (
                         <View key={p} style={[st.todoCard, { width: cardWidth || undefined }]}>
-                          {items.map((t, i) => <TodoRow key={t.id} t={t} last={i === items.length - 1} />)}
+                          {items === 'event'
+                            ? <EventCard e={data.next_event!} />
+                            : items.map((t, i) => <TodoRow key={t.id} t={t} last={i === items.length - 1} />)}
                         </View>
                       ))}
                     </ScrollView>
@@ -114,34 +126,54 @@ export default function Home() {
                     <Pressable key={m.label} style={st.tile} onPress={() => router.push(m.href)}>
                       <View style={st.tileIcon}><MaterialCommunityIcons name={m.icon} size={24} color={color.primary} /></View>
                       <Text style={st.tileLabel}>{m.label}</Text>
+                      {/* 비서 한 줄 상태 */}
+                      {!!data.menu_status[m.status] && <Text style={st.tileStatus} numberOfLines={2}>{data.menu_status[m.status]}</Text>}
                     </Pressable>
                   ))}
                 </View>
               </View>
 
-              {/* 추천 질문 */}
-              <View style={st.chips}>
-                {data.suggested_questions.map((q) => (
-                  <Pressable key={q} style={st.chip} onPress={() => router.push({ pathname: '/chat', params: { q } })}>
-                    <Text style={st.chipText}>{q}</Text>
-                  </Pressable>
-                ))}
-              </View>
             </>
           )}
         </StateView>
       </ScrollView>
 
-      {/* 아래 질문창 */}
+      {/* ▶ FE 15번에 해당하는 부분: 하단 질문창 + 추천 질문 3개 → H-2 (피그마: 질문창 아래 칩) */}
       <View style={st.sheet}>
         <View style={st.handle} />
         <Pressable style={st.ask} onPress={() => router.push('/chat')}>
-          <View style={st.askAvatar}><Text style={{ fontSize: 26 }}>🐘</Text></View>
+          <View style={st.askAvatar}><Character face size={44} /></View>
           <Text style={st.askText}>서경 AI에게 물어보세요!</Text>
           <View style={st.askBtn}><Feather name="arrow-right" size={22} color="#fff" /></View>
         </Pressable>
+        {!!data?.suggested_questions.length && (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={st.chips}>
+            {data.suggested_questions.slice(0, 3).map((q) => (
+              <Pressable key={q} style={st.chip} onPress={() => router.push({ pathname: '/chat', params: { q } })}>
+                <Text style={st.chipText}>{q}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
+        )}
       </View>
     </SafeAreaView>
+  );
+}
+
+/** ▶ FE 13번에 해당하는 부분: 다음 일정 카드 (피그마 홈 2쪽) → A-2 학사 일정 */
+function EventCard({ e }: { e: NonNullable<HomeData['next_event']> }) {
+  const d = new Date(e.start_date + 'T00:00:00');
+  return (
+    <Pressable style={st.event} onPress={() => router.push('/office/calendar')}>
+      <View style={st.eventIcon}><MaterialCommunityIcons name="school" size={34} color={color.primary} /></View>
+      <View style={{ flex: 1, gap: 3 }}>
+        <Text style={st.eventLabel}>다음 일정 · {e.d_day === 0 ? '오늘' : `D-${e.d_day}`}</Text>
+        <Text style={st.eventTitle} numberOfLines={1}>{e.title}</Text>
+        <Text style={st.eventDate}>{d.getMonth() + 1}/{d.getDate()}({DAYS[d.getDay()]})</Text>
+        <Text style={st.eventSub}>다가오는 학사 일정이에요.</Text>
+      </View>
+      <View style={st.eventGo}><Feather name="chevron-right" size={20} color={color.primary} /></View>
+    </Pressable>
   );
 }
 
@@ -172,7 +204,7 @@ const shadow = { shadowColor: '#0C6B3F', shadowOpacity: 0.08, shadowRadius: 16, 
 
 const st = StyleSheet.create({
   safe: { flex: 1, backgroundColor: color.homeBg },
-  scroll: { padding: 16, gap: 16, paddingBottom: 140 },
+  scroll: { padding: 16, gap: 16, paddingBottom: 190 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   logo: { fontSize: 28, fontWeight: '800', color: color.primary },
@@ -181,10 +213,17 @@ const st = StyleSheet.create({
 
   hero: { flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 170 },
   hello: { fontSize: 30, fontWeight: '800', color: color.ink, lineHeight: 40 },
-  briefing: { fontSize: 15, color: color.inkSub, lineHeight: 22 },
-  character: { alignItems: 'center', width: 130 },
-  bubble: { backgroundColor: '#fff', borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10, transform: [{ rotate: '-6deg' }], ...shadow },
-  bubbleText: { fontSize: 11, color: color.primary, fontWeight: '600', textAlign: 'center' },
+  helloSub: { fontSize: 15, color: color.inkSub, lineHeight: 22 },
+  character: { alignItems: 'center', width: 150, gap: 4 },
+  bubble: { backgroundColor: '#fff', borderRadius: 14, paddingVertical: 7, paddingHorizontal: 10, transform: [{ rotate: '-4deg' }], maxWidth: 150, ...shadow },
+  bubbleText: { fontSize: 11, color: color.primary, fontWeight: '700', textAlign: 'center', lineHeight: 15 },
+  event: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 18, paddingHorizontal: 4 },
+  eventIcon: { width: 64, height: 64, borderRadius: 32, backgroundColor: color.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  eventLabel: { fontSize: 12, color: color.inkSub, fontWeight: '600' },
+  eventTitle: { fontSize: 18, fontWeight: '800', color: color.ink },
+  eventDate: { fontSize: 14, color: color.inkSub },
+  eventSub: { fontSize: 13, color: color.inkSub },
+  eventGo: { width: 36, height: 36, borderRadius: 18, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: color.line },
 
   panel: { backgroundColor: '#fff', borderRadius: 24, padding: 18, gap: 14, ...shadow },
   panelTitle: { fontSize: 20, fontWeight: '800', color: color.ink },
@@ -214,15 +253,16 @@ const st = StyleSheet.create({
   tile: { flex: 1, backgroundColor: '#fff', borderRadius: 18, paddingVertical: 14, alignItems: 'center', gap: 8, ...shadow },
   tileIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: color.primarySoft, alignItems: 'center', justifyContent: 'center' },
   tileLabel: { fontSize: 13, fontWeight: '700', color: color.ink },
+  tileStatus: { fontSize: 11, color: color.primaryLight, fontWeight: '700', textAlign: 'center', paddingHorizontal: 4 },
 
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  chips: { flexDirection: 'row', gap: 8, paddingTop: 10 },
   chip: { backgroundColor: '#fff', borderRadius: 16, paddingVertical: 7, paddingHorizontal: 12, borderWidth: 1, borderColor: color.line },
   chipText: { fontSize: 13, color: color.inkSub },
 
   sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, backgroundColor: '#fff', borderTopLeftRadius: 28, borderTopRightRadius: 28, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24, ...shadow },
   handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: '#D5DBD7', marginBottom: 10 },
   ask: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: color.line, borderRadius: 32, padding: 6, paddingLeft: 8 },
-  askAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: color.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  askAvatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: color.primarySoft, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   askText: { flex: 1, fontSize: 17, fontWeight: '800', color: color.primary },
   askBtn: { width: 48, height: 48, borderRadius: 24, backgroundColor: color.primary, alignItems: 'center', justifyContent: 'center' },
 });

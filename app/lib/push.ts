@@ -1,5 +1,7 @@
+// ▶ FE 5번에 해당하는 부분: 서버 푸시 — 알림 권한 요청, 푸시 토큰 등록(PUT /me), 알림을 눌렀을 때 대상 화면 이동,
+//   앱 사용 중 수신 시 앱 안 표시(배너 + 홈 알림 점 새로고침), 앱이 꺼진 상태에서 알림으로 열었을 때도 이동
 // 푸시 알림: 권한 요청 → 토큰을 서버에 등록(PUT /me) → 알림을 누르면 해당 화면으로.
-// Expo Go와 웹에서는 동작하지 않음. EAS 개발 빌드에서 확인 (FE B).
+// Expo Go와 웹에서는 동작하지 않음. EAS 개발 빌드(eas.json의 development 프로필)에서 확인 (FE B).
 import { isRunningInExpoGo } from 'expo';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
@@ -50,12 +52,35 @@ export async function registerPush() {
   }
 }
 
+// 앱을 쓰는 중에 알림이 오면 알려 줄 곳 (홈이 안 읽은 알림 점을 다시 불러옴)
+const received = new Set<() => void>();
+
+/** 앱 사용 중 알림 수신을 구독. 정리 함수를 돌려줌 */
+export function onPushReceived(fn: () => void) {
+  received.add(fn);
+  return () => {
+    received.delete(fn);
+  };
+}
+
+type PushData = { type?: NotifyType; target_id?: number | null };
+
 /** 알림을 누르면 data.type, data.target_id로 화면 이동. 정리 함수를 돌려줌. */
 export function listenPushTaps() {
   if (off) return () => {};
-  const sub = Notifications.addNotificationResponseReceivedListener((res) => {
-    const d = res.notification.request.content.data as { type?: NotifyType; target_id?: number | null };
+  const open = (d: PushData | undefined) => {
     if (d?.type) router.push(screenFor(d.type, d.target_id ?? null));
-  });
-  return () => sub.remove();
+  };
+  // 앱이 꺼져 있을 때 알림을 눌러서 켠 경우: 마지막으로 누른 알림을 한 번만 처리
+  const last = Notifications.getLastNotificationResponse();
+  if (last) {
+    setTimeout(() => open(last.notification.request.content.data as PushData), 0); // 화면 준비 뒤 이동
+    Notifications.clearLastNotificationResponse();
+  }
+  const tap = Notifications.addNotificationResponseReceivedListener((res) => open(res.notification.request.content.data as PushData));
+  const got = Notifications.addNotificationReceivedListener(() => received.forEach((fn) => fn()));
+  return () => {
+    tap.remove();
+    got.remove();
+  };
 }

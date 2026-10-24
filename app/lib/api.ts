@@ -1,3 +1,4 @@
+// ▶ FE 3번에 해당하는 부분: API 클라이언트 한 곳(인증 토큰 자동 첨부), 예시 데이터 ↔ 실제 서버 전환(USE_MOCK)
 // 서버를 부르는 코드는 이 파일 한 곳에만 (app/README.md).
 // USE_MOCK=1이면 서버 대신 mocks/의 예시 데이터를 돌려줌.
 import { useCallback, useState } from 'react';

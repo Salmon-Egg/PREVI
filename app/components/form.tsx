@@ -1,3 +1,4 @@
+// ▶ FE 2번에 해당하는 부분: 입력 공통 부품
 // 입력 부품 (시안 07, 11, 15, 16): 라벨, 드롭다운, 버튼 묶음, 아래에서 뜨는 창, 확인 창
 import { Feather } from '@expo/vector-icons';
 import { useState, type ReactNode } from 'react';

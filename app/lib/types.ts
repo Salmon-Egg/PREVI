@@ -1,6 +1,8 @@
 // 서버 응답 모양 (docs/04_API_명세.md와 같게 유지)
 
 export type TodoType = 'deadline' | 'scholarship' | 'graduation' | 'status';
+// ▶ FE 16번에 해당하는 부분: 할 일 종류 이름 (필터 칩·배지)
+export const TODO_TYPE_KO: Record<TodoType, string> = { deadline: '마감', scholarship: '장학', graduation: '졸업', status: '학적' };
 export type Verdict = 'eligible' | 'ineligible' | 'check';
 export type NotifyType = 'notice' | 'deadline' | 'calendar' | 'chat';
 
@@ -19,7 +21,13 @@ export type Me = {
   completed_requirements: string[];
   consent: { agreed: boolean; agreed_at: string | null };
   notify: { notice: boolean; deadline: boolean; calendar: boolean; chat: boolean; time: string };
+  // ▶ FE 11번에 해당하는 부분: M-5 '비서가 볼 정보'. API 명세에 없는 새 필드라 조장 확인 필요 (없으면 전부 켠 것으로 봄)
+  assistant_scope?: AssistantScope;
 };
+
+/** FE 11번: 비서가 판단할 때 쓸 수 있는 내 정보 */
+export type AssistantScope = { grades: boolean; timetable: boolean; status: boolean; chat_history: boolean };
+export const DEFAULT_SCOPE: AssistantScope = { grades: true, timetable: true, status: true, chat_history: true };
 
 export type Todo = {
   id: number;
@@ -123,7 +131,9 @@ export type Message = {
   created_at: string;
 };
 export type ChatReply = { conversation_id: number; message: Message };
-export type Conversation = { id: number; title: string; pinned: boolean; updated_at: string };
+// ▶ FE 34번에 해당하는 부분: category는 대화 기록 분류 칩(시안 06 ⑤)용. 서버가 안 주면 앱이 제목으로 추측
+export type Conversation = { id: number; title: string; pinned: boolean; updated_at: string; preview?: string; category?: ChatCategory };
+export type ChatCategory = '수업/졸업' | '장학금' | '학사 행정' | '분실물' | '캠퍼스 생활';
 
 export type Notification = {
   id: number;
@@ -133,3 +143,22 @@ export type Notification = {
   read: boolean;
   sent_at: string;
 };
+
+// ▶ FE 35번에 해당하는 부분: 분실물 (C-1~C-5). API 명세에 아직 없음 → 분실물 착수 시 BE와 확정
+export type LostKind = 'found' | 'lost';
+export type LostItem = {
+  id: number;
+  kind: LostKind; // found = 습득물 제보, lost = 분실 신고
+  title: string;
+  category: string; // 지갑, 전자기기, 카드 …
+  place: string;
+  found_at: string; // 날짜+시각
+  keep_at: string | null; // 보관 장소 (습득물)
+  description: string;
+  image_url: string | null;
+  mine: boolean; // 내가 올린 글
+  status: 'open' | 'matched' | 'returned';
+  match: { item_id: number; score: number; reasons: string[] } | null; // AI 매칭 결과
+};
+export const LOST_CATEGORIES = ['지갑', '카드', '전자기기', '가방', '의류', '책·노트', '기타'];
+export type ClaimQuestion = { id: number; question: string };

@@ -1,3 +1,4 @@
+// ▶ FE 20번에 해당하는 부분: L-1 내 학업 메인 (졸업 요건 요약 + 졸업/시간표(FE 22번)/성적(FE 23번) 탭)
 // L-1 내 학업: 졸업 요건 요약 + 탭 [졸업 | 시간표(시안 02) | 성적(시안 09)]
 import { Feather } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';

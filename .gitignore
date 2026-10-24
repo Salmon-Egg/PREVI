@@ -24,3 +24,7 @@ Thumbs.db
 .vscode/
 .idea/
 *.log
+
+# 시연 사이트 결과물 (app에서 npm run build:demo로 다시 만듦, 4MB)
+demo/index.html
+demo/seokyeong-ai-demo.html

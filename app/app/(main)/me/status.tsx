@@ -1,3 +1,4 @@
+// ▶ FE 10번에 해당하는 부분: M-4 학적 정보 변경 + 확인 팝업 → 휴학 변경 시 A-3로 연결
 // 시안 15 학적 정보 변경 + 시안 16 확인 창. 휴학으로 바꾸면 A-3(휴·복학 안내)으로 연결.
 import { router, Stack } from 'expo-router';
 import { useEffect, useState } from 'react';

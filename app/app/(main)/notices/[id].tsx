@@ -1,3 +1,4 @@
+// ▶ FE 25번에 해당하는 부분: S-2 장학 공지 상세 (AI 요약, 판정, 원문 링크, 신청 완료 체크) — A-1(FE 27번) 공지 상세도 같이 씀
 // 시안 13 장학금(공지) 안내: AI 핵심 요약 → 나의 판정 → 공지 원문 → AI 요약 유의사항 → 공지사항 가기 / 신청 완료 체크
 import { Feather } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';

@@ -1,3 +1,4 @@
+// ▶ FE 7번에 해당하는 부분: M-1 로그인 (학교 이메일 인증번호, 시연 모드면 가상 학생 4명)
 // M-1 로그인: 학교 이메일로 인증번호 받기. 시연 모드(DEV_LOGIN)에서는 가상 학생 4명 중 선택.
 import { useState } from 'react';
 import { Text, TextInput, View } from 'react-native';

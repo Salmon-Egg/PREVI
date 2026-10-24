@@ -1,3 +1,4 @@
+// ▶ FE 23번에 해당하는 부분: L-10 성적 항목 추가·수정 → 저장 후 졸업 요건·장학 판정 재계산 결과 표시
 // 시안 11 성적 항목 추가/수정. 저장하면 서버가 졸업 요건·장학 판정을 다시 계산해서 알려 줌.
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';

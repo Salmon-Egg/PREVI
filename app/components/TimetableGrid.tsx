@@ -1,3 +1,4 @@
+// ▶ FE 22번에 해당하는 부분: L-3 주간 시간표 표
 // 주간 시간표 표 (시안 02). 전공은 초록, 교양·일선은 주황.
 import { StyleSheet, Text, View } from 'react-native';
 

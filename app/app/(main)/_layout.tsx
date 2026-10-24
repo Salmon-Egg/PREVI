@@ -1,3 +1,4 @@
+// ▶ FE 1번에 해당하는 부분: 메뉴별 스택 화면 + 처음 쓰는 학생은 M-2(FE 8번)로 보냄
 // 로그인 후 화면들. 처음 쓰는 학생(내 정보가 없음)이면 처음 설정(M-2)으로 보냄.
 import { router, Stack } from 'expo-router';
 import { useEffect } from 'react';

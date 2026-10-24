@@ -1,5 +1,7 @@
 # app/ — 모바일 앱 (Expo SDK 58 + Expo Router)
 
+> 작업 보드 FE 1~35번이 코드 어디에 있는지는 [FE_구현_정리.md](FE_구현_정리.md)를 보세요. 코드에서 `▶ FE`로 검색해도 됩니다.
+
 담당: FE A · FE B
 
 ## 처음 실행
@@ -31,7 +33,8 @@ app/
 │  ├─ login.tsx          M-1
 │  └─ (main)/
 │     ├─ index.tsx       홈 = 피그마 seokyeong_ui_home 1 (인사·캐릭터, 오늘 챙길 일 3개씩 넘겨 보기, 메뉴 4칸, 아래 질문창)
-│     ├─ campus.tsx      캠퍼스 생활 (분실물 자리, 지금은 준비 중)
+│     ├─ campus.tsx      C-1 분실물 센터 (EXPO_PUBLIC_LOST_ENABLED=0이면 '준비 중')
+│     ├─ lost/           found-new C-2 습득물 제보, lost-new C-3 분실 신고, [id] C-4 상세, claim C-5 수령 신청
 │     ├─ onboarding.tsx  M-2 처음 설정
 │     ├─ todos/          T-1 목록, [id] T-2 상세, done T-3
 │     ├─ notifications   T-4 알림 센터
@@ -49,15 +52,26 @@ app/
 │  ├─ api.ts             서버 부르기는 이 파일만 (토큰 자동 첨부, mock 전환, useApi 훅)
 │  ├─ session.ts         로그인 상태 (Supabase 또는 가상 학생)
 │  ├─ push.ts            푸시 등록, 알림 누르면 화면 이동
+│  ├─ photo.ts           사진 고르기 + 줄이기 (분실물 제보)
 │  ├─ types.ts           서버 응답 모양 (API 명세와 같게)
 │  ├─ config.ts · theme.ts
-└─ mocks/                예시 데이터 (API 명세 예시와 같은 모양)
+├─ mocks/                예시 데이터 (API 명세 예시와 같은 모양)
+└─ scripts/build-demo.mjs  시연 사이트 만들기 (npm run build:demo → ../demo/index.html)
 ```
 
-## 남은 일 (MVP 뼈대 이후)
-- 디자인: 시안(`docs/디자인/`)에 맞춰 스타일 다듬기, 캐릭터 이미지(지금은 🐘 자리 표시)
-- 푸시: `npx eas-cli@latest init`으로 projectId 만들기 → 개발 빌드(`eas build --profile development`)에서 확인. Expo Go·웹에서는 푸시가 안 옴
-- 웹 링크: `npx expo export --platform web` → `dist/`를 정적 호스팅(Vercel 등)에 올리기
-- 안드로이드 APK: `eas build -p android --profile preview`
+## 명령
+
+| 명령 | 하는 일 |
+|---|---|
+| `npm run typecheck` | 타입 검사 |
+| `npm run build:demo` | 서버 없이 열리는 시연 사이트(HTML 한 장)를 `../demo/`에 만듦 |
+| `npm run export:web` | 웹으로 내보내기 (`dist/`) |
+| `npm run build:dev` | 푸시 확인용 안드로이드 개발 빌드 (먼저 `npx eas-cli@latest init`) |
+| `npm run build:apk` | 시연용 안드로이드 APK |
+
+## 남은 일
+- 캐릭터 이미지: 지금은 피그마 시안에서 잘라낸 임시 이미지(`assets/character*.png`) → 배경이 투명한 PNG로 바꾸기
+- 푸시: `npx eas-cli@latest init`으로 projectId 만들기 → `npm run build:dev`로 개발 빌드에서 확인. Expo Go·웹에서는 푸시가 안 옴
+- API 명세에 없는 새 필드·주소(조장 확인 필요)는 [FE_구현_정리.md](FE_구현_정리.md) 참고
 
 Expo는 SDK마다 바뀌는 게 많습니다. 새 기능을 넣을 때는 `AGENTS.md`의 안내대로 SDK 58 문서를 먼저 확인하세요.

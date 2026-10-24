@@ -1,3 +1,4 @@
+// ▶ FE 18번에 해당하는 부분: T-3 완료 기록
 // T-3 완료 기록
 import { router, Stack } from 'expo-router';
 import { Text } from 'react-native';

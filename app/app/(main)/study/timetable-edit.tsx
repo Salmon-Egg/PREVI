@@ -1,3 +1,4 @@
+// ▶ FE 22번에 해당하는 부분: L-4~L-7 과목 편집, 추가 방식 팝업, 과목 검색 추가, 직접 입력, 시간 중복·학점 초과 경고
 // 시안 03 수강 과목 편집 + 팝업 04(추가 방식) · 05/06(과목 검색) · 07(직접 입력) · 08(등록 불가)
 import { Feather } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
