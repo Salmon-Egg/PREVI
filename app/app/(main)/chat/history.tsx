@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { Chips, Screen, StateView, Sub } from '../../../components/ui';
-import { api, useApi } from '../../../lib/api';
+import { api, attempt, useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
 import type { ChatCategory, Conversation } from '../../../lib/types';
 
@@ -40,7 +40,7 @@ export default function History() {
     .sort((a, b) => Number(b.pinned) - Number(a.pinned) || b.updated_at.localeCompare(a.updated_at)); // 고정한 대화가 위로
 
   async function togglePin(c: Conversation) {
-    await api.patch(`/conversations/${c.id}`, { pinned: !c.pinned });
+    if (!(await attempt(() => api.patch(`/conversations/${c.id}`, { pinned: !c.pinned }), '고정하지 못했어요'))) return;
     setData((l) => l?.map((x) => (x.id === c.id ? { ...x, pinned: !c.pinned } : x)) ?? null);
   }
 

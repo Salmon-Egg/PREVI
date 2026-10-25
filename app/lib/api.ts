@@ -1,26 +1,28 @@
 // ▶ FE 3번에 해당하는 부분: API 클라이언트 한 곳(인증 토큰 자동 첨부), 예시 데이터 ↔ 실제 서버 전환(USE_MOCK)
 // 서버를 부르는 코드는 이 파일 한 곳에만 (app/README.md).
 // USE_MOCK=1이면 서버 대신 mocks/의 예시 데이터를 돌려줌.
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { useFocusEffect } from 'expo-router';
 
+import { showAlert } from '../components/ui';
 import { mockFetch } from '../mocks';
 import { API_URL, USE_MOCK } from './config';
+import { ApiError } from './errors';
 import { getToken, logout } from './session';
 
-export class ApiError extends Error {
-  constructor(public status: number, public code: string, message: string) {
-    super(message);
-  }
-}
+
+const JSON_HEADER = { 'Content-Type': 'application/json' };
+
+export { ApiError };
 
 async function request<T>(method: string, path: string, body?: unknown): Promise<T> {
   if (USE_MOCK) return mockFetch(method, path, body) as T;
+  const token = getToken(); // 로그인 전이면 Authorization을 아예 안 보냄 ('Bearer null' 방지)
   let res: Response;
   try {
     res = await fetch(API_URL + path, {
       method,
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${getToken()}` },
+      headers: token ? { ...JSON_HEADER, Authorization: `Bearer ${token}` } : JSON_HEADER,
       body: body === undefined ? undefined : JSON.stringify(body),
     });
   } catch {
@@ -43,22 +45,56 @@ export const api = {
   del: <T>(path: string) => request<T>('DELETE', path),
 };
 
+/** 버튼으로 저장·변경할 때: 실패하면 알림창을 띄우고 false (조용히 실패하거나 처리 안 된 오류가 나지 않게) */
+export async function attempt(run: () => Promise<unknown>, failTitle = '저장하지 못했어요') {
+  try {
+    await run();
+    return true;
+  } catch (e) {
+    showAlert(failTitle, (e as ApiError).message);
+    return false;
+  }
+}
+
+/** 보내는 중에는 버튼을 막음 (두 번 눌러 같은 신고·신청이 두 번 들어가지 않게). ref로 막아서 연타도 걸러짐 */
+export function useSubmit() {
+  const running = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const run = useCallback(async (fn: () => Promise<void>) => {
+    if (running.current) return;
+    running.current = true;
+    setBusy(true);
+    try {
+      await fn();
+    } finally {
+      running.current = false;
+      setBusy(false);
+    }
+  }, []);
+  return { busy, run };
+}
+
 /** 화면이 보일 때마다 path를 다시 불러옴. 다른 화면에서 고치고 돌아와도 최신으로 보임. */
 export function useApi<T>(path: string | null) {
   const [data, setData] = useState<T | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const seq = useRef(0); // 검색어를 빨리 바꿀 때 늦게 온 옛 응답이 새 결과를 덮지 않게
+
   const reload = useCallback(async () => {
     if (!path) return;
+    const my = ++seq.current;
     setLoading(true);
     try {
-      setData(await api.get<T>(path));
+      const res = await api.get<T>(path);
+      if (my !== seq.current) return;
+      setData(res);
       setError(null);
     } catch (e) {
-      setError(e as ApiError);
+      if (my === seq.current) setError(e as ApiError);
     } finally {
-      setLoading(false);
+      if (my === seq.current) setLoading(false);
     }
   }, [path]);
 

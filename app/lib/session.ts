@@ -7,6 +7,7 @@ import { createClient } from '@supabase/supabase-js';
 import { SUPABASE_KEY, SUPABASE_URL } from './config';
 
 // 휴대폰에서도 localStorage를 쓸 수 있게 (웹은 원래 있음)
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- 웹에서는 불러오지 않으려고 조건부로 require
 if (Platform.OS !== 'web') require('expo-sqlite/localStorage/install');
 
 const KEY = 'session-token';

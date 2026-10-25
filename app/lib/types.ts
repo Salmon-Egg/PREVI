@@ -99,9 +99,13 @@ export type Graduation = {
   required_total: number;
   earned_total: number;
   remaining_total: number;
-  areas: { name: string; required: number; earned: number }[];
+  // ▶ FE 20번·21번: courses는 그 영역에서 들은 과목과 성적 (영역 카드를 펼치면 보임). API 명세에 없는 새 필드라 조장 확인 필요
+  areas: { name: string; required: number; earned: number; courses?: AreaCourse[] }[];
   requirements: { name: string; done: boolean; todo_id?: number }[];
 };
+
+/** 졸업 영역에 들어간 과목 하나 (학기 "4-1", 성적 A+~F·P) */
+export type AreaCourse = { term: string; course_name: string; credits: number; grade: string };
 
 export type GradeItem = { id: number; term: string; course_name: string; credits: number; grade: string; area: string };
 export type GradeTerm = { term: string; gpa: number | null; items: GradeItem[] };

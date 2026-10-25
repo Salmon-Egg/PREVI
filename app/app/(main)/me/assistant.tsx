@@ -3,7 +3,8 @@ import { Stack } from 'expo-router';
 import { Pressable, Switch, Text, View } from 'react-native';
 
 import { Body, Card, Row, Screen, StateView, Sub, Title } from '../../../components/ui';
-import { api, useApi } from '../../../lib/api';
+import { api, attempt, useApi } from '../../../lib/api';
+import { BRIEF_TIMES } from '../../../lib/constants';
 import { color } from '../../../lib/theme';
 import { DEFAULT_SCOPE, type AssistantScope, type Me } from '../../../lib/types';
 
@@ -21,18 +22,17 @@ const KINDS: { key: keyof Omit<Me['notify'], 'time'>; label: string; desc: strin
   { key: 'calendar', label: '학사일정', desc: '일정 3일 전·당일' },
   { key: 'chat', label: '답변 도착', desc: '질문하고 앱을 나갔을 때' },
 ];
-const TIMES = ['07:00', '08:00', '09:00', '12:00', '18:00', '21:00'];
 
 export default function AssistantSettings() {
   const { data: me, error, loading, reload, setData } = useApi<Me>('/me');
   const scope = { ...DEFAULT_SCOPE, ...me?.assistant_scope };
 
   async function update(notify: Partial<Me['notify']>) {
-    setData(await api.put<Me>('/me', { notify }));
+    await attempt(async () => setData(await api.put<Me>('/me', { notify })));
   }
 
   async function updateScope(patch: Partial<AssistantScope>) {
-    setData(await api.put<Me>('/me', { assistant_scope: { ...scope, ...patch } }));
+    await attempt(async () => setData(await api.put<Me>('/me', { assistant_scope: { ...scope, ...patch } })));
   }
 
   return (
@@ -65,7 +65,7 @@ export default function AssistantSettings() {
             ))}
             <Title>마감 알림 받을 시간</Title>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {TIMES.map((t) => (
+              {BRIEF_TIMES.map((t) => (
                 <Pressable key={t} onPress={() => update({ time: t })} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: me.notify.time === t ? color.primary : color.surface }}>
                   <Text style={{ color: me.notify.time === t ? '#fff' : color.ink, fontWeight: '700' }}>{t}</Text>
                 </Pressable>

@@ -1,41 +1,43 @@
 // ▶ FE 10번에 해당하는 부분: M-4 학적 정보 변경 + 확인 팝업 → 휴학 변경 시 A-3로 연결
 // 시안 15 학적 정보 변경 + 시안 16 확인 창. 휴학으로 바꾸면 A-3(휴·복학 안내)으로 연결.
 import { router, Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { Confirm, Label, Segmented, Select } from '../../../components/form';
-import { Button, Screen, StateView } from '../../../components/ui';
-import { api, useApi } from '../../../lib/api';
+import { Button, Screen, showAlert, StateView } from '../../../components/ui';
+import { api, ApiError, useApi } from '../../../lib/api';
+import { DEPTS, MINORS, STATUSES } from '../../../lib/constants';
 import { color } from '../../../lib/theme';
 import { STATUS_KO, type Me, type Status } from '../../../lib/types';
 
-const DEPTS = ['소프트웨어학과', '전자컴퓨터공학과'];
-const MINORS = ['없음', '경영학부 (부전공)', '소프트웨어학과 (복수전공)', '전자컴퓨터공학과 (복수전공)'];
-const STATUSES: Status[] = ['enrolled', 'leave', 'returned'];
 
 type Form = { department: string; minor: string; status: Status; grade: number; semester: number };
 
+const formOf = (me: Me): Form => ({
+  department: me.department ?? DEPTS[0], minor: me.minor ?? '없음', status: me.status, grade: me.grade ?? 1, semester: me.semester ?? 1,
+});
+
 export default function StatusEdit() {
   const { data: me, error, loading, reload } = useApi<Me>('/me');
-  const [form, setForm] = useState<Form | null>(null);
+  // 고치기 전에는 서버 값을 그대로 보여 주고, 처음 고칠 때 그 값에서 시작
+  const [edit, setEdit] = useState<Form | null>(null);
   const [asking, setAsking] = useState(false);
-
-  useEffect(() => {
-    if (me && !form) {
-      setForm({ department: me.department ?? DEPTS[0], minor: me.minor ?? '없음', status: me.status, grade: me.grade ?? 1, semester: me.semester ?? 1 });
-    }
-  }, [me]);
+  const form = edit ?? (me ? formOf(me) : null);
 
   async function save() {
     if (!form) return;
     setAsking(false);
-    await api.put('/me', { ...form, minor: form.minor === '없음' ? null : form.minor });
+    try {
+      await api.put('/me', { ...form, minor: form.minor === '없음' ? null : form.minor });
+    } catch (e) {
+      return showAlert('저장하지 못했어요', (e as ApiError).message);
+    }
     if (form.status === 'leave' && me?.status !== 'leave') router.replace('/office/leave');
     else router.back();
   }
 
-  const set = (patch: Partial<Form>) => setForm((f) => (f ? { ...f, ...patch } : f));
+  const set = (patch: Partial<Form>) => form && setEdit({ ...form, ...patch });
 
   return (
     <Screen>

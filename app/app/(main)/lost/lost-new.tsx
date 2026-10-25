@@ -4,7 +4,7 @@ import { useState } from 'react';
 
 import { Input, Label, Select } from '../../../components/form';
 import { Button, Screen, showAlert, Sub } from '../../../components/ui';
-import { api, ApiError } from '../../../lib/api';
+import { api, ApiError, useSubmit } from '../../../lib/api';
 import { LOST_CATEGORIES } from '../../../lib/types';
 
 export default function LostNew() {
@@ -14,7 +14,9 @@ export default function LostNew() {
   const [when, setWhen] = useState('');
   const [description, setDescription] = useState('');
 
-  async function submit() {
+  const { busy, run } = useSubmit();
+
+  const submit = () => run(async () => {
     try {
       const res = await api.post<{ matches: number }>('/lost-items', { kind: 'lost', title, category, place, lost_at: when, description });
       showAlert('분실 신고를 올렸어요', res?.matches ? `비슷한 습득물 ${res.matches}개를 찾았어요. 분실물 센터 위쪽에서 확인해 보세요.` : '비슷한 습득물이 들어오면 바로 알려 드릴게요.');
@@ -22,7 +24,7 @@ export default function LostNew() {
     } catch (e) {
       showAlert('신고 실패', (e as ApiError).message);
     }
-  }
+  });
 
   return (
     <Screen>
@@ -38,7 +40,7 @@ export default function LostNew() {
       <Input value={when} onChangeText={setWhen} placeholder="예: 10/12 오후 3시쯤" />
       <Label>특징</Label>
       <Input value={description} onChangeText={setDescription} placeholder="색, 브랜드, 안에 든 것" multiline />
-      <Button label="분실 신고 올리기" disabled={!title || !place} onPress={submit} />
+      <Button label="분실 신고 올리기" disabled={busy || !title.trim() || !place.trim()} onPress={submit} />
     </Screen>
   );
 }

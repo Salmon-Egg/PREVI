@@ -13,7 +13,8 @@ import type { NotifyType } from './types';
 
 // Expo Go·웹에서는 불러오기만 해도 경고창이 떠서 아예 안 불러옴
 const off = Platform.OS === 'web' || isRunningInExpoGo();
-const Notifications: typeof import('expo-notifications') = off ? (null as any) : require('expo-notifications');
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- 조건부로만 불러와야 해서 require (위 주석). off일 때는 아래 함수들이 먼저 빠져나가 쓰지 않음
+const Notifications: typeof import('expo-notifications') = off ? (null as unknown as typeof import('expo-notifications')) : require('expo-notifications');
 
 if (!off) Notifications.setNotificationHandler({
   // 앱을 쓰는 중에 와도 위에 띄움
@@ -24,13 +25,13 @@ if (!off) Notifications.setNotificationHandler({
 export function screenFor(type: NotifyType, targetId: number | null): Href {
   switch (type) {
     case 'notice':
-      return `/notices/${targetId}`;
+      return targetId == null ? '/office' : `/notices/${targetId}`;
     case 'deadline':
-      return `/todos/${targetId}`;
+      return targetId == null ? '/todos' : `/todos/${targetId}`;
     case 'calendar':
       return '/office/calendar';
     case 'chat':
-      return { pathname: '/chat', params: { conversation: String(targetId) } };
+      return targetId == null ? '/chat' : { pathname: '/chat', params: { conversation: String(targetId) } };
   }
 }
 

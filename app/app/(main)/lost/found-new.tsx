@@ -7,7 +7,7 @@ import { ActivityIndicator, Image, Pressable, StyleSheet, Text, View } from 'rea
 
 import { Input, Label, Select } from '../../../components/form';
 import { Button, Row, Screen, showAlert, Sub } from '../../../components/ui';
-import { api, ApiError } from '../../../lib/api';
+import { api, ApiError, useSubmit } from '../../../lib/api';
 import { pickPhoto, type Photo } from '../../../lib/photo';
 import { color } from '../../../lib/theme';
 import { LOST_CATEGORIES } from '../../../lib/types';
@@ -38,7 +38,9 @@ export default function FoundNew() {
     }
   }
 
-  async function submit() {
+  const { busy, run } = useSubmit();
+
+  const submit = () => run(async () => {
     try {
       await api.post('/lost-items', { kind: 'found', ...draft, keep_at: keep, image_base64: photo?.base64 ?? null });
       showAlert('제보했어요', '비슷한 분실 신고가 있으면 주인에게 바로 알려 드릴게요.');
@@ -46,7 +48,7 @@ export default function FoundNew() {
     } catch (e) {
       showAlert('제보 실패', (e as ApiError).message);
     }
-  }
+  });
 
   return (
     <Screen>
@@ -81,7 +83,7 @@ export default function FoundNew() {
         <Label required>맡긴 곳</Label>
         <Select value={keep} items={KEEP} onChange={setKeep} />
       </View>
-      <Button label="이대로 제보하기" disabled={!draft.title || !draft.place} onPress={submit} />
+      <Button label="이대로 제보하기" disabled={busy || !draft.title.trim() || !draft.place.trim()} onPress={submit} />
     </Screen>
   );
 }

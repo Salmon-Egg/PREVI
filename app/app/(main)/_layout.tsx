@@ -25,6 +25,8 @@ export default function MainLayout() {
     >
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="onboarding" options={{ title: '처음 설정', headerBackVisible: false }} />
+      {/* ▶ FE 15번·30번: 홈 질문창을 위로 끌어 올리면 대화창이 아래에서 올라오는 느낌으로 (휴대폰 앱) */}
+      <Stack.Screen name="chat/index" options={{ animation: 'slide_from_bottom' }} />
     </Stack>
   );
 }

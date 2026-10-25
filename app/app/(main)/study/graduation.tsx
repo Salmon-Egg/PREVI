@@ -2,6 +2,7 @@
 import { router, Stack } from 'expo-router';
 import { Text, View } from 'react-native';
 
+import { AreaCard } from '../../../components/AreaCard';
 import { Body, Card, DdayBadge, Row, Screen, StateView, Sub, Title } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
@@ -28,20 +29,8 @@ export default function GraduationDetail() {
             </Card>
 
             <Title>영역별 이수 현황</Title>
-            {data.areas.map((a) => {
-              const pct = Math.min(1, a.earned / a.required);
-              return (
-                <Card key={a.name}>
-                  <Row style={{ justifyContent: 'space-between' }}>
-                    <Body>{a.name}</Body>
-                    <Sub>{a.earned} / {a.required}학점{pct < 1 ? ` · ${a.required - a.earned}학점 남음` : ' · 완료'}</Sub>
-                  </Row>
-                  <View style={{ height: 8, borderRadius: 4, backgroundColor: color.surface }}>
-                    <View style={{ width: `${pct * 100}%`, height: 8, borderRadius: 4, backgroundColor: pct >= 1 ? color.primary : color.alert }} />
-                  </View>
-                </Card>
-              );
-            })}
+            {/* 이수 학점 오른쪽 ⌄: 그 영역에서 들은 과목과 성적 */}
+            {data.areas.map((a) => <AreaCard key={a.name} area={a} bar />)}
 
             <Title>남은 요건</Title>
             {data.requirements.map((r) => (

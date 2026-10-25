@@ -5,7 +5,7 @@ import { useState } from 'react';
 
 import { Input, Label } from '../../../components/form';
 import { Button, Card, Screen, showAlert, StateView, Sub } from '../../../components/ui';
-import { api, ApiError, useApi } from '../../../lib/api';
+import { api, ApiError, useSubmit, useApi } from '../../../lib/api';
 import type { ClaimQuestion } from '../../../lib/types';
 
 export default function Claim() {
@@ -14,7 +14,9 @@ export default function Claim() {
   const [answers, setAnswers] = useState<Record<number, string>>({});
   const done = !!data?.length && data.every((q) => answers[q.id]?.trim());
 
-  async function submit() {
+  const { busy, run } = useSubmit();
+
+  const submit = () => run(async () => {
     try {
       const res = await api.post<{ ok: boolean; message: string }>(`/lost-items/${id}/claim`, { answers });
       showAlert(res.ok ? '본인 확인 완료' : '확인이 더 필요해요', res.message);
@@ -22,7 +24,7 @@ export default function Claim() {
     } catch (e) {
       showAlert('신청 실패', (e as ApiError).message);
     }
-  }
+  });
 
   return (
     <Screen>
@@ -36,7 +38,7 @@ export default function Claim() {
           </Card>
         ))}
       </StateView>
-      <Button label="수령 신청하기" disabled={!done} onPress={submit} />
+      <Button label="수령 신청하기" disabled={busy || !done} onPress={submit} />
     </Screen>
   );
 }

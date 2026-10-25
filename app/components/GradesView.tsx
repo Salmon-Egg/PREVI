@@ -1,31 +1,57 @@
 // ▶ FE 23번에 해당하는 부분: L-8 성적 조회 / L-9 수정 모드 공통 화면
 // 성적 보기 (시안 09) / 수정 모드 (시안 10). 내 학업 탭과 성적 수정 화면이 같이 씀.
+// 수정 모드: −를 누르면 바로 지워지고, '+ 과목 추가하기'로 넣은 과목은 돌아오자마자 목록에 보임.
+// '수정 완료하기'를 누르면 이번에 바뀐 내용과 다시 계산한 졸업 학점을 알려 주고 돌아감
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { api, useApi } from '../lib/api';
+import { api, ApiError, useApi } from '../lib/api';
 import { overall, termLabel } from '../lib/format';
 import { color } from '../lib/theme';
-import type { GradeTerm } from '../lib/types';
-import { Button, confirmAsk, Row, StateView, Sub } from './ui';
+import type { GradeTerm, Graduation } from '../lib/types';
+import { Button, Row, showAlert, StateView, Sub } from './ui';
 
 const gradeTone = (g: string) => (g.startsWith('A') ? { bg: color.primarySoft, fg: color.primary }
   : g.startsWith('B') ? { bg: color.warmSoft, fg: color.alert } : { bg: color.surface, fg: color.inkSub });
 
 export function GradesView({ editing = false }: { editing?: boolean }) {
-  const { data, error, loading, reload } = useApi<GradeTerm[]>('/grades');
+  const { data, error, loading, reload, setData } = useApi<GradeTerm[]>('/grades');
   const [open, setOpen] = useState<string | null>(null);
   const terms = data ?? [];
   const sum = overall(terms);
-  const openTerm = open ?? terms[0]?.term;
+  const openTerm = open ?? terms[terms.length - 1]?.term; // 처음에는 가장 최근 학기를 펼침
 
-  function remove(id: number, name: string) {
-    confirmAsk(name, '이 과목 성적을 지울까요?', '삭제', async () => {
+  // 수정 모드에 들어왔을 때의 과목 목록 → '수정 완료하기'에서 추가·삭제 수를 알려 주려고 기억
+  const [startIds, setStartIds] = useState<number[] | null>(null);
+  const ids = terms.flatMap((t) => t.items.map((g) => g.id));
+  if (editing && data && startIds === null) setStartIds(ids);
+  const now = new Set(ids);
+  const before = new Set(startIds ?? []);
+  const added = startIds ? ids.filter((i) => !before.has(i)).length : 0;
+  const removed = startIds ? startIds.filter((i) => !now.has(i)).length : 0;
+
+  /** 누르는 즉시 목록에서 빼고 서버에서도 지움 (실패하면 다시 불러옴) */
+  async function remove(id: number) {
+    setData(terms.map((t) => ({ ...t, items: t.items.filter((g) => g.id !== id) })).filter((t) => t.items.length));
+    try {
       await api.del(`/grades/${id}`);
-      reload();
-    });
+    } catch (e) {
+      showAlert('삭제 실패', (e as ApiError).message);
+    }
+    reload();
+  }
+
+  /** 다시 계산한 졸업 학점을 알려 주고 돌아감 */
+  async function finish() {
+    const changed = [added && `${added}과목 추가`, removed && `${removed}과목 삭제`].filter(Boolean).join(', ');
+    try {
+      const g = await api.get<Graduation>('/graduation');
+      showAlert(changed ? '성적을 반영했어요' : '바뀐 성적이 없어요',
+        `${changed ? `${changed} · ` : ''}총 ${g.earned_total}학점 이수, 졸업까지 ${g.remaining_total}학점 남았어요.\n내 학업 › 졸업 탭의 영역별 과목에도 반영됐어요.`);
+    } catch {}
+    router.back();
   }
 
   return (
@@ -33,7 +59,12 @@ export function GradesView({ editing = false }: { editing?: boolean }) {
       {editing ? (
         <View style={st.editBanner}>
           <Text style={{ color: color.alert, fontWeight: '800' }}>✏️ 성적 편집 중</Text>
-          <Sub>과목 삭제 또는 항목 추가 후 완료 버튼을 눌러주세요.</Sub>
+          <Sub>과목 삭제 또는 항목 추가 후 완료 버튼을 눌러주세요. 과목을 누르면 성적을 고칠 수 있어요.</Sub>
+          {(added > 0 || removed > 0) && (
+            <Text style={{ color: color.primary, fontWeight: '700', marginTop: 2 }}>
+              이번에 바뀐 것: {[added && `추가 ${added}`, removed && `삭제 ${removed}`].filter(Boolean).join(' · ')} (총 {sum.earned}학점)
+            </Text>
+          )}
         </View>
       ) : (
         <View style={st.summary}>
@@ -64,7 +95,7 @@ export function GradesView({ editing = false }: { editing?: boolean }) {
                 onPress={() => router.push({ pathname: '/study/grade-edit', params: { ...g, id: String(g.id), credits: String(g.credits) } })}>
                 <Text style={st.itemName}>{g.course_name} ({g.credits}학점)</Text>
                 {editing ? (
-                  <Pressable accessibilityLabel={`${g.course_name} 삭제`} onPress={() => remove(g.id, g.course_name)} style={st.minus}>
+                  <Pressable accessibilityLabel={`${g.course_name} 삭제`} onPress={() => remove(g.id)} style={st.minus}>
                     <Text style={{ color: '#fff', fontWeight: '900' }}>−</Text>
                   </Pressable>
                 ) : (
@@ -84,7 +115,7 @@ export function GradesView({ editing = false }: { editing?: boolean }) {
       })}
       {editing && terms.length === 0 && <Button label="+ 과목 추가하기" kind="ghost" onPress={() => router.push('/study/grade-edit')} />}
       {editing
-        ? <Button label="수정 완료하기" onPress={() => router.back()} />
+        ? <Button label="수정 완료하기" onPress={finish} />
         : <Button label="✏️ 성적 수정하기" kind="ghost" onPress={() => router.push('/study/grades-edit')} />}
     </StateView>
   );

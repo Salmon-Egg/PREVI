@@ -4,7 +4,7 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 
-import { Input, Label, Segmented, Select } from '../../../components/form';
+import { Input, Label, Select } from '../../../components/form';
 import { Button, Screen, showAlert } from '../../../components/ui';
 import { api, ApiError } from '../../../lib/api';
 import { termLabel } from '../../../lib/format';
@@ -13,7 +13,8 @@ import { color } from '../../../lib/theme';
 const TERMS = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2', '4-1', '4-2'];
 const GRADES = ['A+', 'A0', 'B+', 'B0', 'C+', 'C0', 'D+', 'D0', 'F', 'P'];
 const POINT: Record<string, string> = { 'A+': '4.5', A0: '4.0', 'B+': '3.5', B0: '3.0', 'C+': '2.5', C0: '2.0', 'D+': '1.5', D0: '1.0', F: '0', P: '통과' };
-const AREAS = ['전공', '교양 필수', '교양 선택'];
+// 졸업 요건 영역과 같은 이름 (내 학업 › 졸업 탭에서 이 영역으로 묶여 보임)
+const AREAS = ['전공 필수', '전공 선택', '교양 필수', '교양 선택'];
 
 type Recalc = { recalculated: { remaining_total: number | null; new_eligible_scholarships: number } };
 
@@ -22,19 +23,22 @@ export default function GradeEdit() {
   const [term, setTerm] = useState(p.term ?? '4-1');
   const [name, setName] = useState(p.course_name ?? '');
   const [credits, setCredits] = useState(Number(p.credits ?? 3));
+  const [saving, setSaving] = useState(false);
   const [grade, setGrade] = useState(p.grade ?? 'A+');
-  const [area, setArea] = useState(p.area ?? '전공');
+  const [area, setArea] = useState(p.area === '전공' ? '전공 선택' : p.area ?? '전공 필수'); // 예전 값 '전공'은 전공 선택으로
 
   async function save() {
-    const body = { term, course_name: name, credits, grade, area };
+    setSaving(true); // 두 번 눌러 같은 과목이 두 번 들어가지 않게
+    const body = { term, course_name: name.trim(), credits, grade, area };
     try {
       const res = p.id ? await api.put<Recalc>(`/grades/${p.id}`, body) : await api.post<Recalc>('/grades', body);
       const r = res.recalculated;
       const extra = r.new_eligible_scholarships ? `\n새로 신청할 수 있는 장학금 ${r.new_eligible_scholarships}개가 생겼어요!` : '';
-      showAlert('저장했어요', `졸업까지 ${r.remaining_total ?? '-'}학점 남았어요.${extra}`);
+      showAlert(p.id ? '성적을 고쳤어요' : '과목을 추가했어요', `[${body.course_name}] ${termLabel(term)} · ${area} · ${grade}\n다시 계산하면 졸업까지 ${r.remaining_total ?? '-'}학점 남았어요.${extra}`);
       router.back();
     } catch (e) {
       showAlert('저장 실패', (e as ApiError).message);
+      setSaving(false);
     }
   }
 
@@ -56,11 +60,11 @@ export default function GradeEdit() {
         </View>
       </View>
       <Label>이수 영역</Label>
-      <Segmented value={area} items={AREAS} onChange={setArea} />
+      <Select value={area} items={AREAS} onChange={setArea} />
       <View style={{ backgroundColor: color.primarySoft, borderRadius: 12, padding: 12 }}>
         <Text style={{ fontSize: 13, color: color.primary }}>💡 직접 수정/입력한 성적은 졸업 학점 계산에 반영돼요.</Text>
       </View>
-      <Button label="저장하기" disabled={!name} onPress={save} />
+      <Button label="저장하기" disabled={!name.trim() || saving} onPress={save} />
     </Screen>
   );
 }

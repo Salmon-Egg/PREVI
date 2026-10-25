@@ -1,7 +1,7 @@
 // 화면에 보여 줄 글자 모양 만들기
 import type { ClassTime, GradeTerm } from './types';
+import { WEEKDAYS } from './constants';
 
-const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
 
 const toMin = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number);
@@ -62,5 +62,6 @@ export function deadlineText(iso: string | null) {
   const days = Math.round((new Date(due.toDateString()).getTime() - new Date(today.toDateString()).getTime()) / 864e5);
   const hhmm = iso.slice(11, 16);
   if (days === 0) return `오늘 ${hhmm} 마감!`;
-  return `D-${days} (${due.getMonth() + 1}/${due.getDate()}(${DAYS[due.getDay()]})까지)`;
+  if (days < 0) return `마감 지남 (${due.getMonth() + 1}/${due.getDate()}(${WEEKDAYS[due.getDay()]}))`; // 'D--30'처럼 나오지 않게
+  return `D-${days} (${due.getMonth() + 1}/${due.getDate()}(${WEEKDAYS[due.getDay()]})까지)`;
 }

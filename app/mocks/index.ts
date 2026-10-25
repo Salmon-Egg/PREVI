@@ -1,11 +1,14 @@
 // ▶ FE 3번에 해당하는 부분: 예시 데이터 (USE_MOCK=1이면 서버 대신 이 값을 돌려줌)
 // 서버 없이 화면을 만들 때 쓰는 예시 데이터 (EXPO_PUBLIC_USE_MOCK=1).
-// 모양은 docs/04_API_명세.md 예시와 같음. 고친 내용은 앱을 다시 켜면 처음으로 돌아감.
+// 모양은 docs/04_API_명세.md 예시와 같음. 내 정보는 학생별로 저장되고, 그 밖의 고친 내용은 앱을 다시 켜면 처음으로 돌아감.
 // 시연용 가상 학생 4명 중 누구로 로그인했는지에 따라 이름·학과·학년이 바뀜 (나머지 예시는 같음)
 import { PERSONAS } from '../lib/config';
+import { overall } from '../lib/format';
+import { ApiError } from '../lib/errors';
+import { checkAdd } from '../lib/schedule';
 import { getToken } from '../lib/session';
 import type {
-  Application, CalendarEvent, ChatCard, ChatReply, ClaimQuestion, Conversation, GradeTerm, Home, LostItem, Me, Message,
+  Application, AreaCourse, CalendarEvent, ChatCard, Course, GradeItem, Graduation, ChatReply, ClaimQuestion, Conversation, GradeTerm, Home, LostItem, Me, Message,
   NoticeDetail, Notification, Scholarship, TimetableEntry, TodoDetail,
 } from '../lib/types';
 
@@ -13,20 +16,49 @@ const d = (days: number) => new Date(Date.now() + days * 864e5).toISOString().sl
 const dday = (date: string) => Math.round((new Date(date + 'T00:00:00').getTime() - new Date(d(0) + 'T00:00:00').getTime()) / 864e5);
 const now = () => new Date().toISOString();
 
-const me: Me = {
+// ---- 시연용 가상 학생 4명의 내 정보 (학생마다 따로 저장) ----
+// 마이페이지에서 고친 학적·알림 설정은 그 학생에게만 남고, 로그아웃·새로고침해도 유지됨(브라우저·휴대폰 저장소).
+// 계정을 삭제하면 그 학생 정보가 지워져서, 다시 고르면 처음 설정(M-2)부터 시작함
+const PROFILE_KEY = 'mock-profiles-v1';
+const BASE: Me = {
   nickname: '홍길동', department: '소프트웨어학과', minor: null, grade: 4, semester: 2, status: 'enrolled',
   admission_year: 2021, interests: ['장학금'], completed_requirements: ['졸업 영어 인증'],
   consent: { agreed: true, agreed_at: '2026-10-20T10:00:00+09:00' },
   notify: { notice: true, deadline: true, calendar: true, chat: true, time: '09:00' },
   assistant_scope: { grades: true, timetable: true, status: true, chat_history: true },
 };
-
-/** 로그인한 가상 학생에 맞춰 이름·학과·학년을 바꿈 (dev-<id> 토큰) */
-function applyPersona() {
-  const p = PERSONAS.find((x) => getToken() === `dev-${x.id}`);
-  if (!p || me.nickname === p.name) return;
+/** 처음 상태: config의 PERSONAS 설명("1학년 · 소프트웨어학과")대로 */
+function defaultProfile(p: (typeof PERSONAS)[number]): Me {
   const [grade, dept] = p.desc.split(' · ');
-  Object.assign(me, { nickname: p.name, department: dept, grade: Number(grade[0]), admission_year: 2026 - Number(grade[0]) + 1 });
+  const g = Number(grade[0]);
+  return { ...BASE, nickname: p.name, department: dept, grade: g, admission_year: 2026 - g + 1, notify: { ...BASE.notify } };
+}
+function loadProfiles(): Record<string, Me | null> {
+  let saved: Record<string, Me | null> = {};
+  try {
+    saved = JSON.parse(globalThis.localStorage?.getItem(PROFILE_KEY) ?? '{}');
+  } catch {}
+  return Object.fromEntries(PERSONAS.map((p) => [p.id, p.id in saved ? saved[p.id] : defaultProfile(p)]));
+}
+const profiles = loadProfiles();
+function saveProfiles() {
+  try {
+    globalThis.localStorage?.setItem(PROFILE_KEY, JSON.stringify(profiles));
+  } catch {}
+}
+/** 지금 로그인한 가상 학생 번호 (dev-<id> 토큰). 모르면 홍길동 */
+const currentId = () => PERSONAS.find((x) => getToken() === `dev-${x.id}`)?.id ?? PERSONAS[3].id;
+
+// 아래 예시 데이터가 쓰는 '지금 학생 정보'. 요청마다 applyPersona()로 맞춤
+let me: Me = profiles[currentId()] ?? BASE;
+function applyPersona() {
+  me = profiles[currentId()] ?? { ...BASE, nickname: '' };
+}
+
+/** 로그인 화면(M-1)에 보여 줄 가상 학생 설명: 지금 저장된 학년·학과, 삭제했으면 그렇다고 */
+export function mockPersonaDesc(id: string) {
+  const pr = profiles[id];
+  return pr ? `${pr.grade}학년 · ${pr.department}${pr.status !== 'enrolled' ? ` · ${pr.status === 'leave' ? '휴학' : '복학'}` : ''}` : '탈퇴함 · 고르면 처음 설정부터';
 }
 
 const todos: TodoDetail[] = [
@@ -105,12 +137,60 @@ const calendar = (): CalendarEvent[] => [
   { id: 7, title: '서경 취업박람회', start_date: d(2), end_date: d(2), description: '청운관 로비' },
 ].map((e) => ({ ...e, d_day: dday(e.start_date) }));
 
-const graduation = () => ({
-  required_total: 130, earned_total: 121, remaining_total: 9,
-  areas: [
-    { name: '전공 필수', required: 39, earned: 36 }, { name: '전공 선택', required: 45, earned: 45 },
-    { name: '교양 필수', required: 18, earned: 18 }, { name: '교양 선택', required: 28, earned: 22 },
+// 영역별로 들은 과목 (학기, 과목명, 학점, 성적). 합계가 위 이수 학점과 같게 맞춤
+const course = (term: string, course_name: string, credits: number, grade: string): AreaCourse => ({ term, course_name, credits, grade });
+const AREA_COURSES: Record<string, AreaCourse[]> = {
+  '전공 필수': [
+    course('1-1', '프로그래밍기초', 3, 'A+'), course('1-2', '자료구조', 3, 'A0'), course('2-1', '컴퓨터구조', 3, 'B+'), course('2-1', '이산수학', 3, 'A0'),
+    course('2-2', '알고리즘', 3, 'A+'), course('2-2', '객체지향프로그래밍', 3, 'A0'), course('3-1', '운영체제', 3, 'B+'), course('3-1', '데이터베이스', 3, 'A0'),
+    course('3-2', '컴퓨터네트워크', 3, 'B0'), course('3-2', '소프트웨어공학', 3, 'A0'), course('4-1', '캡스톤디자인I', 3, 'A+'), course('4-1', '정보보호개론', 3, 'A0'),
   ],
+  '전공 선택': [
+    course('2-1', '웹프로그래밍', 3, 'A+'), course('2-2', '리눅스시스템', 3, 'B+'), course('2-2', '모바일프로그래밍', 3, 'A0'), course('3-1', '인공지능개론', 3, 'B+'),
+    course('3-1', '컴파일러', 3, 'B0'), course('3-1', '클라우드컴퓨팅', 3, 'A0'), course('3-2', '머신러닝', 3, 'A0'), course('3-2', '빅데이터처리', 3, 'A+'),
+    course('3-2', '컴퓨터그래픽스', 3, 'B+'), course('4-1', '딥러닝응용', 3, 'A0'), course('4-1', '분산시스템', 3, 'B+'), course('4-1', '자연어처리', 3, 'A+'),
+    course('2-1', '시스템프로그래밍', 3, 'B+'), course('1-2', '파이썬프로그래밍', 3, 'A+'), course('4-1', '블록체인기초', 3, 'P'),
+  ],
+  '교양 필수': [
+    course('1-1', '글쓰기와 소통', 2, 'A+'), course('1-1', '서경인성리더십', 1, 'P'), course('1-1', '대학영어I', 3, 'B+'), course('1-2', '대학영어II', 3, 'A0'),
+    course('1-2', '미적분학', 3, 'B0'), course('2-1', '진로탐색', 1, 'P'), course('2-1', '사회봉사', 2, 'P'), course('2-2', '창의적사고', 3, 'A0'),
+  ],
+  '교양 선택': [
+    course('1-1', '심리학의 이해', 3, 'A0'), course('1-2', '현대사회와 윤리', 3, 'B+'), course('2-1', '경제학원론', 3, 'B0'), course('2-2', '디자인씽킹', 3, 'A+'),
+    course('3-1', '영화로 보는 역사', 2, 'A0'), course('3-2', '생활 속 통계', 3, 'A0'), course('3-2', '창업과 리더십', 2, 'B+'), course('4-1', '세계 문화 이해', 3, 'A+'),
+  ],
+};
+
+// 성적 기록 하나 = 졸업 영역에 들어간 과목 하나. 성적 탭(학기별)과 졸업 탭(영역별)이 같은 기록을 씀
+// 고치면(POST·PUT·DELETE /grades) 졸업 학점·영역별 과목이 같이 바뀜 (서버의 재계산 흉내)
+let gradeSeq = 1;
+const gradeItems: GradeItem[] = Object.entries(AREA_COURSES).flatMap(([area, list]) => list.map((c) => ({ id: gradeSeq++, area, ...c })));
+const AREA_REQUIRED: Record<string, number> = { '전공 필수': 39, '전공 선택': 45, '교양 필수': 18, '교양 선택': 28 };
+/** 예전 이수 영역 값('전공')은 전공 선택으로 봄 */
+const areaOf = (a: string) => (a === '전공' ? '전공 선택' : a);
+const earnedOf = (items: GradeItem[]) => items.filter((g) => g.grade !== 'F').reduce((n, g) => n + g.credits, 0);
+
+function gradeTerms(): GradeTerm[] {
+  const terms = [...new Set(gradeItems.map((g) => g.term))].sort();
+  return terms.map((term) => {
+    const items = gradeItems.filter((g) => g.term === term);
+    return { term, gpa: overall([{ term, gpa: null, items }]).gpa, items };
+  });
+}
+
+const graduation = () => {
+  const areas = Object.entries(AREA_REQUIRED).map(([name, required]) => {
+    const items = gradeItems.filter((g) => areaOf(g.area) === name);
+    return { name, required, earned: earnedOf(items), courses: items.map(({ term, course_name, credits, grade }) => ({ term, course_name, credits, grade })) };
+  });
+  // 영역별로 기준을 넘긴 학점은 졸업 학점에 더 쳐주지 않음
+  const earned_total = areas.reduce((n, a) => n + Math.min(a.earned, a.required), 0);
+  const required_total = 130;
+  return gradTail(areas, required_total, earned_total);
+};
+
+const gradTail = (areas: Graduation['areas'], required_total: number, earned_total: number): Graduation => ({
+  required_total, earned_total, remaining_total: Math.max(0, required_total - earned_total), areas,
   requirements: [
     { name: '졸업 영어 인증', done: true },
     { name: '졸업작품 심사 신청', done: todos.find((t) => t.id === 31)!.done, todo_id: 31 },
@@ -118,18 +198,6 @@ const graduation = () => ({
   ],
 });
 
-const grades: GradeTerm[] = [
-  { term: '3-2', gpa: 3.83, items: [
-    { id: 4, term: '3-2', course_name: '데이터베이스', credits: 3, grade: 'A0', area: '전공' },
-    { id: 5, term: '3-2', course_name: '운영체제', credits: 3, grade: 'B+', area: '전공' },
-    { id: 6, term: '3-2', course_name: '글쓰기와 소통', credits: 2, grade: 'A+', area: '교양 필수' },
-  ] },
-  { term: '4-1', gpa: 4.0, items: [
-    { id: 7, term: '4-1', course_name: '캡스톤디자인I', credits: 3, grade: 'A+', area: '전공' },
-    { id: 8, term: '4-1', course_name: '소프트웨어공학', credits: 3, grade: 'A0', area: '전공' },
-    { id: 9, term: '4-1', course_name: '인공지능개론', credits: 3, grade: 'B+', area: '전공' },
-  ] },
-];
 
 const timetable: TimetableEntry[] = [
   { id: 1, course_id: 1, course_name: '캡스톤디자인II', code: 'CS0401', credits: 3, category: '전필', professor: '김서경', room: '북304',
@@ -142,6 +210,16 @@ const timetable: TimetableEntry[] = [
     times: [{ day: '금', start: '12:00', end: '13:00' }] },
 ];
 
+// 개설 과목 (과목 검색 L-5). 모바일앱디자인은 금 10~13시라 서경인성리더십(금 12~13시)과 겹침 → 등록 불가 창 확인용
+const COURSES: Course[] = [
+  { id: 15, name: '모바일앱디자인', code: 'DS0201', credits: 3, area: '교양 선택', category: '일선', professor: '최디자인', room: '예지301', times: [{ day: '금', start: '10:00', end: '13:00' }] },
+  { id: 14, name: '빅데이터개론', code: 'GE0302', credits: 2, area: '교양 선택', category: '교양', professor: '정정보', room: '청운201', times: [{ day: '목', start: '09:00', end: '11:00' }] },
+  { id: 21, name: '소프트웨어설계', code: 'CS0410', credits: 3, area: '전공', category: '전선', professor: '한설계', room: '북401', times: [{ day: '목', start: '13:00', end: '16:00' }] },
+  { id: 22, name: '모바일프로그래밍', code: 'CS0322', credits: 3, area: '전공', category: '전선', professor: '윤앱', room: '정보305', times: [{ day: '월', start: '14:00', end: '17:00' }] },
+  { id: 23, name: '데이터시각화', code: 'CS0377', credits: 3, area: '전공', category: '전선', professor: '박데이터', room: '정보301', times: [{ day: '화', start: '10:00', end: '12:00' }] },
+  { id: 24, name: '영화와 인문학', code: 'GE0510', credits: 2, area: '교양 선택', category: '교양', professor: '이인문', room: '청운103', times: [{ day: '수', start: '10:00', end: '12:00' }] },
+];
+
 const notifications: Notification[] = [
   { id: 501, type: 'deadline', title: '졸업작품 심사 신청 마감이 오늘이에요', target_id: 31, read: false, sent_at: `${d(0)}T09:00:00+09:00` },
   { id: 503, type: 'calendar', title: '3일 뒤 중간고사 성적 확인이 시작돼요', target_id: 2, read: false, sent_at: `${d(0)}T09:00:00+09:00` },
@@ -151,6 +229,12 @@ const notifications: Notification[] = [
 
 /** 졸업 관련 할 일은 4학년에게만 (가상 학생마다 다르게 보이게) */
 const mine = (t: TodoDetail) => t.type !== 'graduation' || me.grade === 4;
+
+/** 홈 브리핑 문장: 할 일·장학금 상태로 매번 다시 만듦 (서버의 ⑤ 브리핑 흉내). 0개인 부분은 빼고 말함 */
+function briefingOf(todayCount: number, eligible: number) {
+  const parts = [todayCount && `오늘 마감 ${todayCount}개`, eligible && `신청 가능한 장학금 ${eligible}개`].filter(Boolean);
+  return parts.length ? `${parts.join(', ')}가 있어요` : '오늘은 급하게 챙길 일이 없어요. 여유로운 하루 보내세요!';
+}
 
 const home = (): Home => {
   applyPersona();
@@ -162,7 +246,7 @@ const home = (): Home => {
   return {
     nickname: me.nickname,
     unread_notifications: notifications.filter((n) => !n.read).length,
-    briefing: `오늘 마감 ${todayCount}개, 신청 가능한 장학금 ${eligible}개가 있어요`,
+    briefing: briefingOf(todayCount, eligible),
     today_todos: open.slice(0, 9),
     next_event: next ? { id: next.id, title: next.title, start_date: next.start_date, d_day: next.d_day } : null,
     menu_status: {
@@ -304,6 +388,12 @@ const claimQuestions: ClaimQuestion[] = [
   { id: 2, question: '지갑의 브랜드나 눈에 띄는 특징을 적어 주세요.' },
 ];
 
+/** 서버처럼: 없는 id면 404 (예전에는 다른 공지를 대신 보여 줬음) */
+function found<T>(x: T | undefined): T {
+  if (x === undefined) throw new ApiError(404, 'NOT_FOUND', '찾을 수 없어요. 지워졌거나 주소가 바뀌었을 수 있어요.');
+  return x;
+}
+
 export async function mockFetch(method: string, path: string, body?: any): Promise<unknown> {
   await new Promise((r) => setTimeout(r, method === 'POST' && path === '/chat' ? 900 : 200)); // 로딩·'답변 작성 중' 확인용
   applyPersona();
@@ -312,22 +402,41 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
   const id = Number(p.split('/')[2]);
   const key = `${method} ${p.replace(/\/\d+/, '/:id')}`;
   switch (key) {
-    case 'GET /me': return me;
-    case 'PUT /me': return Object.assign(me, body, body.notify && { notify: { ...me.notify, ...body.notify } }); // 서버처럼 notify는 합치기
-    case 'DELETE /me': return undefined;
-    case 'GET /home': return home();
+    case 'GET /me': case 'GET /home': {
+      if (!profiles[currentId()]) {
+        // 서버처럼: 처음 쓰는(또는 탈퇴한) 학생 → 앱이 처음 설정(M-2)으로 보냄
+        throw new ApiError(404, 'NO_PROFILE', '처음 설정이 필요해요');
+      }
+      return key === 'GET /me' ? me : home();
+    }
+    case 'PUT /me': {
+      const id = currentId();
+      const base = profiles[id] ?? { ...defaultProfile(PERSONAS.find((x) => x.id === id)!), consent: { agreed: false, agreed_at: null } };
+      const next: Me = { ...base, ...body, notify: { ...base.notify, ...body.notify } }; // 서버처럼 notify는 합치기
+      if (body.consent?.agreed) next.consent = { agreed: true, agreed_at: now() };
+      profiles[id] = next;
+      saveProfiles();
+      applyPersona();
+      return next;
+    }
+    case 'DELETE /me': {
+      // 서버처럼: 성적을 포함한 그 학생의 정보를 지움 (예시 데이터라 지금은 내 정보만 지움)
+      profiles[currentId()] = null;
+      saveProfiles();
+      return undefined;
+    }
     case 'GET /todos':
       return todos.filter((t) => mine(t) && (!q.has('done') || String(t.done) === q.get('done')) && (!q.get('type') || t.type === q.get('type')))
         .sort((a, b) => (a.d_day ?? 99) - (b.d_day ?? 99));
-    case 'GET /todos/:id': return todos.find((t) => t.id === id);
+    case 'GET /todos/:id': return found(todos.find((t) => t.id === id));
     case 'PATCH /todos/:id': {
-      const t = Object.assign(todos.find((x) => x.id === id)!, body, { done_at: body.done ? now() : null });
+      const t = Object.assign(found(todos.find((x) => x.id === id)), body, { done_at: body.done ? now() : null });
       const s = t.type === 'scholarship' && scholarships.find((x) => x.notice_id === t.source?.id);
       if (s) Object.assign(s, { applied: t.done, applied_at: t.done_at }); // 서버처럼 신청 내역에 기록
       return t;
     }
     case 'POST /todos': {
-      const t: TodoDetail = { id: Date.now(), type: 'deadline', link: null, reason: '직접 등록한 일이에요.', source: null, ...body,
+      const t: TodoDetail = { type: 'deadline', link: null, reason: '직접 등록한 일이에요.', source: null, ...body, id: Date.now(),
         d_day: body.due_date ? dday(body.due_date) : null, done: false, done_at: null };
       todos.push(t);
       return t;
@@ -339,28 +448,52 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
       return notices.map(({ id, title, category, deadline, posted_at, summary }) => ({ id, title, category, deadline, posted_at, summary: summary.slice(0, 1) }))
         .sort((a, b) => (b.posted_at ?? '').localeCompare(a.posted_at ?? ''));
     case 'GET /notices/:id': {
-      const n = notices.find((x) => x.id === id) ?? notices[0];
+      const n = found(notices.find((x) => x.id === id));
       const s = scholarships.find((x) => x.notice_id === id);
       const todo = todos.find((t) => t.source?.kind === 'notice' && t.source.id === id && !t.done);
       return { ...n, eligibility: s ? { verdict: s.verdict, reasons: s.reasons } : null, todo_id: s?.applied ? null : todo?.id ?? null, applied: !!s?.applied };
     }
     case 'GET /calendar': return calendar();
     case 'GET /graduation': return graduation();
-    case 'GET /grades': return grades;
-    case 'POST /grades': case 'PUT /grades/:id': case 'DELETE /grades/:id':
-      return { item: body, recalculated: { remaining_total: 9, new_eligible_scholarships: 0 } };
-    case 'GET /courses': return [
-      { id: 15, name: '모바일앱디자인', code: 'DS0201', credits: 3, area: '교양 선택', category: '일선', professor: '최디자인', room: '예지301', times: [{ day: '금', start: '10:00', end: '13:00' }] },
-      { id: 14, name: '빅데이터개론', code: 'GE0302', credits: 2, area: '교양 선택', category: '교양', professor: '정정보', room: '청운201', times: [{ day: '목', start: '09:00', end: '11:00' }] },
-    ];
-    case 'GET /timetable': return timetable;
-    case 'POST /timetable':
-      if (body.course_id === 15) {
-        const { ApiError } = await import('../lib/api');
-        throw new ApiError(409, 'TIME_CONFLICT', '강의 시간 중복 (금요일 04교시)\n기존 수강 과목 [서경인성리더십]과 수업 시간대가 서로 겹칩니다.');
+    case 'GET /grades': return gradeTerms();
+    case 'POST /grades': case 'PUT /grades/:id': case 'DELETE /grades/:id': {
+      const before = graduation().areas.filter((a) => a.earned >= a.required).length;
+      let item: GradeItem | null = null;
+      if (method === 'POST') gradeItems.push((item = { id: gradeSeq++, ...body, area: areaOf(body.area) }));
+      else {
+        const i = gradeItems.findIndex((g) => g.id === id);
+        if (i < 0) throw new Error('없는 성적이에요');
+        if (method === 'PUT') item = Object.assign(gradeItems[i], body, { area: areaOf(body.area) });
+        else gradeItems.splice(i, 1);
       }
+      const g = graduation();
+      return { item, recalculated: { remaining_total: g.remaining_total, new_eligible_scholarships: 0,
+        completed_areas: g.areas.filter((a) => a.earned >= a.required).length - before } };
+    }
+    case 'GET /courses': {
+      // 과목명 또는 과목코드로 찾기
+      const word = (q.get('q') ?? '').trim().toLowerCase();
+      return COURSES.filter((c) => !word || c.name.toLowerCase().includes(word) || (c.code ?? '').toLowerCase().includes(word));
+    }
+    case 'GET /timetable': return timetable;
+    case 'POST /timetable': {
+      // 서버처럼: 과목 검색이면 개설 과목에서 찾고, 직접 입력이면 보낸 내용 그대로. 겹치거나 학점을 넘으면 409
+      const c = body.course_id ? COURSES.find((x) => x.id === body.course_id) : null;
+      const entry: TimetableEntry = c
+        ? { id: Date.now(), course_id: c.id, course_name: c.name, code: c.code, credits: c.credits, category: c.category, professor: c.professor, room: c.room, times: c.times }
+        : { id: Date.now(), course_id: null, code: null, room: null, professor: null, ...body };
+      const problem = checkAdd(timetable, entry);
+      if (problem) {
+        throw new ApiError(409, problem.code, problem.lines.join('\n'));
+      }
+      timetable.push(entry);
+      return entry;
+    }
+    case 'DELETE /timetable/:id': {
+      const i = timetable.findIndex((e) => e.id === id);
+      if (i >= 0) timetable.splice(i, 1);
       return {};
-    case 'DELETE /timetable/:id': return {};
+    }
     case 'POST /chat': return chat(body);
     case 'GET /conversations': {
       const word = q.get('q') ?? '';
@@ -375,7 +508,7 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
     case 'GET /lost-items':
       if (q.get('matched_for') === 'me') return lostItems.filter((i) => i.kind === 'found' && i.match?.item_id === 951).sort((a, b) => b.match!.score - a.match!.score);
       return lostItems.filter((i) => !q.get('kind') || i.kind === q.get('kind'));
-    case 'GET /lost-items/:id': return lostItems.find((i) => i.id === id);
+    case 'GET /lost-items/:id': return found(lostItems.find((i) => i.id === id));
     case 'GET /lost-items/:id/questions': return claimQuestions;
     case 'POST /lost-items/:id/claim': return { ok: true, message: '보관처(학생지원팀, 학생회관 1층)에서 평일 9~18시에 학생증을 보여 주고 받아 가세요.' };
     case 'POST /lost-items/analyze': return { title: '흰색 무선 이어폰 케이스', category: '전자기기', place: '', description: '흰색 플라스틱 케이스, 에어팟 추정 (AI 초안)' };

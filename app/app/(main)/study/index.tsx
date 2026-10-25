@@ -5,9 +5,10 @@ import { router, Stack } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { AreaCard } from '../../../components/AreaCard';
 import { GradesView } from '../../../components/GradesView';
 import { TimetableGrid } from '../../../components/TimetableGrid';
-import { Body, Card, Row, Screen, StateView, Sub } from '../../../components/ui';
+import { Card, Row, Screen, StateView, Sub } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { semesterLabel } from '../../../lib/format';
 import { color } from '../../../lib/theme';
@@ -40,14 +41,8 @@ export default function Study() {
         ))}
       </View>
 
-      {tab === '졸업' && grad.data?.areas.map((a) => (
-        <Card key={a.name}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <Body>{a.name}</Body>
-            <Body style={{ fontWeight: '700', color: a.earned >= a.required ? color.primary : color.alert }}>{a.earned} / {a.required}</Body>
-          </Row>
-        </Card>
-      ))}
+      {/* ▶ FE 20번에 해당하는 부분: 영역별 이수 학점 — ⌄를 누르면 그 영역에서 들은 과목과 성적 */}
+      {tab === '졸업' && grad.data?.areas.map((a) => <AreaCard key={a.name} area={a} />)}
       {tab === '시간표' && <Timetable />}
       {tab === '성적' && <GradesView />}
     </Screen>

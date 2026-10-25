@@ -1,4 +1,4 @@
-// ▶ FE 9번에 해당하는 부분: M-3 마이페이지
+// ▶ FE 9번에 해당하는 부분: M-3 마이페이지 (계정 삭제는 경고 두 번)
 // 시안 14 마이페이지: 프로필(졸업 진행 막대) · 알림 설정 · 계정 관리 · 서비스 정보
 // 시안의 '비밀번호 변경'은 이메일 인증번호 로그인이라 비밀번호가 없어서 뺌.
 // '방해 금지 시간', '다크 모드', '글자 크기'는 서버·앱에 아직 기능이 없어서 뺌.
@@ -10,12 +10,12 @@ import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Select } from '../../../components/form';
 import { confirmAsk, Screen, showAlert, StateView } from '../../../components/ui';
-import { api, useApi } from '../../../lib/api';
+import { api, attempt, ApiError, useApi } from '../../../lib/api';
 import { logout } from '../../../lib/session';
+import { BRIEF_TIMES } from '../../../lib/constants';
 import { color } from '../../../lib/theme';
 import { STATUS_KO, type Graduation, type Me } from '../../../lib/types';
 
-const TIMES = ['07:00', '08:00', '09:00', '12:00', '18:00', '21:00'];
 const timeLabel = (t: string) => {
   const h = Number(t.slice(0, 2));
   return `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${t.slice(3)}`;
@@ -27,13 +27,20 @@ export default function MyPage() {
   const allOn = !!me && me.notify.notice && me.notify.deadline && me.notify.calendar && me.notify.chat;
 
   async function setNotify(notify: Partial<Me['notify']>) {
-    setData(await api.put<Me>('/me', { notify }));
+    await attempt(async () => setData(await api.put<Me>('/me', { notify })));
   }
 
+  // 계정 삭제는 되돌릴 수 없어서 경고를 두 번 띄움 → 두 번째에서도 '삭제'를 눌러야 지움 (지운 뒤 로그인 화면으로)
   function deleteAccount() {
-    confirmAsk('계정 삭제 및 탈퇴', '성적을 포함한 모든 정보와 AI 브리핑 기록이 지워지고 되돌릴 수 없어요.', '삭제', async () => {
-      await api.del('/me');
-      await logout();
+    confirmAsk('계정 삭제 및 탈퇴', '성적을 포함한 모든 정보와 AI 브리핑 기록이 지워져요.', '계속', () => {
+      confirmAsk('정말 삭제하시겠습니까?', '삭제하면 원래대로 되돌릴 수 없습니다.\n학적·성적·시간표·할 일·채팅 기록이 모두 지워져요.', '삭제', async () => {
+        try {
+          await api.del('/me');
+          await logout();
+        } catch (e) {
+          showAlert('삭제하지 못했어요', (e as ApiError).message);
+        }
+      });
     });
   }
 
@@ -70,7 +77,7 @@ export default function MyPage() {
               <View style={st.item}>
                 <Text style={st.itemTitle}>마감 임박 및 브리핑 알림</Text>
                 <View style={{ width: 130 }}>
-                  <Select value={me.notify.time} items={TIMES} label={timeLabel} onChange={(time) => setNotify({ time })} />
+                  <Select value={me.notify.time} items={BRIEF_TIMES} label={timeLabel} onChange={(time) => setNotify({ time })} />
                 </View>
               </View>
               <Item title="알림 종류 자세히" onPress={() => router.push('/me/assistant')} />

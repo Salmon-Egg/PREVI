@@ -4,8 +4,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { color } from '../lib/theme';
 import type { TimetableEntry } from '../lib/types';
+import { CLASS_DAYS } from '../lib/constants';
 
-const DAYS = ['월', '화', '수', '목', '금'];
 const ROW = 56; // 한 시간 높이
 const toMin = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number);
@@ -23,13 +23,13 @@ export function TimetableGrid({ entries }: { entries: TimetableEntry[] }) {
     <View>
       <View style={g.head}>
         <Text style={[g.headText, g.timeCol]}>시</Text>
-        {DAYS.map((d) => <Text key={d} style={[g.headText, { flex: 1 }]}>{d}</Text>)}
+        {CLASS_DAYS.map((d) => <Text key={d} style={[g.headText, { flex: 1 }]}>{d}</Text>)}
       </View>
       <View style={{ flexDirection: 'row' }}>
         <View style={g.timeCol}>
           {hours.map((h) => <Text key={h} style={g.hour}>{String(h).padStart(2, '0')}</Text>)}
         </View>
-        {DAYS.map((day) => (
+        {CLASS_DAYS.map((day) => (
           <View key={day} style={[g.dayCol, { height: hours.length * ROW }]}>
             {hours.map((h) => <View key={h} style={g.cell} />)}
             {entries.flatMap((e) =>

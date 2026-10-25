@@ -8,14 +8,11 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Body, Button, Card, Character, Row, Screen, Sub, Title } from '../../components/ui';
 import { api, ApiError } from '../../lib/api';
 import { registerPush } from '../../lib/push';
+import { DEPTS, MINORS, STATUSES } from '../../lib/constants';
 import { color } from '../../lib/theme';
 import { STATUS_KO, type Status } from '../../lib/types';
 
-const DEPTS = ['소프트웨어학과', '전자컴퓨터공학과'];
-// 학적 정보 변경(M-4, me/status.tsx)과 같은 목록
-const MINORS = ['없음', '경영학부 (부전공)', '소프트웨어학과 (복수전공)', '전자컴퓨터공학과 (복수전공)'];
 const YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026];
-const STATUSES: Status[] = ['enrolled', 'leave', 'returned'];
 const STEPS = 4;
 
 function Choice<T extends string | number>({ items, value, onChange, label = (v: T) => String(v) }: {

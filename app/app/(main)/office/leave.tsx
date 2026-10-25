@@ -5,7 +5,7 @@ import { router, Stack } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { Body, Button, Card, Row, Screen, showAlert, StateView, Sub, Title } from '../../../components/ui';
-import { api, useApi } from '../../../lib/api';
+import { api, attempt, useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
 import { STATUS_KO, type CalendarEvent, type Me, type Scholarship } from '../../../lib/types';
 
@@ -26,8 +26,8 @@ export default function Leave() {
 
   async function addTodo() {
     if (!period) return;
-    await api.post('/todos', { title: period.title, due_date: period.end_date ?? period.start_date, type: 'status', source: { kind: 'calendar', id: period.id } });
-    showAlert('할 일에 등록했어요', '마감 전날과 당일에 알려 드릴게요.');
+    const ok = await attempt(() => api.post('/todos', { title: period.title, due_date: period.end_date ?? period.start_date, type: 'status', source: { kind: 'calendar', id: period.id } }), '할 일에 등록하지 못했어요');
+    if (ok) showAlert('할 일에 등록했어요', '마감 전날과 당일에 알려 드릴게요.');
   }
 
   // ▶ FE 32번에 해당하는 부분: A-3에서 넘어온 맥락(학적)으로 대화 시작

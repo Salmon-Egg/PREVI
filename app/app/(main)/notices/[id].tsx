@@ -2,10 +2,10 @@
 // 시안 13 장학금(공지) 안내: AI 핵심 요약 → 나의 판정 → 공지 원문 → AI 요약 유의사항 → 공지사항 가기 / 신청 완료 체크
 import { Feather } from '@expo/vector-icons';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Screen, StateView, VerdictBadge } from '../../../components/ui';
-import { api, useApi } from '../../../lib/api';
+import { isSafeUrl, openLink, Screen, StateView, VerdictBadge } from '../../../components/ui';
+import { api, attempt, useApi } from '../../../lib/api';
 import { deadlineText, dotDate } from '../../../lib/format';
 import { color } from '../../../lib/theme';
 import type { NoticeDetail } from '../../../lib/types';
@@ -17,8 +17,8 @@ export default function Notice() {
 
   async function markApplied() {
     if (!n?.todo_id) return;
-    await api.patch(`/todos/${n.todo_id}`, { done: true }); // 서버가 신청 내역에 기록
-    reload();
+    // 서버가 신청 내역에 기록
+    if (await attempt(() => api.patch(`/todos/${n.todo_id}`, { done: true }))) reload();
   }
 
   return (
@@ -62,7 +62,7 @@ export default function Notice() {
 
       {n && (
         <View style={st.bottom}>
-          <Pressable style={[st.btn, st.btnGhost]} onPress={() => (n.url ? Linking.openURL(n.url) : router.push('/office'))}>
+          <Pressable style={[st.btn, st.btnGhost]} onPress={() => (isSafeUrl(n.url) ? openLink(n.url) : router.push('/office'))}>
             <Text style={[st.btnText, { color: color.primary }]}>📢 공지사항 가기</Text>
           </Pressable>
           {n.applied ? (

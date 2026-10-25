@@ -24,6 +24,20 @@ export function showAlert(title: string, message: string) {
   else Alert.alert(title, message);
 }
 
+/** 바깥 링크 열기. 서버·공지에서 온 주소라 http(s)만 열고 javascript:, intent:, file: 같은 건 막음 */
+export function isSafeUrl(url: string | null | undefined): url is string {
+  return !!url && /^https?:\/\/\S+$/i.test(url.trim());
+}
+
+export async function openLink(url: string | null | undefined) {
+  if (!isSafeUrl(url)) return showAlert('링크를 열 수 없어요', '올바른 웹 주소가 아니에요.');
+  try {
+    await Linking.openURL(url.trim());
+  } catch {
+    showAlert('링크를 열 수 없어요', '잠시 뒤 다시 시도해 주세요.');
+  }
+}
+
 /** 확인/취소 창. 확인을 누르면 onOk */
 export function confirmAsk(title: string, message: string, okLabel: string, onOk: () => void) {
   if (Platform.OS === 'web') openDialog({ title, message, okLabel, onOk });
@@ -146,7 +160,7 @@ function ratioOf(line: string | undefined): [number, number] | null {
 export function InfoCard({ card }: { card: ChatCard }) {
   const ratio = ratioOf(card.lines[1]);
   return (
-    <Pressable style={s.infoCard} disabled={!card.link} onPress={() => card.link && Linking.openURL(card.link)}>
+    <Pressable style={s.infoCard} disabled={!isSafeUrl(card.link)} onPress={() => openLink(card.link)}>
       {card.image_url && <Image source={{ uri: card.image_url }} style={s.infoImage} />}
       <Text style={s.infoTitle}>{card.title}</Text>
       <Text style={s.infoBig}>{card.lines[0]}</Text>
@@ -192,15 +206,13 @@ export function ItemCard({ title, desc, image, icon, badge, meta, onPress }: {
   );
 }
 
-/** ▶ FE 12번에 해당하는 부분: 서경 AI 캐릭터 (피그마 홈 시안의 코끼리). face=true면 질문창용 얼굴 */
+/** ▶ FE 12번에 해당하는 부분: 서경 AI 캐릭터 (피그마 홈 시안의 코끼리).
+ *  가장자리가 투명하게 흐려진 그림이라 어느 배경 위에서도 이어져 보임. face=true면 질문창용 동그란 얼굴 */
 export function Character({ size = 120, face = false }: { size?: number; face?: boolean }) {
-  return (
-    <Image
-      accessibilityLabel="서경 AI 캐릭터"
-      source={face ? require('../assets/character-face.png') : require('../assets/character.png')}
-      style={{ width: size, height: face ? size : size * (340 / 332), borderRadius: face ? size / 2 : 24 }}
-    />
-  );
+  if (face) {
+    return <Image accessibilityLabel="서경 AI 캐릭터" source={require('../assets/character-face.png')} style={{ width: size, height: size, borderRadius: size / 2 }} />;
+  }
+  return <Image accessibilityLabel="서경 AI 캐릭터" source={require('../assets/character.png')} style={{ width: size, height: size * (355 / 480) }} />;
 }
 
 /** ▶ FE 31번에 해당하는 부분: '답변 작성 중' 점 세 개 움직임 */
