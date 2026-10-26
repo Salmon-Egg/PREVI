@@ -27,11 +27,17 @@ def main() -> None:
             print("실행:", f.name)
 
     chunks = db.all_rows("select id, content from doc_chunks where embedding is null")
-    vectors = ai_client.embed([c["content"] for c in chunks]) if chunks else None
-    if vectors:
-        for c, v in zip(chunks, vectors):
+    done = 0
+    for i in range(0, len(chunks), 32):  # 한 번에 다 보내면 문단이 많을 때 Ollama가 실패함
+        part = chunks[i:i + 32]
+        vectors = ai_client.embed([c["content"] for c in part])
+        if not vectors:
+            break
+        for c, v in zip(part, vectors):
             db.run("update doc_chunks set embedding = %s::vector where id = %s", [str(v), c["id"]])
-        print(f"문서 임베딩: {len(vectors)}개")
+        done += len(vectors)
+    if done:
+        print(f"문서 임베딩: {done}개")
     else:
         print("문서 임베딩 건너뜀 (가짜 AI 모드 또는 EMBED_MODEL 없음) → 챗봇은 글자 검색을 씀")
 

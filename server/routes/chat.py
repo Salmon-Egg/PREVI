@@ -63,7 +63,11 @@ def _my_info(uid: str, p: dict, topic: str | None, question: str) -> dict:
         if not g:
             return {"text": "학과 졸업 기준이 아직 없어 계산할 수 없어요.", "cards": [], "actions": []}
         pending = [r for r in g["requirements"] if not r["done"]]
-        summary = f"졸업까지 {g['remaining_total']}학점, 남은 요건 {len(pending)}가지예요: " + ", ".join(r["name"] for r in pending)
+        # AI가 "117학점에서 뺀 값"처럼 계산하려 들지 않게, 남은 학점을 완성된 숫자로 줌
+        summary = (f"앞으로 {g['remaining_total']}학점 더 들으면 돼요 "
+                   f"(지금 {g['earned_total']}학점 / 필요 {g['required_total']}학점).")
+        if pending:
+            summary += f" 남은 요건 {len(pending)}가지: " + ", ".join(r["name"] for r in pending)
         cards = [{"image_url": None, "title": "졸업까지 남은 학점",
                   "lines": [f"{g['remaining_total']}학점", f"{g['earned_total']} / {g['required_total']}"], "link": None}]
         actions = [{"type": "open_screen", "label": "졸업 요건 자세히", "payload": {"screen": "L-2"}}]
