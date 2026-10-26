@@ -17,6 +17,10 @@ def _ask(prompt: str, payload: dict) -> dict | None:
         return None
 
 
+DEPARTMENTS = ["소프트웨어학과", "전자컴퓨터공학과"]  # routes/me.py에서 고를 수 있는 학과와 같게
+STATUS = {"enrolled": "enrolled", "leave": "leave", "returned": "returned", "재학생": "enrolled", "휴학생": "leave", "복학생": "returned"}
+
+
 def summarize_notice(title: str, body: str) -> dict:
     """① 공지 해석 + ② 대상 분류. 실패하면 요약 없이 원문만 둠 (빈 조건 = 모두 대상)."""
     out = _ask("notice_summary", {"title": title, "body": body}) or {}
@@ -25,9 +29,32 @@ def summarize_notice(title: str, body: str) -> dict:
         "summary": (out.get("summary") or [title])[:3],
         "deadline": out.get("deadline"),
         "documents": out.get("documents") or [],
-        "target": out.get("target") or {},
-        "conditions": out.get("conditions") or {},
+        "target": clean_target(out.get("target")),
+        "conditions": clean_conditions(out.get("conditions")),
     }
+
+
+def clean_target(t) -> dict:
+    """AI가 쓴 대상을 BE A 대조 코드가 읽는 모양으로. 학과는 짧게 써도('소프트웨어') 정식 이름으로 맞춤."""
+    t = t if isinstance(t, dict) else {}
+    grades = [int(g) for g in t.get("grades") or [] if str(g).strip() in ("1", "2", "3", "4")]
+    depts = [next((k for k in DEPARTMENTS if d in k or k in d), d)
+             for d in (str(x).strip() for x in t.get("departments") or []) if d]
+    statuses = [STATUS[s] for s in t.get("statuses") or [] if s in STATUS]
+    return {"grades": grades, "departments": depts, "statuses": statuses}
+
+
+def clean_conditions(c) -> dict:
+    """숫자가 아니면 버림. 글자("3.0")가 그대로 가면 대조 코드의 >= 비교에서 서버가 멈춤."""
+    c = c if isinstance(c, dict) else {}
+    out = {}
+    for key, cast in (("min_gpa", float), ("min_credits", int), ("income_max", int)):
+        try:
+            if c.get(key) is not None:
+                out[key] = cast(float(c[key]))
+        except (TypeError, ValueError):
+            log.warning("공지 조건 %s 무시: %r", key, c[key])
+    return out
 
 
 def severity(todo_type: str, title: str) -> int:

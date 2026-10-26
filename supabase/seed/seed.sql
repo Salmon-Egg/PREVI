@@ -71,10 +71,10 @@ select '00000000-0000-0000-0000-000000000002', t.term, t.term || ' 과목 ' || g
        case when g <= 3 then '전공' else '교양 선택' end
 from (values ('1-1'), ('1-2'), ('2-1')) t(term), generate_series(1, 5) g;
 
--- 3학년 박바뻐: 직전 학기(3-1) 평점 3.1 → 성적우수 장학금 조건 미충족
+-- 3학년 박바뻐: 직전 학기(3-1) 평점 2.9 → 성적우수 장학금(평점 3.0 이상) 조건 미충족
 insert into grades (user_id, term, course_name, credits, grade, area)
 select '00000000-0000-0000-0000-000000000003', t.term, t.term || ' 과목 ' || g, 3,
-       case when t.term = '3-1' then (array['B+','B0','B+','C+','B+'])[g] else 'B0' end,
+       case when t.term = '3-1' then (array['B0','B0','B+','C+','C+'])[g] else 'B0' end,
        case when g <= 3 then '전공' else '교양 선택' end
 from (values ('1-1'), ('1-2'), ('2-1'), ('2-2'), ('3-1')) t(term), generate_series(1, 5) g;
 
