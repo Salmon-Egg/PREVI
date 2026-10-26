@@ -1,5 +1,6 @@
 """챗봇 POST /chat (H-1, H-2) · 대화 목록 (H-3).
 ⑩ 의도 파악 → 내 정보면 ⑫ 계산 결과로 답, 문서면 ⑪ 문서 검색 후 근거로 답, 근거가 없으면 '모른다' + 기록."""
+import logging
 import re
 from typing import Literal
 
@@ -7,6 +8,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 import agent
+import config
 import db
 from ai import client as ai_client
 from ai import tasks
@@ -15,6 +17,7 @@ from db import Json
 from errors import ApiError, not_found
 
 router = APIRouter()
+log = logging.getLogger("chat")
 VERDICT_KO = {"eligible": "신청 가능", "check": "확인 필요", "ineligible": "조건 미충족"}
 UNKNOWN = "학교 문서에서 근거를 찾지 못했어요. 질문을 기록해 두었으니, 문서가 보강되면 답해 드릴게요."
 
@@ -28,11 +31,14 @@ def search_chunks(question: str, k: int = 3) -> list[dict]:
     """문서 검색. 임베딩이 있으면 벡터 검색, 없으면(가짜 AI 모드) 두 글자 묶음이 많이 겹치는 문단."""
     vec = ai_client.embed([question])
     if vec:
-        return db.all_rows(
-            """select c.content, d.title, d.url from doc_chunks c join documents d on d.id = c.document_id
-               where c.embedding is not null order by c.embedding <=> %s::vector limit %s""",
+        rows = db.all_rows(
+            """select c.content, d.title, d.url, c.embedding <=> %s::vector as distance
+               from doc_chunks c join documents d on d.id = c.document_id
+               where c.embedding is not null order by distance limit %s""",
             [str(vec[0]), k],
         )
+        log.info("문서 거리 %s: %s", question[:30], [round(r["distance"], 3) for r in rows])  # 기준 숫자 정할 때 봄
+        return [r for r in rows if r["distance"] <= config.DOC_MAX_DISTANCE]
     # shortcut: 문단이 수천 개가 되면 느려짐. 그때는 임베딩(벡터 검색)을 켜기
     rows = db.all_rows("select c.content, d.title, d.url from doc_chunks c join documents d on d.id = c.document_id")
     q = _bigrams(question)
