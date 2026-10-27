@@ -172,7 +172,7 @@ export default function Home() {
             {data && (
               <>
                 {/* ▶ FE 12번에 해당하는 부분: 인사 + 마스코트. 인사말·미어캣 위치는 새 홈 시안과 같은 비율
-                    (브리핑 말풍선은 2026-10-27 요청으로 뺌. 브리핑 문구는 GET /home의 briefing으로 계속 받음) */}
+                    (브리핑 말풍선은 2026-10-27 요청으로 기능째 뺌. GET /home의 briefing은 앱에서 안 씀) */}
                 <View style={[st.hero, { minHeight: hero.minHeight }]}>
                   {/* 인사말: 줄마다 그 글자 길이만큼만 흐림 판을 깔아 가독성을 높임 (흐림 판은 글자와 따로 둔 뒤판이라 글자는 또렷함) */}
                   <View style={[st.heroText, { paddingTop: hero.padTop }]}>

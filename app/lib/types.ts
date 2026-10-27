@@ -49,7 +49,6 @@ export type TodoDetail = Todo & {
 export type Home = {
   nickname: string;
   unread_notifications: number;
-  briefing: string;
   today_todos: Todo[];
   next_event: { id: number; title: string; start_date: string; d_day: number } | null;
   menu_status: { study: string; scholarship: string; admin: string; campus: string };

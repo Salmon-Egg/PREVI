@@ -230,23 +230,15 @@ const notifications: Notification[] = [
 /** 졸업 관련 할 일은 4학년에게만 (가상 학생마다 다르게 보이게) */
 const mine = (t: TodoDetail) => t.type !== 'graduation' || me.grade === 4;
 
-/** 홈 브리핑 문장: 할 일·장학금 상태로 매번 다시 만듦 (서버의 ⑤ 브리핑 흉내). 0개인 부분은 빼고 말함 */
-function briefingOf(todayCount: number, eligible: number) {
-  const parts = [todayCount && `오늘 마감 ${todayCount}개`, eligible && `신청 가능한 장학금 ${eligible}개`].filter(Boolean);
-  return parts.length ? `${parts.join(', ')}가 있어요` : '오늘은 급하게 챙길 일이 없어요. 여유로운 하루 보내세요!';
-}
-
 const home = (): Home => {
   applyPersona();
   const open = todos.filter((t) => mine(t) && !t.done && (t.d_day ?? 0) >= 0).sort((a, b) => (a.d_day ?? 99) - (b.d_day ?? 99));
-  const todayCount = open.filter((t) => t.d_day === 0).length;
   const eligible = scholarships.filter((s) => !s.applied && s.verdict === 'eligible').length;
   const next = calendar().filter((e) => e.d_day >= 0).sort((a, b) => a.d_day - b.d_day)[0];
   const newNotices = notices.filter((n) => n.posted_at && dday(n.posted_at.slice(0, 10)) >= -3).length;
   return {
     nickname: me.nickname,
     unread_notifications: notifications.filter((n) => !n.read).length,
-    briefing: briefingOf(todayCount, eligible),
     today_todos: open.slice(0, 9),
     next_event: next ? { id: next.id, title: next.title, start_date: next.start_date, d_day: next.d_day } : null,
     menu_status: {
@@ -323,8 +315,12 @@ function answer(q: string, ctx: { kind: string; id: number } | null): Reply {
   }
   if (/챙길|오늘/.test(q)) {
     const h = home();
+    // 오늘 마감 개수만 말하고, 없으면 그렇다고 함 (0개인 부분은 빼고 말함)
+    const todayCount = h.today_todos.filter((t) => t.d_day === 0).length;
     return {
-      text: `${h.briefing}. 가장 급한 일부터 정리했어요.`,
+      text: h.today_todos.length
+        ? `${todayCount ? `오늘 마감인 일이 ${todayCount}개 있어요. ` : ''}가장 급한 일부터 정리했어요.`
+        : '오늘은 급하게 챙길 일이 없어요. 여유로운 하루 보내세요!',
       cards: h.today_todos.slice(0, 3).map((t): ChatCard => ({ image_url: null, title: t.title, lines: [t.d_day === 0 ? '오늘 마감' : `D-${t.d_day}`, t.due_date ?? ''], link: null })),
       sources: [], actions: [{ type: 'open_screen', label: '할 일 전체 보기', payload: { screen: 'T-1' } }],
     };
