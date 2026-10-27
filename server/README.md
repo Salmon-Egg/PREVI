@@ -34,6 +34,25 @@ Supabase Authentication > Hooks에서 Before User Created에
 이메일 소유 확인을 위해 Supabase의 Confirm Email도 켜 두세요.
 학적 변경 후 할 일 생성·재계산은 아직 연결하지 않았습니다.
 
+### 성적·과목
+
+`supabase/migrations/003_courses_grades.sql` 실행 후 사용할 수 있습니다.
+
+- `GET /courses?q=`: 과목 이름 부분 검색 (최대 100개). 실제 과목 목록은 별도 입력이 필요합니다.
+- `GET /grades`: 본인 성적을 최신 학기순으로 묶고 학점 가중 평점을 계산합니다.
+- `POST /grades`, `PUT /grades/{id}`, `DELETE /grades/{id}`: 본인 성적을 추가·전체 수정·삭제합니다.
+- 같은 학기의 같은 과목 이름은 중복 저장할 수 없습니다 (409).
+- 과목표는 로그인 사용자에게 읽기만 허용하고, 성적표는 자기 데이터만 읽고 고칠 수 있습니다.
+- `recalculated.remaining_total`, `recalculated.new_eligible_scholarships`는 현재 `null`입니다.
+  졸업 기준과 장학 판정 파이프라인을 연결하기 전까지 완료된 계산으로 취급하면 안 됩니다.
+  졸업 요건·장학 재계산 기능은 아직 미완료입니다.
+
+평점 기준표와 둘째 자리 이하 처리 근거:
+https://www.skuniv.ac.kr/exam-and-grade (소수점 셋째 자리 이하 절사)
+P는 평점 계산에서 제외하고, 등급제 F는 0점으로 계산합니다.
+현재 API 명세에 없는 NP·계절학기·학점포기·재수강 대체 규칙은 지원하지 않습니다.
+실제 적용 전에 입력 형식과 규칙을 팀과 확정해야 합니다.
+
 ## 여기에 들어갈 것
 ```
 server/

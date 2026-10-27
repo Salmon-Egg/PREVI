@@ -24,6 +24,14 @@ SQL 실행 시 학교 도메인 허용·유사 도메인 차단을 함수로 검
 
 공식 문서: https://supabase.com/docs/guides/auth/auth-hooks/before-user-created-hook
 
+## 과목·성적 표
+
+SQL Editor의 새 쿼리에서 `migrations/003_courses_grades.sql` 전체를 실행합니다.
+결과에 `courses`, `grades` 두 줄이 나오고 둘 다 `rowsecurity=true`인지 확인합니다.
+학교 과목·졸업 기준이나 실제 학생 데이터는 이 파일에 넣지 않았습니다.
+과목은 관리자만 추가하고, 인증 사용자는 검색만 할 수 있습니다.
+성적은 본인만 조회·추가·수정·삭제하며 계정 삭제 시 함께 삭제됩니다.
+
 ## 여기에 들어갈 것
 ```
 supabase/

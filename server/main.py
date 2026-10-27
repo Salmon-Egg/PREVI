@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from server.config import Settings
 from server.errors import register_handlers
 from server.routes.me import router as me_router
+from server.routes.grades import router as grades_router
 
 
 def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTransport | None = None):
@@ -19,6 +20,7 @@ def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTrans
     app = FastAPI(title="서경 AI 비서 API", version="0.1.0", lifespan=lifespan)
     register_handlers(app)
     app.include_router(me_router)
+    app.include_router(grades_router)
 
     @app.get("/health", tags=["운영"])
     async def health():
