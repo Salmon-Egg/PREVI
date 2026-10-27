@@ -1,3 +1,5 @@
+from datetime import datetime
+import re
 from uuid import UUID
 
 import httpx
@@ -13,6 +15,15 @@ bearer = HTTPBearer(auto_error=False)
 class AuthenticatedUser(BaseModel):
     id: UUID
     email: str | None = None
+    email_confirmed_at: datetime | None = None
+
+
+def validate_school_user(user: AuthenticatedUser):
+    email = (user.email or "").lower()
+    if re.fullmatch(r"[^@\s]+@skuniv\.ac\.kr", email) is None:
+        raise APIError(401, "SCHOOL_EMAIL_REQUIRED", "@skuniv.ac.kr 학교 이메일로 로그인해 주세요.")
+    if user.email_confirmed_at is None:
+        raise APIError(401, "EMAIL_NOT_VERIFIED", "학교 이메일 인증을 완료해 주세요.")
 
 
 async def require_user(
@@ -34,6 +45,8 @@ async def require_user(
     if response.status_code != 200:
         raise APIError(500, "AUTH_SERVICE_UNAVAILABLE", "지금은 로그인을 확인할 수 없어요.")
     try:
-        return AuthenticatedUser.model_validate(response.json())
+        user = AuthenticatedUser.model_validate(response.json())
     except (ValueError, ValidationError):
         raise APIError(500, "AUTH_SERVICE_INVALID_RESPONSE", "로그인 확인 응답을 처리할 수 없어요.") from None
+    validate_school_user(user)
+    return user

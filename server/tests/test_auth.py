@@ -38,7 +38,7 @@ def test_valid_token_verified_with_supabase():
         assert str(request.url) == "https://example.supabase.co/auth/v1/user"
         assert request.headers["authorization"] == "Bearer test-user-token"
         assert request.headers["apikey"] == "test-public-key"
-        return httpx.Response(200, json={"id": USER_ID, "email": "student@example.com"})
+        return httpx.Response(200, json={"id": USER_ID, "email": "student@skuniv.ac.kr", "email_confirmed_at": "2026-10-27T00:00:00Z"})
     with make_client(handler) as client:
         response = client.get("/protected", headers={"Authorization": "Bearer test-user-token"})
         assert response.status_code == 200
@@ -74,3 +74,25 @@ def test_health_docs_and_not_found():
         assert client.get("/health").json() == {"status": "ok"}
         assert client.get("/docs").status_code == 200
         assert client.get("/missing").json()["error"]["code"] == "NOT_FOUND"
+
+
+@pytest.mark.parametrize("email", ["student@gmail.com", "student@sub.skuniv.ac.kr", "student@skuniv.ac.kr.evil.com", "student@fakeskuniv.ac.kr", "student@skuniv.ac.kr ", "a@b@skuniv.ac.kr", "@skuniv.ac.kr", None])
+def test_non_school_email_rejected(email):
+    user = {"id": USER_ID, "email": email, "email_confirmed_at": "2026-10-27T00:00:00Z"}
+    with make_client(lambda request: httpx.Response(200, json=user)) as client:
+        response = client.get("/protected", headers={"Authorization": "Bearer test"})
+        assert response.status_code == 401
+        assert response.json()["error"]["code"] == "SCHOOL_EMAIL_REQUIRED"
+
+
+def test_unverified_school_email_rejected():
+    with make_client(lambda request: httpx.Response(200, json={"id": USER_ID, "email": "student@skuniv.ac.kr"})) as client:
+        response = client.get("/protected", headers={"Authorization": "Bearer test"})
+        assert response.status_code == 401
+        assert response.json()["error"]["code"] == "EMAIL_NOT_VERIFIED"
+
+
+def test_school_domain_case_insensitive():
+    user = {"id": USER_ID, "email": "Student@SKUNIV.AC.KR", "email_confirmed_at": "2026-10-27T00:00:00Z"}
+    with make_client(lambda request: httpx.Response(200, json=user)) as client:
+        assert client.get("/protected", headers={"Authorization": "Bearer test"}).status_code == 200

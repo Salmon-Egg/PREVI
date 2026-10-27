@@ -27,7 +27,8 @@ def main():
         try:
             tokens = []
             for index in range(2):
-                email = f"codex-profile-check-{uuid4().hex}@example.com"
+                # 관리자 API로만 만들고 메일은 보내지 않는 가상 학교 계정.
+                email = f"codex-profile-check-{uuid4().hex}@skuniv.ac.kr"
                 password = secrets.token_urlsafe(32)
                 result = remote.post("/auth/v1/admin/users", headers=admin_headers,
                                      json={"email": email, "password": password, "email_confirm": True})

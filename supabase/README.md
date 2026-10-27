@@ -8,7 +8,21 @@
 `profiles`의 `rowsecurity`가 `true`이면 표와 RLS가 생성된 것입니다.
 다른 사용자 접근 차단은 별도 테스트 계정으로 검증해야 합니다.
 이미 생성된 표가 있으면 재실행 시 오류가 납니다. 기존 표를 삭제하지 말고 상태를 확인하세요.
-학교 이메일 제한은 이 SQL에 포함되어 있지 않습니다.
+학교 이메일 제한은 `migrations/002_school_email_hook.sql`로 설정합니다.
+
+## 학교 이메일 가입 제한
+
+1. SQL Editor의 새 쿼리에서 `002_school_email_hook.sql` 전체를 실행합니다.
+2. Authentication > Hooks에서 Before User Created 항목에 Postgres 함수를 연결합니다.
+3. schema는 `public`, 함수는 `hook_school_email_only`를 선택하고 저장·활성화합니다.
+4. 이메일 설정의 Confirm Email을 켜서 실제 학교 메일 소유 여부를 인증합니다.
+
+SQL 파일 생성·실행만으로는 가입 제한이 켜지지 않습니다. Hook 연결이 필요합니다.
+SQL 실행 시 학교 도메인 허용·유사 도메인 차단을 함수로 검사하며 실제 계정이나 메일을 만들지 않습니다.
+기존 계정은 삭제하지 않습니다. 기존 외부 이메일 계정은 서버 인증에서 차단합니다.
+관리자의 Auto Confirm 테스트 계정은 실제 메일 소유 확인을 생략하므로 시연용으로만 사용합니다.
+
+공식 문서: https://supabase.com/docs/guides/auth/auth-hooks/before-user-created-hook
 
 ## 여기에 들어갈 것
 ```

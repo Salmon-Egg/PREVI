@@ -20,7 +20,7 @@ def client_for(database_handler):
         assert request.headers["authorization"] == "Bearer user-token"
         assert request.headers["apikey"] == "test-key"
         if request.url.path == "/auth/v1/user":
-            return httpx.Response(200, json={"id": USER_ID})
+            return httpx.Response(200, json={"id": USER_ID, "email": "student@skuniv.ac.kr", "email_confirmed_at": "2026-10-27T00:00:00Z"})
         assert request.url.path == "/rest/v1/profiles"
         return database_handler(request)
     return TestClient(create_app(Settings("https://example.supabase.co", "test-key"), httpx.MockTransport(handler)))

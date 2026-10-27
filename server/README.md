@@ -26,7 +26,13 @@ python -m venv .venv
 먼저 `supabase/migrations/001_profiles.sql`을 Supabase SQL Editor에서 실행하세요.
 첫 `PUT /me`가 본인 프로필을 만들며, 저장 전 `GET /me`는 404를 반환합니다.
 알림 종류는 처음에는 꺼져 있고, 동의 시각은 서버가 기록합니다.
-학교 이메일 제한, 학적 변경 후 할 일 생성·재계산은 아직 연결하지 않았습니다.
+인증 시 `@skuniv.ac.kr` 도메인과 이메일 인증 완료 여부를 확인합니다.
+기존 외부 이메일 계정은 삭제하지 않지만 API 접근은 차단합니다.
+가입 자체의 제한은 `supabase/migrations/002_school_email_hook.sql` 실행 후
+Supabase Authentication > Hooks에서 Before User Created에
+`public.hook_school_email_only`를 연결해야 활성화됩니다.
+이메일 소유 확인을 위해 Supabase의 Confirm Email도 켜 두세요.
+학적 변경 후 할 일 생성·재계산은 아직 연결하지 않았습니다.
 
 ## 여기에 들어갈 것
 ```
