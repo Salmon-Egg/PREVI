@@ -22,8 +22,27 @@ async def database_rows(request: Request, method: str, table: str, **kwargs) -> 
         raise APIError(500, "DATABASE_UNAVAILABLE", "데이터 서버에 연결할 수 없어요.") from None
     if response.status_code in (401, 403):
         raise APIError(401, "UNAUTHORIZED", "로그인 또는 접근 권한을 확인해 주세요.")
+    if table == "timetable" and response.status_code in (400, 409):
+        try:
+            message = response.json().get("message")
+        except (ValueError, AttributeError):
+            message = None
+        known = {
+            "TIME_CONFLICT": (409, "이미 등록한 과목과 수업 시간이 겹쳐요."),
+            "CREDIT_LIMIT": (409, "입력 성적 기준으로 계산한 이번 학기 신청 가능 학점을 초과했어요."),
+            "DUPLICATE_COURSE": (409, "이미 시간표에 등록한 과목이에요."),
+            "PROFILE_INCOMPLETE": (400, "내 정보의 학과·입학년도·학년·학기를 먼저 입력해 주세요."),
+            "CREDIT_RULES_UNKNOWN": (409, "현재 학과·학번의 수강 상한을 먼저 확인해야 해요."),
+            "INVALID_TIMES": (400, "수업 시간 정보를 확인해 주세요."),
+            "COURSE_NOT_FOUND": (404, "과목을 찾을 수 없어요."),
+        }
+        if message in known:
+            status, text = known[message]
+            raise APIError(status, message, text)
     if response.status_code == 409:
-        raise APIError(409, "DUPLICATE_GRADE", "같은 학기에 같은 이름의 과목이 이미 있어요. 기존 항목을 수정해 주세요.")
+        if table == "grades":
+            raise APIError(409, "DUPLICATE_GRADE", "같은 학기에 같은 이름의 과목이 이미 있어요. 기존 항목을 수정해 주세요.")
+        raise APIError(409, "DATA_CONFLICT", "이미 등록된 항목과 충돌해요.")
     if response.status_code not in (200, 201, 204):
         raise APIError(500, "DATABASE_ERROR", "데이터를 저장하거나 가져올 수 없어요.")
     if response.status_code == 204 or not response.content:
