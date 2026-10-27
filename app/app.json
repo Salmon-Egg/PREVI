@@ -28,14 +28,7 @@
       "expo-router",
       "expo-status-bar",
       "expo-sqlite",
-      "expo-notifications",
-      [
-        "expo-image-picker",
-        {
-          "cameraPermission": "습득물 사진을 찍어 제보하려면 카메라 권한이 필요해요.",
-          "photosPermission": "습득물 사진을 앨범에서 고르려면 사진 권한이 필요해요."
-        }
-      ]
+      "expo-notifications"
     ]
   }
 }

@@ -1,5 +1,5 @@
 // ▶ FE 26번에 해당하는 부분: S-3 장학 신청 내역 (장학금 화면의 '신청 완료' 칩·'신청 내역 전체 보기'에서 들어옴)
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 
 import { Badge, ItemCard, Screen, StateView, Sub } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
@@ -9,8 +9,7 @@ import type { Application } from '../../../lib/types';
 export default function Applications() {
   const { data, error, loading, reload } = useApi<Application[]>('/scholarship-applications');
   return (
-    <Screen>
-      <Stack.Screen options={{ title: '신청 내역' }} />
+    <Screen title="신청 내역">
       <Sub>공지 상세에서 “신청 완료 체크”를 누른 장학금이에요. 같은 장학금 알림은 다시 보내지 않아요.</Sub>
       <StateView loading={loading} error={error} empty={!data?.length} emptyText="신청 완료로 체크한 장학금이 없어요" onRetry={reload}>
         {data?.map((a) => (

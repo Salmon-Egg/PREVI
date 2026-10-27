@@ -1,8 +1,9 @@
 // ▶ FE 19번에 해당하는 부분: T-4 알림 센터 — 푸시로 받은 알림 목록, 읽음 처리, 누르면 대상 화면
 import { Feather } from '@expo/vector-icons';
-import { router, Stack } from 'expo-router';
-import { Pressable, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, View } from 'react-native';
 
+import { Text } from '../../components/Text';
 import { Card, Row, Screen, StateView, Sub } from '../../components/ui';
 import { api, useApi } from '../../lib/api';
 import { screenFor } from '../../lib/push';
@@ -31,11 +32,7 @@ export default function Notifications() {
   }
 
   return (
-    <Screen>
-      <Stack.Screen options={{
-        title: '알림',
-        headerRight: () => unread.length ? <Pressable onPress={readAll}><Text style={{ color: color.primary, fontWeight: '700' }}>모두 읽음</Text></Pressable> : null,
-      }} />
+    <Screen title="알림" right={unread.length ? <Pressable onPress={readAll} hitSlop={8}><Text style={{ color: color.primary, fontWeight: '800' }}>모두 읽음</Text></Pressable> : null}>
       <StateView loading={loading} error={error} empty={!data?.length} emptyText="받은 알림이 없어요" onRetry={reload}>
         {data?.map((n) => (
           <Card key={n.id} onPress={() => open(n)} style={n.read ? undefined : { backgroundColor: color.primarySoft, borderColor: color.primarySoft }}>

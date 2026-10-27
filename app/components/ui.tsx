@@ -1,12 +1,19 @@
-// ▶ FE 2번에 해당하는 부분: 공통 컴포넌트 (카드·사진 카드, D-day 배지, 판정 배지, 출처, 빈 화면·로딩·오류 상태)
-// 여러 화면이 같이 쓰는 부품. 색은 lib/theme.ts.
+// ▶ FE 2번에 해당하는 부분: 공통 컴포넌트 (화면 틀, 카드·사진 카드, D-day 배지, 판정 배지, 출처, 빈 화면·로딩·오류 상태)
+// 여러 화면이 같이 쓰는 부품. 색은 lib/theme.ts. 2026-10-27 새 시안 모양:
+// 하늘색→연두 배경 + 초록 제목(‹ 뒤로) + 반투명 흰 판(내용) + 판 아래쪽 초록 그라데이션 버튼
 import { Feather } from '@expo/vector-icons';
+import { router, Stack } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Alert, Animated, Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ApiError } from '../lib/api';
-import { color } from '../lib/theme';
+import { useNoInvert } from '../lib/display';
+import { color, gradient, gradientBg, webBlur } from '../lib/theme';
 import type { ChatCard, Verdict } from '../lib/types';
+import { Text } from './Text';
+
+const web = Platform.OS === 'web';
 
 // ▶ FE 6번에 해당하는 부분: 웹 링크에서는 브라우저 alert/confirm 창이 막히는 곳(임베드·미리보기)이 있어서
 // 웹은 앱 안에 그리는 창(DialogHost)으로 보여 줌. 휴대폰은 기존처럼 기본 Alert
@@ -20,7 +27,7 @@ function openDialog(next: Dialog | null) {
 
 /** 알림창 */
 export function showAlert(title: string, message: string) {
-  if (Platform.OS === 'web') openDialog({ title, message });
+  if (web) openDialog({ title, message });
   else Alert.alert(title, message);
 }
 
@@ -40,7 +47,7 @@ export async function openLink(url: string | null | undefined) {
 
 /** 확인/취소 창. 확인을 누르면 onOk */
 export function confirmAsk(title: string, message: string, okLabel: string, onOk: () => void) {
-  if (Platform.OS === 'web') openDialog({ title, message, okLabel, onOk });
+  if (web) openDialog({ title, message, okLabel, onOk });
   else Alert.alert(title, message, [{ text: '취소', style: 'cancel' }, { text: okLabel, onPress: onOk }]);
 }
 
@@ -62,25 +69,65 @@ export function DialogHost() {
       <View style={s.dim}>
         <View style={s.dialog}>
           <Text style={s.dialogTitle}>{d.title}</Text>
-          <Text style={s.body}>{d.message}</Text>
-          <View style={[s.row, { alignSelf: 'stretch', marginTop: 8 }]}>
+          <Text style={[s.body, { textAlign: 'center' }]}>{d.message}</Text>
+          <Row style={{ alignSelf: 'stretch', marginTop: 8 }}>
             {d.onOk && <View style={{ flex: 1 }}><Button label="취소" kind="ghost" onPress={close} /></View>}
-            <View style={{ flex: 1 }}>
+            <View style={{ flex: d.onOk ? 1.6 : 1 }}>
               <Button label={d.okLabel ?? '확인'} onPress={() => { close(); d.onOk?.(); }} />
             </View>
-          </View>
+          </Row>
         </View>
       </View>
     </Modal>
   );
 }
 
-export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
-  if (!scroll) return <View style={s.screen}>{children}</View>;
+/** 새 시안 배경: 위 하늘색 → 아래 연두 + 구석의 흐린 초록 얼룩 */
+export function AppBackground({ css = gradient.screen }: { css?: string }) {
   return (
-    <ScrollView style={{ backgroundColor: color.bg }} contentContainerStyle={s.screen}>
-      {children}
-    </ScrollView>
+    <View pointerEvents="none" style={[StyleSheet.absoluteFill, gradientBg(css, '#E2F0EA')]}>
+      <View style={[s.blob, { top: -70, left: -90, width: 220, height: 220 }]} />
+      <View style={[s.blob, { top: '42%', right: -110, width: 200, height: 260 }]} />
+      <View style={[s.blob, { bottom: -60, left: -40, width: 240, height: 200 }]} />
+      <View style={[s.blob, { bottom: -80, right: -60, width: 220, height: 220 }]} />
+    </View>
+  );
+}
+
+/** 뒤로 (처음 연 화면이면 홈으로) */
+export function goBack() {
+  if (router.canGoBack()) router.back();
+  else router.replace('/');
+}
+
+/** 화면 틀: 배경 + ‹ 제목 + 반투명 흰 판(내용) + 판 아래 고정 버튼(footer)
+ *  back=false면 뒤로 버튼 없음(처음 설정), scroll=false면 판 안을 직접 채움(시간표 표 등) */
+export function Screen({ title, right, footer, children, scroll = true, back = true, gap = 12 }: {
+  title: string; right?: ReactNode; footer?: ReactNode; children: ReactNode; scroll?: boolean; back?: boolean; gap?: number;
+}) {
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={s.screen}>
+      <Stack.Screen options={{ title }} />
+      <AppBackground />
+      <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+        {back && (
+          <Pressable accessibilityLabel="뒤로" hitSlop={10} onPress={goBack} style={s.back}>
+            <Feather name="chevron-left" size={26} color={color.title} />
+          </Pressable>
+        )}
+        <Text style={s.headerTitle} numberOfLines={1}>{title}</Text>
+        {right}
+      </View>
+      <View style={[s.panel, { marginBottom: Math.max(insets.bottom, 12) + 8 }]}>
+        {scroll ? (
+          <ScrollView contentContainerStyle={[s.content, { gap }]} keyboardShouldPersistTaps="handled">{children}</ScrollView>
+        ) : (
+          <View style={[s.content, { gap, flex: 1 }]}>{children}</View>
+        )}
+        {footer && <View style={s.footer}>{footer}</View>}
+      </View>
+    </View>
   );
 }
 
@@ -105,8 +152,9 @@ export function Card({ children, onPress, style }: { children: ReactNode; onPres
   );
 }
 
-export function Button({ label, onPress, kind = 'primary', disabled }: {
-  label: string; onPress: () => void; kind?: 'primary' | 'ghost'; disabled?: boolean;
+/** 주 버튼 = 초록 그라데이션, ghost = 흰 바탕 + 초록 테두리. compact = 두 개 나란히 놓을 때 (글자 조금 작게) */
+export function Button({ label, onPress, kind = 'primary', disabled, compact }: {
+  label: string; onPress: () => void; kind?: 'primary' | 'ghost'; disabled?: boolean; compact?: boolean;
 }) {
   const primary = kind === 'primary';
   return (
@@ -114,16 +162,16 @@ export function Button({ label, onPress, kind = 'primary', disabled }: {
       accessibilityRole="button"
       disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [s.btn, primary ? s.btnPrimary : s.btnGhost, (pressed || disabled) && { opacity: 0.6 }]}
+      style={({ pressed }) => [s.btn, compact && { paddingHorizontal: 6 }, primary ? [gradientBg(gradient.primary, color.primary), s.btnShadow] : s.btnGhost, (pressed || disabled) && { opacity: 0.55 }]}
     >
-      <Text style={[s.btnText, { color: primary ? '#fff' : color.primary }]}>{label}</Text>
+      <Text style={[s.btnText, compact && { fontSize: 14 }, { color: primary ? '#fff' : color.title }]} numberOfLines={1}>{label}</Text>
     </Pressable>
   );
 }
 
 export function Badge({ label, tone = 'soft' }: { label: string; tone?: 'strong' | 'soft' | 'warn' | 'bad' }) {
-  const bg = { strong: color.primary, soft: color.primarySoft, warn: color.warnSoft, bad: color.badSoft }[tone];
-  const fg = { strong: '#fff', soft: color.primary, warn: color.warn, bad: color.alert }[tone];
+  const bg = { strong: color.primary, soft: color.primarySoft, warn: color.warnSoft, bad: color.redSoft }[tone];
+  const fg = { strong: '#fff', soft: color.primary, warn: color.warn, bad: color.red }[tone];
   return (
     <View style={[s.badge, { backgroundColor: bg }]}>
       <Text style={[s.badgeText, { color: fg }]}>{label}</Text>
@@ -183,18 +231,14 @@ export function InfoCard({ card }: { card: ChatCard }) {
   );
 }
 
-/** ▶ FE 2번에 해당하는 부분: 사진·제목·설명 2줄·링크 카드 (공지·분실물·채팅 카드가 같이 씀) */
-export function ItemCard({ title, desc, image, icon, badge, meta, onPress }: {
-  title: string; desc?: string | null; image?: string | number | null; icon?: keyof typeof Feather.glyphMap;
+/** ▶ FE 2번에 해당하는 부분: 아이콘·제목·설명 2줄·링크 카드 (공지·신청 내역이 같이 씀) */
+export function ItemCard({ title, desc, icon, badge, meta, onPress }: {
+  title: string; desc?: string | null; icon?: keyof typeof Feather.glyphMap;
   badge?: ReactNode; meta?: string | null; onPress?: () => void;
 }) {
   return (
-    <Pressable style={({ pressed }) => [s.item, pressed && { opacity: 0.7 }]} onPress={onPress} disabled={!onPress}>
-      {image ? (
-        <Image source={typeof image === 'number' ? image : { uri: image }} style={s.itemImage} />
-      ) : icon ? (
-        <View style={s.itemIcon}><Feather name={icon} size={22} color={color.primary} /></View>
-      ) : null}
+    <Pressable style={({ pressed }) => [s.card, s.item, pressed && { opacity: 0.7 }]} onPress={onPress} disabled={!onPress}>
+      {icon && <View style={s.itemIcon}><Feather name={icon} size={20} color={color.primary} /></View>}
       <View style={{ flex: 1, gap: 3 }}>
         {badge}
         <Text style={s.itemTitle} numberOfLines={1}>{title}</Text>
@@ -206,20 +250,28 @@ export function ItemCard({ title, desc, image, icon, badge, meta, onPress }: {
   );
 }
 
-/** ▶ FE 12번에 해당하는 부분: 서경 AI 캐릭터 (피그마 홈 시안의 코끼리).
- *  가장자리가 투명하게 흐려진 그림이라 어느 배경 위에서도 이어져 보임. face=true면 질문창용 동그란 얼굴 */
+/** ▶ FE 12번에 해당하는 부분: 마스코트 PREVI(미어캣, assets/mascot.png 241×400 그대로).
+ *  size = 키. face=true면 동그라미 안에 머리 쪽만 (대화창·질문 바) */
 export function Character({ size = 120, face = false }: { size?: number; face?: boolean }) {
+  const keep = useNoInvert(); // 다크 모드에서도 원래 색
   if (face) {
-    return <Image accessibilityLabel="서경 AI 캐릭터" source={require('../assets/character-face.png')} style={{ width: size, height: size, borderRadius: size / 2 }} />;
+    const w = size * 1.2;
+    return (
+      <View style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', backgroundColor: '#F4EEE4' }}>
+        <Image accessibilityLabel="마스코트 PREVI" source={require('../assets/mascot.png')}
+          style={[{ position: 'absolute', width: w, height: w * (400 / 241), left: (size - w) / 2, top: size * 0.08 }, keep]} />
+      </View>
+    );
   }
-  return <Image accessibilityLabel="서경 AI 캐릭터" source={require('../assets/character.png')} style={{ width: size, height: size * (355 / 480) }} />;
+  return <Image accessibilityLabel="마스코트 PREVI" source={require('../assets/mascot.png')} resizeMode="contain"
+    style={[{ width: size * (241 / 400), height: size }, keep]} />;
 }
 
 /** ▶ FE 31번에 해당하는 부분: '답변 작성 중' 점 세 개 움직임 */
 export function TypingDots() {
   const [v] = useState(() => new Animated.Value(0));
   useEffect(() => {
-    const loop = Animated.loop(Animated.timing(v, { toValue: 3, duration: 900, useNativeDriver: Platform.OS !== 'web' }));
+    const loop = Animated.loop(Animated.timing(v, { toValue: 3, duration: 900, useNativeDriver: !web }));
     loop.start();
     return () => loop.stop();
   }, [v]);
@@ -240,7 +292,7 @@ export function Chips<T>({ items, value, onChange, label }: { items: T[]; value:
       {items.map((v) => {
         const on = v === value;
         return (
-          <Pressable key={label(v)} onPress={() => onChange(v)} style={[s.chip, on && s.chipOn]}>
+          <Pressable key={label(v)} onPress={() => onChange(v)} style={[s.chip, on && gradientBg(gradient.primary, color.primary), on && { borderColor: 'transparent' }]}>
             <Text style={[s.chipText, on && { color: '#fff' }]}>{label(v)}</Text>
           </Pressable>
         );
@@ -283,35 +335,41 @@ export function Row({ children, style }: { children: ReactNode; style?: ViewStyl
 }
 
 export const s = StyleSheet.create({
-  screen: { padding: 16, gap: 12, backgroundColor: color.bg, flexGrow: 1 },
-  title: { fontSize: 17, fontWeight: '700', color: color.ink, marginTop: 8 },
+  screen: { flex: 1 },
+  blob: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(122, 196, 138, 0.42)', ...(web ? ({ filter: 'blur(46px)' } as object) : { opacity: 0.35 }) },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 18, paddingBottom: 12 },
+  back: { marginLeft: -6 },
+  headerTitle: { flex: 1, fontSize: 19, fontWeight: '800', color: color.title },
+  // 반투명 흰 판: 테두리는 흰색, 웹은 뒤 배경을 흐리게
+  panel: { flex: 1, marginHorizontal: 16, borderRadius: 28, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.58)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.95)', ...(webBlur(14) ?? {}) },
+  content: { padding: 18, flexGrow: 1 },
+  footer: { paddingHorizontal: 18, paddingBottom: 18, paddingTop: 8, gap: 8 },
+  title: { fontSize: 17, fontWeight: '800', color: color.title, marginTop: 6 },
   sub: { fontSize: 13, color: color.inkSub, lineHeight: 19 },
   body: { fontSize: 15, color: color.ink, lineHeight: 22 },
-  card: { borderWidth: 1, borderColor: color.line, borderRadius: 14, padding: 14, gap: 6, backgroundColor: color.bg },
-  btn: { borderRadius: 12, paddingVertical: 13, paddingHorizontal: 16, alignItems: 'center' },
-  btnPrimary: { backgroundColor: color.primary },
-  btnGhost: { backgroundColor: color.primarySoft },
-  btnText: { fontSize: 15, fontWeight: '600' },
-  badge: { borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, alignSelf: 'flex-start' },
-  badgeText: { fontSize: 12, fontWeight: '700' },
+  card: { borderWidth: 1, borderColor: color.field, borderRadius: 18, padding: 15, gap: 6, backgroundColor: 'rgba(255,255,255,0.94)' },
+  btn: { borderRadius: 14, paddingVertical: 15, paddingHorizontal: 16, alignItems: 'center' },
+  btnShadow: { shadowColor: '#0B6B3F', shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
+  btnGhost: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B9D9C6' },
+  btnText: { fontSize: 16, fontWeight: '800' },
+  badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: 'flex-start' },
+  badgeText: { fontSize: 12, fontWeight: '800' },
   source: { fontSize: 12, color: color.inkSub },
-  infoCard: { backgroundColor: color.bg, borderRadius: 16, padding: 14, gap: 6, borderWidth: 1, borderColor: color.line, minWidth: 220, maxWidth: 300 },
+  infoCard: { backgroundColor: '#fff', borderRadius: 16, padding: 14, gap: 6, borderWidth: 1, borderColor: color.field, minWidth: 220, maxWidth: 300 },
   infoImage: { width: '100%', height: 120, borderRadius: 10, backgroundColor: color.surface },
   infoTitle: { fontSize: 13, fontWeight: '700', color: color.ink },
   infoBig: { fontSize: 22, fontWeight: '800', color: color.primary },
   progress: { height: 8, borderRadius: 4, backgroundColor: color.primarySoft, overflow: 'hidden' },
   progressFill: { height: 8, borderRadius: 4, backgroundColor: color.primary },
-  item: { flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: color.line, borderRadius: 16, padding: 12, backgroundColor: color.bg },
-  itemImage: { width: 64, height: 64, borderRadius: 12, backgroundColor: color.surface },
-  itemIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: color.primarySoft, alignItems: 'center', justifyContent: 'center' },
-  itemTitle: { fontSize: 15, fontWeight: '700', color: color.ink },
+  item: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  itemIcon: { width: 42, height: 42, borderRadius: 21, backgroundColor: color.primarySoft, alignItems: 'center', justifyContent: 'center' },
+  itemTitle: { fontSize: 15, fontWeight: '800', color: color.ink },
   dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: color.primary },
-  chip: { borderRadius: 16, paddingVertical: 7, paddingHorizontal: 13, backgroundColor: color.surface },
-  chipOn: { backgroundColor: color.primary },
-  chipText: { fontSize: 13, fontWeight: '700', color: color.ink },
+  chip: { borderRadius: 999, paddingVertical: 7, paddingHorizontal: 14, backgroundColor: '#fff', borderWidth: 1.2, borderColor: color.field },
+  chipText: { fontSize: 13, fontWeight: '700', color: color.title },
   center: { padding: 32, alignItems: 'center', gap: 12 },
-  dim: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', padding: 24 },
-  dialog: { backgroundColor: color.bg, borderRadius: 20, padding: 20, gap: 8, width: '100%', maxWidth: 400, alignSelf: 'center' },
-  dialogTitle: { fontSize: 18, fontWeight: '800', color: color.ink },
+  dim: { flex: 1, backgroundColor: 'rgba(38, 64, 52, 0.45)', justifyContent: 'center', padding: 24 },
+  dialog: { backgroundColor: '#fff', borderRadius: 26, padding: 22, gap: 10, width: '100%', maxWidth: 400, alignSelf: 'center', alignItems: 'center' },
+  dialogTitle: { fontSize: 18, fontWeight: '800', color: color.ink, textAlign: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

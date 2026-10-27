@@ -1,9 +1,10 @@
 // ▶ FE 29번에 해당하는 부분: A-3 휴·복학 안내 — 규정 근거, 장학 영향, 기한 → 할 일 등록
 // 규정 근거·장학 영향은 챗봇이 학사요람(문서 검색)을 근거로 답함 → 화면에서 바로 물어볼 수 있게 함
 import { Feather } from '@expo/vector-icons';
-import { router, Stack } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Text } from '../../../components/Text';
 import { Body, Button, Card, Row, Screen, showAlert, StateView, Sub, Title } from '../../../components/ui';
 import { api, attempt, useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
@@ -34,8 +35,7 @@ export default function Leave() {
   const ask = (q: string) => router.push({ pathname: '/chat', params: { q, contextKind: 'status', contextId: '0' } });
 
   return (
-    <Screen>
-      <Stack.Screen options={{ title: '휴·복학 안내' }} />
+    <Screen title="휴·복학 안내">
       <StateView loading={me.loading || cal.loading} error={me.error ?? cal.error} empty={!me.data} onRetry={me.reload}>
         {me.data && (
           <Card style={{ backgroundColor: color.primarySoft, borderWidth: 0 }}>

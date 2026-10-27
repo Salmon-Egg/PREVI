@@ -1,7 +1,8 @@
 // ▶ FE 11번에 해당하는 부분: M-5 AI 비서 설정 — 비서가 볼 정보, 알림 종류별 켜기·끄기, 알림 시간
-import { Stack } from 'expo-router';
-import { Pressable, Switch, Text, View } from 'react-native';
 
+import { Pressable, Switch, View } from 'react-native';
+
+import { Text } from '../../../components/Text';
 import { Body, Card, Row, Screen, StateView, Sub, Title } from '../../../components/ui';
 import { api, attempt, useApi } from '../../../lib/api';
 import { BRIEF_TIMES } from '../../../lib/constants';
@@ -16,7 +17,7 @@ const SCOPES: { key: keyof AssistantScope; label: string; desc: string }[] = [
   { key: 'chat_history', label: '이전 대화', desc: '같은 대화 안에서 앞의 질문을 이어서 이해해요' },
 ];
 
-const KINDS: { key: keyof Omit<Me['notify'], 'time'>; label: string; desc: string }[] = [
+const KINDS: { key: keyof Omit<Me['notify'], 'time' | 'quiet'>; label: string; desc: string }[] = [
   { key: 'notice', label: '나에게 해당하는 새 공지', desc: '수집한 공지가 내 학년·학적·조건에 맞을 때' },
   { key: 'deadline', label: '마감 알림', desc: '할 일 마감 전날·당일' },
   { key: 'calendar', label: '학사일정', desc: '일정 3일 전·당일' },
@@ -36,8 +37,7 @@ export default function AssistantSettings() {
   }
 
   return (
-    <Screen>
-      <Stack.Screen options={{ title: 'AI 비서 설정' }} />
+    <Screen title="AI 비서 설정">
       <StateView loading={loading} error={error} empty={!me} onRetry={reload}>
         {me && (
           <>
@@ -48,7 +48,7 @@ export default function AssistantSettings() {
               <Card key={k.key}>
                 <Row style={{ justifyContent: 'space-between' }}>
                   <View style={{ flex: 1 }}><Body>{k.label}</Body><Sub>{k.desc}</Sub></View>
-                  <Switch value={scope[k.key]} onValueChange={(v) => updateScope({ [k.key]: v })} trackColor={{ true: color.primary }} />
+                  <Switch value={scope[k.key]} onValueChange={(v) => updateScope({ [k.key]: v })} trackColor={{ true: color.primaryLight }} thumbColor="#fff" />
                 </Row>
               </Card>
             ))}
@@ -59,14 +59,14 @@ export default function AssistantSettings() {
               <Card key={k.key}>
                 <Row style={{ justifyContent: 'space-between' }}>
                   <View style={{ flex: 1 }}><Body>{k.label}</Body><Sub>{k.desc}</Sub></View>
-                  <Switch value={me.notify[k.key]} onValueChange={(v) => update({ [k.key]: v })} trackColor={{ true: color.primary }} />
+                  <Switch value={me.notify[k.key]} onValueChange={(v) => update({ [k.key]: v })} trackColor={{ true: color.primaryLight }} thumbColor="#fff" />
                 </Row>
               </Card>
             ))}
             <Title>마감 알림 받을 시간</Title>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
               {BRIEF_TIMES.map((t) => (
-                <Pressable key={t} onPress={() => update({ time: t })} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: me.notify.time === t ? color.primary : color.surface }}>
+                <Pressable key={t} onPress={() => update({ time: t })} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: me.notify.time === t ? color.primary : '#fff', borderWidth: 1, borderColor: me.notify.time === t ? color.primary : color.field }}>
                   <Text style={{ color: me.notify.time === t ? '#fff' : color.ink, fontWeight: '700' }}>{t}</Text>
                 </Pressable>
               ))}

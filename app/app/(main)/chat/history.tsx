@@ -1,17 +1,18 @@
 // ▶ FE 34번에 해당하는 부분: H-3 대화 목록 — 검색, 고정, 분류 칩 (피그마 06_ai_chat ⑤ 대화 기록)
 import { Feather } from '@expo/vector-icons';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Text, TextInput } from '../../../components/Text';
 import { Chips, Screen, StateView, Sub } from '../../../components/ui';
 import { api, attempt, useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
 import type { ChatCategory, Conversation } from '../../../lib/types';
 
-const CATS: ('전체' | ChatCategory)[] = ['전체', '수업/졸업', '장학금', '학사 행정', '분실물', '캠퍼스 생활'];
+const CATS: ('전체' | ChatCategory)[] = ['전체', '수업/졸업', '장학금', '학사 행정', '기타'];
 const ICON: Record<ChatCategory, keyof typeof Feather.glyphMap> = {
-  '수업/졸업': 'book-open', 장학금: 'award', '학사 행정': 'file-text', 분실물: 'search', '캠퍼스 생활': 'map-pin',
+  '수업/졸업': 'book-open', 장학금: 'award', '학사 행정': 'file-text', 기타: 'message-circle',
 };
 
 /** 서버가 category를 안 주면 제목 낱말로 추측 */
@@ -21,8 +22,7 @@ function categoryOf(c: Conversation): ChatCategory {
   if (/장학/.test(t)) return '장학금';
   if (/졸업|학점|성적|수강|시간표|과목/.test(t)) return '수업/졸업';
   if (/휴학|복학|학사|공지|일정/.test(t)) return '학사 행정';
-  if (/분실|습득|잃어/.test(t)) return '분실물';
-  return '캠퍼스 생활';
+  return '기타';
 }
 
 export default function History() {
@@ -45,8 +45,7 @@ export default function History() {
   }
 
   return (
-    <Screen>
-      <Stack.Screen options={{ title: '대화 기록' }} />
+    <Screen title="대화 기록">
       <View style={st.search}>
         <Feather name="search" size={18} color={color.inkSub} />
         <TextInput style={st.input} placeholder="대화 검색" placeholderTextColor={color.inkSub} value={q} onChangeText={setQ} />

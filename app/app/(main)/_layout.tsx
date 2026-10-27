@@ -1,10 +1,10 @@
 // ▶ FE 1번에 해당하는 부분: 메뉴별 스택 화면 + 처음 쓰는 학생은 M-2(FE 8번)로 보냄
 // 로그인 후 화면들. 처음 쓰는 학생(내 정보가 없음)이면 처음 설정(M-2)으로 보냄.
+// 머리줄(‹ 제목)은 화면마다 components/ui.tsx의 Screen이 직접 그림 (새 시안: 배경 위에 초록 제목)
 import { router, Stack } from 'expo-router';
 import { useEffect } from 'react';
 
 import { api, ApiError } from '../../lib/api';
-import { color } from '../../lib/theme';
 
 export default function MainLayout() {
   useEffect(() => {
@@ -14,17 +14,7 @@ export default function MainLayout() {
   }, []);
 
   return (
-    <Stack
-      screenOptions={{
-        headerTintColor: color.ink,
-        headerTitleStyle: { fontWeight: '800', color: color.primary }, // 시안: 화면 제목은 초록
-        headerShadowVisible: false,
-        headerBackButtonDisplayMode: 'minimal',
-        contentStyle: { backgroundColor: color.bg },
-      }}
-    >
-      <Stack.Screen name="index" options={{ headerShown: false }} />
-      <Stack.Screen name="onboarding" options={{ title: '처음 설정', headerBackVisible: false }} />
+    <Stack screenOptions={{ headerShown: false }}>
       {/* ▶ FE 15번·30번: 홈 질문창을 위로 끌어 올리면 대화창이 아래에서 올라오는 느낌으로 (휴대폰 앱) */}
       <Stack.Screen name="chat/index" options={{ animation: 'slide_from_bottom' }} />
     </Stack>

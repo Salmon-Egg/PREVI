@@ -40,16 +40,17 @@ export const supabase = SUPABASE_URL
     })
   : null;
 
-// Supabase 토큰이 새로 발급되면(자동 갱신) 따라 바꿈
+// Supabase 토큰이 새로 발급되면(자동 갱신) 따라 바꿈. 로그인 전에는 바꾸지 않음
+// (회원가입 중 인증번호 확인만 해도 세션이 생기는데, 그때 바로 로그인되면 가입하기 전에 홈으로 넘어감 — lib/auth.ts)
 supabase?.auth.onAuthStateChange((_event, s) => {
-  if (s?.access_token) set(s.access_token);
+  if (s?.access_token && token) set(s.access_token);
 });
 
 export function getToken() {
   return token;
 }
 
-/** 시연용 가상 학생 로그인 (DEV_LOGIN) 또는 Supabase 로그인 후 토큰 저장 */
+/** 로그인 성공 후 토큰 저장 (lib/auth.ts). 시연용이면 dev-<학생 번호> */
 export function login(nextToken: string) {
   set(nextToken);
 }

@@ -1,10 +1,11 @@
 // ▶ FE 28번에 해당하는 부분: A-2 학사 일정 (내 학년에 해당하는 일정을 달력 + 목록으로)
 // 홈의 '다음 일정' 카드, 알림(type=calendar)이 이 화면을 엶
 import { Feather } from '@expo/vector-icons';
-import { Stack } from 'expo-router';
-import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
+
+import { Text } from '../../../components/Text';
 import { Badge, Card, Row, Screen, StateView, Sub } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
@@ -37,8 +38,7 @@ export default function Calendar() {
   const move = (n: number) => { setPicked(null); setMonth(new Date(month.getFullYear(), month.getMonth() + n, 1)); };
 
   return (
-    <Screen>
-      <Stack.Screen options={{ title: '학사 일정' }} />
+    <Screen title="학사 일정">
       <StateView loading={loading} error={error} empty={false} onRetry={reload}>
         <View style={st.cal}>
           <Row style={{ justifyContent: 'space-between' }}>

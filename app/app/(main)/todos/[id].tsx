@@ -1,6 +1,6 @@
 // ▶ FE 17번에 해당하는 부분: T-2 할 일 상세 (근거, 마감, 신청 링크, 완료 체크, 채팅으로 묻기 → FE 32번 맥락 넘김)
 // T-2 할 일 상세: 왜 나에게 해당하는지(근거), 마감, 신청 링크, 완료 체크, 채팅으로 묻기(맥락 넘김)
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 import { Body, Button, Card, DdayBadge, openLink, Row, Screen, showAlert, StateView, Sub, Title } from '../../../components/ui';
 import { api, ApiError, useApi } from '../../../lib/api';
@@ -25,8 +25,7 @@ export default function TodoDetailScreen() {
   }
 
   return (
-    <Screen>
-      <Stack.Screen options={{ title: '할 일' }} />
+    <Screen title="할 일">
       <StateView loading={loading} error={error} empty={!t} onRetry={reload}>
         {t && (
           <>

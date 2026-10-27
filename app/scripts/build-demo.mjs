@@ -12,12 +12,12 @@ const APP = join(dirname(fileURLToPath(import.meta.url)), '..');
 const OUT = join(APP, 'dist-demo');
 const DEMO = join(APP, '..', 'demo');
 
-// 1) 예시 데이터 모드 + 분실물 켠 상태로 웹 내보내기 (app.config.js가 DEMO_BUILD=1이면 한 파일로 묶음)
+// 1) 예시 데이터 모드로 웹 내보내기 (app.config.js가 DEMO_BUILD=1이면 한 파일로 묶음)
 rmSync(OUT, { recursive: true, force: true });
 execSync(`npx expo export --platform web --output-dir dist-demo --clear`, {
   cwd: APP,
   stdio: 'inherit',
-  env: { ...process.env, DEMO_BUILD: '1', EXPO_PUBLIC_USE_MOCK: '1', EXPO_PUBLIC_DEV_LOGIN: '1', EXPO_PUBLIC_LOST_ENABLED: '1' },
+  env: { ...process.env, DEMO_BUILD: '1', EXPO_PUBLIC_USE_MOCK: '1', EXPO_PUBLIC_DEV_LOGIN: '1' },
 });
 
 // 2) 그림·글꼴을 data: 주소로 바꿔 넣기. 아이콘 글꼴은 실제로 쓰는 두 가지만 (나머지는 불러지지 않음)
