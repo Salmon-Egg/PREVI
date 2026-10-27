@@ -12,7 +12,7 @@ const toMin = (hhmm: string) => {
   return h * 60 + m;
 };
 
-export const isMajor = (category: string | null) => !category || category.startsWith('전');
+const isMajor = (category: string | null) => !category || category.startsWith('전');
 
 export function TimetableGrid({ entries }: { entries: TimetableEntry[] }) {
   const ends = entries.flatMap((e) => e.times.map((t) => toMin(t.end)));

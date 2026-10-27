@@ -36,8 +36,7 @@ const SCREENS: Record<string, (id?: number) => Href> = {
   'C-1': () => '/campus',
 };
 
-export type ChatContext = { kind: string; id: number } | null;
-type Context = ChatContext;
+type Context = { kind: string; id: number } | null;
 
 /** q: 열자마자 보낼 질문, context: 할 일·공지·학적 맥락(첫 질문에만), conversation: 이어서 볼 이전 대화 번호
  *  keyboardOffset: 위에 머리줄이 있으면 그 높이 (iOS 키보드가 입력창을 가리지 않게) */

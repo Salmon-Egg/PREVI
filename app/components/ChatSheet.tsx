@@ -5,12 +5,11 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
-import { Animated, BackHandler, PanResponder, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Animated, BackHandler, Image, PanResponder, Platform, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { color } from '../lib/theme';
 import { ChatPanel } from './ChatPanel';
-import { Character } from './ui';
 
 /** 접혀 있을 때 보이는 높이 (손잡이 + 바) — 여기에 아래 안전 영역이 더해짐 */
 export const SHEET_BAR = 90;
@@ -19,7 +18,7 @@ const native = Platform.OS !== 'web';
 
 export function ChatSheet() {
   const insets = useSafeAreaInsets();
-  const { height: windowHeight } = useWindowDimensions();
+  const { height: windowHeight, width: windowWidth } = useWindowDimensions();
   const [measured, setMeasured] = useState(0);
   // 웹은 onLayout이 늦거나 안 올 때(탭이 가려져 있을 때 등)가 있어서 붙는 순간 바로 잼
   const measureWeb = useCallback((el: ComponentRef<typeof View> | null) => {
@@ -110,8 +109,9 @@ export function ChatSheet() {
             </View>
           ) : (
             <Pressable style={st.ask} accessibilityLabel="서경 AI 대화창 열기" onPress={() => moveTo(true)}>
-              <View style={st.askAvatar}><Character face size={44} /></View>
-              <Text style={st.askText}>서경 AI에게 물어보세요!</Text>
+              <View style={st.askAvatar}><MascotFace size={44} /></View>
+              {/* 폭이 좁은 휴대폰(360 미만)에서도 한 줄에 들어가게 글자를 조금 줄임 */}
+              <Text style={[st.askText, windowWidth < 360 && { fontSize: 14 }]} numberOfLines={1}>서경 AI에게 물어보세요!</Text>
               {/* 위쪽 화살표: 누르면 끝까지 끌어 올린 것처럼 대화창이 올라옴 */}
               <View style={st.askBtn}><Feather name="arrow-up" size={22} color="#fff" /></View>
             </Pressable>
@@ -146,3 +146,14 @@ const st = StyleSheet.create({
   headerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '800', color: color.primary },
 });
+
+/** 홈 아래 바의 PREVI(미어캣) 얼굴: 받은 그림을 그대로 쓰고 동그라미 안에 머리 쪽만 보이게 (그림 241×400, 머리는 위 45%) */
+function MascotFace({ size }: { size: number }) {
+  const w = size * 1.2;
+  return (
+    <View style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', backgroundColor: '#F4EEE4' }}>
+      <Image accessibilityLabel="마스코트 PREVI" source={require('../assets/mascot.png')}
+        style={{ position: 'absolute', width: w, height: w * (400 / 241), left: (size - w) / 2, top: size * 0.08 }} />
+    </View>
+  );
+}

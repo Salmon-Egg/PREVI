@@ -32,7 +32,7 @@
 | 9 | M-3 마이페이지 | 🔧 | 계정 삭제 시 **경고 두 번**(두 번째: "정말 삭제하시겠습니까? 삭제하면 원래대로 되돌릴 수 없습니다") 후 삭제 → 로그인 화면 | `app/(main)/me/index.tsx` |
 | 10 | M-4 학적 변경 | ✔ | (변경 없음) | `app/(main)/me/status.tsx` |
 | 11 | M-5 AI 비서 설정 | 🔧 | **'비서가 볼 정보'**(학적·성적·시간표·이전 대화) 켜기·끄기 | `app/(main)/me/assistant.tsx` |
-| 12 | 캐릭터 + 브리핑 | 🔧 | 피그마 홈(07_home_v1) 윗부분 그림(구름·학교·풀숲·반짝 표시·코끼리)을 **화면 폭 그대로 배경**으로 깔고 시안의 글자·말풍선만 지움, 원본 압축 얼룩은 윤곽을 살리는 필터로 정리, 인사말·말풍선·카드 위치를 피그마 비율로 계산, 코끼리 손끝이 카드에 살짝 가려져 사이 빈틈 없음, 브리핑 말풍선 + 동그라미 꼬리, 브리핑 숫자는 할 일·장학금 상태에 따라 바뀜(0개면 생략) | `app/(main)/index.tsx`, `assets/home-hero.png`, `assets/character*.png` |
+| 12 | 캐릭터 + 브리핑 | 🔧 | (2026-10-27 새 디자인) 홈 전체 배경을 받은 배경 그림(`home-bg.jpg`, 스크롤해도 고정)으로, 왼쪽 위 이름 **PREVI**, 마스코트 PREVI(미어캣, `mascot.png`)는 크게 두고 다리·꼬리는 카드 뒤로(책까지 보임), 인사말은 줄마다 글자 길이만큼만 뒤 배경을 흐리게(모서리 둥글게) 해서 가독성. **브리핑 말풍선은 요청으로 뺌** — 브리핑 문구(`GET /home`의 `briefing`)는 지금 홈에 안 보임. 오늘 챙길 일은 피그마 Today-Card처럼(색 점 + 둥근 D-day 배지, 달력 아이콘) | `app/(main)/index.tsx`, `components/ChatSheet.tsx`, `assets/home-bg.jpg`, `assets/mascot.png` |
 | 13 | 오늘 챙길 일·다음 일정 | 🔧 | **다음 일정 카드**(피그마 홈 2쪽) → A-2, 웹에서 **마우스로 잡고 끌어 넘기기**·점 눌러 이동 | `app/(main)/index.tsx` |
 | 14 | 메뉴 칸 + 비서 한 줄 | 🔧 | 칸마다 **`menu_status` 한 줄**, 기본 3칸 / 분실물 켜면 4칸 (`EXPO_PUBLIC_LOST_ENABLED`) | `app/(main)/index.tsx`, `lib/config.ts` |
 | 15 | 질문창 + 추천 질문 | 🔧 | 아래 바를 **잡고 끌어 올리면 대화 화면이 따라 올라와서 그 자리에서 바로 대화**(앱은 손가락, 웹은 마우스), ↑ 화살표를 누르면 끝까지 올린 것과 같음, 머리줄을 내리거나 ⌄로 닫기. 홈의 추천 질문 칩은 뺌(대화 시작 화면에 추천 질문 있음) | `components/ChatSheet.tsx`, `app/(main)/index.tsx` |
@@ -83,7 +83,7 @@
 
 ## 참고
 
-- 홈 배경(`assets/home-hero.png`)과 캐릭터(`assets/character.png`, `character-face.png`)는 피그마 홈 시안 화면에서 잘라 글자를 지운 이미지입니다. 디자이너에게 원본(배경·캐릭터 분리 PNG)을 받으면 같은 이름으로 바꾸기만 하면 됩니다.
+- 홈은 새 디자인(배경 `assets/home-bg.jpg` + 마스코트 PREVI `assets/mascot.png`, 아이콘 색은 피그마 '01_홈화면_1'처럼 칸마다 다른 색)입니다. 다른 화면(채팅 등)은 아직 예전 코끼리 캐릭터(`assets/character.png`, `character-face.png`)를 씁니다. 그림을 바꾸려면 같은 이름 파일만 바꾸면 됩니다.
 - 새 패키지: `expo-image-picker`, `expo-image-manipulator`(분실물 사진), `expo-dev-client`(개발 빌드). 받은 뒤에는 `npm install`을 다시 해 주세요.
 - 타입 검사(`npm run typecheck`)와 린트 모두 경고 0개로 통과합니다 (`require` 두 곳은 웹에서 안 불러오려는 의도라 이유를 적고 예외 처리).
 
