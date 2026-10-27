@@ -3,3 +3,5 @@ uvicorn>=0.30,<1
 httpx>=0.27,<1
 python-dotenv>=1,<2
 beautifulsoup4>=4.12,<5
+openai>=1.57,<2
+pypdf>=6,<7

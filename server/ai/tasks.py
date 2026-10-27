@@ -3,8 +3,8 @@ AI가 실패해도 서비스가 멈추지 않게, 함수마다 문장 틀(템플
 import json
 import logging
 
-from ai.client import ask_json
-from logic.schedule import DEFAULT_SEVERITY
+from server.ai.client import ask_json
+from server.logic.schedule import DEFAULT_SEVERITY
 
 log = logging.getLogger("ai")
 
@@ -54,6 +54,10 @@ def clean_conditions(c) -> dict:
                 out[key] = cast(float(c[key]))
         except (TypeError, ValueError):
             log.warning("공지 조건 %s 무시: %r", key, c[key])
+    # 칸에 못 넣은 조건: 판정 코드가 보고 '확인 필요'로 돌림 (조용히 버리면 '신청 가능'으로 잘못 뜸)
+    unknown = [s for s in (str(u).strip() for u in c.get("unknown") or [] if u) if s]
+    if unknown:
+        out["unknown"] = unknown
     return out
 
 

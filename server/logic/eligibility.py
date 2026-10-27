@@ -50,6 +50,9 @@ def judge(target: dict, conditions: dict, profile: dict, last_gpa: float | None,
     if conditions.get("income_max") is not None:
         unknown = True  # 소득분위는 앱이 모름
         reasons.append(f"소득분위 {conditions['income_max']}구간 이하 — 앱이 알 수 없어 직접 확인이 필요해요")
+    for text in conditions.get("unknown") or []:  # AI가 칸에 못 넣은 조건 (토익, 학사경고 등)
+        unknown = True
+        reasons.append(f"{text} — 직접 확인이 필요해요")
 
     verdict = "ineligible" if failed else "check" if unknown else "eligible"
     return verdict, reasons

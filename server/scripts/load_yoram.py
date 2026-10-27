@@ -1,15 +1,17 @@
-"""학사요람 PDF → 문단 → documents/doc_chunks → 임베딩. init_db가 자동으로 부르고, 이미 있는 DB에서는 직접 실행.
-server/ 폴더에서:  python -m scripts.load_yoram   (다시 실행해도 됨: 지난번 요람 문단을 지우고 새로 넣음)
+"""학사요람 PDF → 문단 → documents/doc_chunks → 임베딩. Supabase에 서버 키(SUPABASE_SECRET_KEY)로 넣음.
+009_chat_documents.sql 적용 후, 저장소 맨 위 폴더에서:  python -m server.scripts.load_yoram
+(다시 실행해도 됨: 지난번 요람 문단을 지우고 새로 넣음)
 
 넣는 곳은 학칙·학칙시행세칙·교육과정(공통)만. 연혁·교직원·학과별 과목표는 검색을 흐려서 뺌.
 학칙·세칙은 조(제 N 조) 하나가 문단 하나, 교육과정은 800자 안팎으로 자름."""
+import os
 import re
 from pathlib import Path
 
+import httpx
 from pypdf import PdfReader
 
-import db
-from ai import client as ai_client
+from server.ai import client as ai_client  # .env도 여기서 읽힘
 
 SEED = Path(__file__).resolve().parents[2] / "supabase" / "seed"
 PDF = SEED / "2026_서경대학교_대학요람.pdf"
@@ -74,30 +76,38 @@ def web_chunks(file: str, title: str) -> list[str]:
     return out
 
 
-def _insert(title: str, url: str | None, kind: str, contents: list[str]) -> None:
-    doc = db.one("insert into documents (title, url, kind) values (%s, %s, %s) returning id", [title, url, kind])
-    for c in contents:
-        db.run("insert into doc_chunks (document_id, content) values (%s, %s)", [doc["id"], c])
+def _db() -> httpx.Client:
+    url, secret = os.getenv("SUPABASE_URL", "").rstrip("/"), os.getenv("SUPABASE_SECRET_KEY", "").strip()
+    if not url or not secret:
+        raise RuntimeError(".env의 SUPABASE_URL과 SUPABASE_SECRET_KEY(서버 전용)가 필요합니다.")
+    return httpx.Client(base_url=f"{url}/rest/v1", timeout=60,
+                        headers={"apikey": secret, "Authorization": f"Bearer {secret}", "Prefer": "return=representation"})
+
+
+def _insert(db: httpx.Client, title: str, url: str | None, kind: str, contents: list[str]) -> None:
+    doc = db.post("/documents", json={"title": title, "url": url, "kind": kind}).raise_for_status().json()[0]
+    db.post("/doc_chunks", json=[{"document_id": doc["id"], "content": c} for c in contents]).raise_for_status()
 
 
 def main() -> None:
     chunks = chunks_of()
-    db.run("delete from documents where title like %s or title like %s or title like %s",
-           [TITLE + "%", "%(예시)", "장학금 규정 · %"])
-    for name, _, _ in SECTIONS:
-        _insert(f"{TITLE} · {name}", None, "학사요람", [c for n, c in chunks if n == name])
-    web = 0
-    for title, url, file in WEB_DOCS:
-        contents = web_chunks(file, title)
-        _insert(title, url, "규정", contents)
-        web += len(contents)
-    print(f"학사요람 문단: {len(chunks)}개, 장학금 규정 문단: {web}개")
-    embed_missing()
+    with _db() as db:
+        for pattern in (TITLE + "*", "*(예시)", "장학금 규정 · *"):
+            db.delete("/documents", params={"title": f"like.{pattern}"}).raise_for_status()
+        for name, _, _ in SECTIONS:
+            _insert(db, f"{TITLE} · {name}", None, "학사요람", [c for n, c in chunks if n == name])
+        web = 0
+        for title, url, file in WEB_DOCS:
+            contents = web_chunks(file, title)
+            _insert(db, title, url, "규정", contents)
+            web += len(contents)
+        print(f"학사요람 문단: {len(chunks)}개, 장학금 규정 문단: {web}개")
+        embed_missing(db)
 
 
-def embed_missing() -> None:
+def embed_missing(db: httpx.Client) -> None:
     """임베딩이 빈 문단을 채움. 가짜 AI 모드면 건너뜀(챗봇은 글자 검색)."""
-    chunks = db.all_rows("select id, content from doc_chunks where embedding is null")
+    chunks = db.get("/doc_chunks", params={"embedding": "is.null", "select": "id,content", "limit": 5000}).raise_for_status().json()
     done = 0
     for i in range(0, len(chunks), 32):  # 한 번에 다 보내면 문단이 많을 때 Ollama가 실패함
         part = chunks[i:i + 32]
@@ -105,7 +115,7 @@ def embed_missing() -> None:
         if not vectors:
             break
         for c, v in zip(part, vectors):
-            db.run("update doc_chunks set embedding = %s::vector where id = %s", [str(v), c["id"]])
+            db.patch("/doc_chunks", params={"id": f"eq.{c['id']}"}, json={"embedding": str(v)}).raise_for_status()
         done += len(vectors)
     if done:
         print(f"문서 임베딩: {done}개")
