@@ -111,6 +111,11 @@ P는 평점 계산에서 제외하고, 등급제 F는 0점으로 계산합니다
 https://www.skuniv.ac.kr/course-registration,
 https://www.skuniv.ac.kr/academic-status (2026-10-27 확인).
 
+실제 DB 재검사: `.venv\Scripts\python.exe -m server.check_timetable_live`
+2026-10-27: 등록·조회·삭제, 학기 분리, 중복 시간, 19/22/15학점 경계,
+과목 학점 위조 차단, 동시 요청의 시간·상한 차단, 타인 접근 제한을 통과했습니다.
+검사에서 만든 계정 2개·과목 1개와 관련 데이터는 정리했습니다.
+
 ## 여기에 들어갈 것
 ```
 server/
