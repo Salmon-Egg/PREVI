@@ -2,24 +2,30 @@
 
 담당: BE A · BE B
 
-| 파일 | 언제 | 하는 일 |
+| 파일 (예정) | 언제 | 하는 일 |
 |---|---|---|
-| `collect_notices.py` | 9·13·18시 | 공개 게시판 새 글 수집 → ①② AI 정리 → 학생별 다시 계산 → 나에게 해당하는 새 공지 알림 |
-| `daily_check.py` | 매시 정각 | 알림 시간이 지금인 학생만: 비서 다시 계산 → 마감 전날·당일, 학사일정 3일 전·당일 알림 |
-| `sample_board.json` | — | `BOARD_URL`이 비어 있을 때 쓰는 예시 공지 6개 (`{D+7}` = 오늘부터 7일 뒤) |
+| `collect_notices.py` | 9·13·18시 | 학교 공개 게시판에서 새 글 수집 → AI 정리 → 대상 학생 판정 → 새 공지 알림 |
+| `daily_check.py` | 매일 아침 (9시 전) | 졸업 요건·장학 판정 → 오늘 챙길 일 정렬 → 브리핑 → 마감·학사일정 알림 |
 
-직접 실행 (server/ 폴더에서):
-```
-python -m jobs.collect_notices
-python -m jobs.daily_check --now      # --now: 시각 상관없이 모든 학생 지금 처리 (시연용)
+- 서버의 cron(정해진 시각에 실행해 주는 기능)에 등록합니다.
+- 수집은 로그인 없이 볼 수 있는 공개 게시판만 대상으로 합니다.
+- 같은 작업을 두 번 실행해도 공지가 중복 저장되거나 알림이 두 번 가지 않게 만듭니다.
+
+## 현재 구현
+
+`collect_notices.py`는 공개 학사·장학 게시판의 목록과 본문을 읽고 새 글만 저장합니다.
+AI 요약·학생별 판정·알림은 아직 연결 전이며, 저장된 글은 `extraction_status=pending`입니다.
+본문 이미지와 첨부는 확인된 주소/식별자만 기록하고 파일 다운로드·OCR은 수행하지 않습니다.
+설치: 저장소 최상위에서 `.venv\Scripts\python.exe -m pip install -r server/requirements.txt`.
+
+Linux 배포 후 crontab 예시 (실제 서버 경로로 수정, `logs` 폴더를 먼저 생성):
+
+```cron
+CRON_TZ=Asia/Seoul
+0 9,13,18 * * * cd /opt/seokyeong-ai-secretary && .venv/bin/python -m server.jobs.collect_notices --save --pages 3 --max-posts 150 >> logs/notices.log 2>&1
 ```
 
-학교 서버(Linux) cron 등록 예시 (`crontab -e`):
-```
-0 9,13,18 * * *  cd /경로/server && .venv/bin/python -m jobs.collect_notices >> jobs.log 2>&1
-0 * * * *        cd /경로/server && .venv/bin/python -m jobs.daily_check >> jobs.log 2>&1
-```
-
-- 두 작업 모두 여러 번 돌려도 공지가 중복 저장되거나 알림이 두 번 가지 않습니다 (`board_post_id`, `notifications.dedupe_key`).
-- 수집은 로그인 없이 볼 수 있는 공개 게시판만 대상으로 합니다. 실패하면 `crawl_logs`에 남고 다음 회차에 다시 시도합니다.
-- 학교 게시판 구조를 확인한 뒤 `.env`의 `BOARD_URL`, `BOARD_LINK_PATTERN`, `BOARD_BODY_SELECTOR`를 맞춰야 합니다.
+CRON_TZ를 지원하는 cron인지 확인하고, 미지원 환경은 서버 시간대를 Asia/Seoul로 설정합니다.
+이 예시는 아직 학교 서버에 등록하지 않았습니다. Windows 개발 PC에서는 직접 명령으로 검사합니다.
+수집이 일부 실패하면 종료 코드 1과 글 번호/오류 종류가 로그에 남습니다.
+수집 실패 글은 다음 회차에 재시도합니다. 저장한 글은 건너뛰므로 `pending/failed` AI 재처리는 BE B 작업입니다.

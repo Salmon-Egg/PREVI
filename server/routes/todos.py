@@ -1,84 +1,89 @@
-"""할 일 (T-1 ~ T-3)."""
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Literal
 
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Path, Query, Request
+from pydantic import BaseModel, ConfigDict, Field
 
-import agent
-import db
-from auth import current_user
-from errors import not_found
-from routes.home import todo_shape
+from server.auth import AuthenticatedUser, require_user
+from server.database import database_rows
+from server.errors import APIError
+from server.routes.notices import notice_by_id
 
-router = APIRouter()
+router = APIRouter(tags=["할 일"])
+KST = timezone(timedelta(hours=9))
 TodoType = Literal["deadline", "scholarship", "graduation", "status"]
 
 
-def _detail(t: dict) -> dict:
-    return {**todo_shape(t, agent.today()), "reason": t["reason"], "link": t["link"],
-            "source": {"kind": t["source_kind"], "id": t["source_id"]} if t["source_kind"] else None,
-            "done_at": t["done_at"]}
+class NoticeSource(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: Literal["notice"]
+    id: int = Field(gt=0)
 
 
-@router.get("/todos")
-def list_todos(type: TodoType | None = None, done: bool | None = None, uid: str = Depends(current_user)):
-    rows = db.all_rows(
-        """select * from todos where user_id = %s and (%s::text is null or type = %s) and (%s::bool is null or done = %s)
-           order by done, due_date nulls last, priority desc""",
-        [uid, type, type, done, done],
-    )
-    today = agent.today()
-    return [{**todo_shape(t, today), "done_at": t["done_at"]} for t in rows]
-
-
-@router.get("/todos/{todo_id}")
-def get_todo(todo_id: int, uid: str = Depends(current_user)):
-    t = db.one("select * from todos where id = %s and user_id = %s", [todo_id, uid])
-    if not t:
-        raise not_found("할 일")
-    return _detail(t)
-
-
-class Source(BaseModel):
-    kind: str
-    id: int | None = None
-
-
-class TodoIn(BaseModel):
-    title: str
+class TodoInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    title: str = Field(min_length=1, max_length=200)
     due_date: date | None = None
     type: TodoType = "deadline"
-    source: Source | None = None
+    source: NoticeSource | None = None
 
 
-@router.post("/todos", status_code=201)
-def add_todo(body: TodoIn, uid: str = Depends(current_user)):
-    """챗봇 '마감 알림 받기' 버튼(⑬)에서 부름. 학생이 직접 만든 할 일이라 auto_key 없음."""
-    t = db.one(
-        """insert into todos (user_id, type, title, due_date, source_kind, source_id, reason)
-           values (%s, %s, %s, %s, %s, %s, '채팅에서 알림을 받기로 한 일이에요.') returning *""",
-        [uid, body.type, body.title, body.due_date, body.source and body.source.kind, body.source and body.source.id],
-    )
-    return _detail(t)
-
-
-class TodoPatch(BaseModel):
+class TodoDone(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
     done: bool
 
 
+def todo_output(row: dict, detail=False, today: date | None = None):
+    due = date.fromisoformat(row["due_date"]) if row["due_date"] else None
+    result = {key: row[key] for key in ("id", "type", "title", "due_date", "done")}
+    result["d_day"] = (due - (today or datetime.now(KST).date())).days if due else None
+    if detail:
+        result.update({"reason": row["reason"], "link": row["link"], "done_at": row["done_at"],
+            "source": {"kind": row["source_kind"], "id": row["source_id"]} if row["source_id"] is not None else None})
+    return result
+
+
+@router.get("/todos")
+async def todos(request: Request, type: TodoType | None = None, done: bool | None = Query(default=None), user: AuthenticatedUser = Depends(require_user)):
+    params = {"user_id": f"eq.{user.id}", "select": "id,type,title,due_date,done", "order": "due_date.asc.nullslast,id.asc", "limit": 100}
+    if type is not None: params["type"] = "eq." + type
+    if done is not None: params["done"] = "eq." + str(done).lower()
+    return [todo_output(row) for row in await database_rows(request, "GET", "todos", params=params)]
+
+
+@router.get("/todos/{todo_id}")
+async def todo_detail(request: Request, todo_id: int = Path(gt=0), user: AuthenticatedUser = Depends(require_user)):
+    rows = await database_rows(request, "GET", "todos", params={"id": f"eq.{todo_id}", "user_id": f"eq.{user.id}"})
+    if not rows: raise APIError(404, "TODO_NOT_FOUND", "할 일을 찾을 수 없어요.")
+    return todo_output(rows[0], detail=True)
+
+
+@router.post("/todos")
+async def create_todo(body: TodoInput, request: Request, user: AuthenticatedUser = Depends(require_user)):
+    values = {"user_id": str(user.id), "title": body.title, "type": body.type,
+              "due_date": body.due_date.isoformat() if body.due_date else None}
+    if body.source:
+        notice = await notice_by_id(request, body.source.id)
+        if body.type == "scholarship" and notice["category"] != "장학":
+            raise APIError(400, "INVALID_SCHOLARSHIP_SOURCE", "장학 할 일은 장학 공지와 연결해야 해요.")
+        values.update({"source_kind": "notice", "source_id": body.source.id, "link": notice["url"],
+                       "reason": "사용자가 공지를 보고 등록한 할 일이에요."})
+    elif body.type == "scholarship":
+        raise APIError(400, "INVALID_SCHOLARSHIP_SOURCE", "신청 내역을 기록하려면 장학 공지를 연결해 주세요.")
+    rows = await database_rows(request, "POST", "todos", headers={"Prefer": "return=representation"}, json=values)
+    if not rows: raise APIError(500, "DATABASE_ERROR", "할 일 저장 결과를 확인할 수 없어요.")
+    return todo_output(rows[0], detail=True)
+
+
 @router.patch("/todos/{todo_id}")
-def patch_todo(todo_id: int, body: TodoPatch, uid: str = Depends(current_user)):
-    t = db.one("update todos set done = %s, done_at = case when %s then now() end where id = %s and user_id = %s returning *",
-               [body.done, body.done, todo_id, uid])
-    if not t:
-        raise not_found("할 일")
-    if body.done and t["type"] == "scholarship" and t["source_kind"] == "notice":
-        # 신청 내역(S-3)에 기록 → 같은 장학 알림이 다시 오지 않음
-        db.run("insert into scholarship_applications (user_id, notice_id) values (%s, %s) on conflict do nothing",
-               [uid, t["source_id"]])
-    if body.done and t["type"] == "graduation":
-        db.run("""update profiles set completed_requirements = array_append(completed_requirements, %s)
-                  where user_id = %s and not (%s = any(completed_requirements))""", [t["title"], uid, t["title"]])
-    agent.recalc(uid)
-    return _detail(t)
+async def patch_todo(body: TodoDone, request: Request, todo_id: int = Path(gt=0), user: AuthenticatedUser = Depends(require_user)):
+    rows = await database_rows(request, "PATCH", "todos", params={"id": f"eq.{todo_id}", "user_id": f"eq.{user.id}"},
+        headers={"Prefer": "return=representation"}, json={"done": body.done})
+    if not rows: raise APIError(404, "TODO_NOT_FOUND", "할 일을 찾을 수 없어요.")
+    return todo_output(rows[0], detail=True)
+
+
+@router.get("/scholarship-applications")
+async def applications(request: Request, user: AuthenticatedUser = Depends(require_user)):
+    return await database_rows(request, "GET", "scholarship_applications", params={"user_id": f"eq.{user.id}",
+        "select": "id,notice_id,applied_at", "order": "applied_at.desc,id.desc", "limit": 100})

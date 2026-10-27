@@ -1,28 +1,28 @@
-"""알림 센터 (T-4)."""
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, Path, Request
+from pydantic import BaseModel, ConfigDict
 
-import db
-from auth import current_user
-from errors import not_found
+from server.auth import AuthenticatedUser, require_user
+from server.database import database_rows
+from server.errors import APIError
 
-router = APIRouter()
-COLS = "id, type, title, target_id, read, sent_at"
-
-
-@router.get("/notifications")
-def list_notifications(uid: str = Depends(current_user)):
-    return db.all_rows(f"select {COLS} from notifications where user_id = %s order by sent_at desc limit 100", [uid])
+router = APIRouter(tags=["알림"])
+FIELDS = "id,type,title,target_id,read,sent_at"
 
 
-class ReadIn(BaseModel):
+class ReadInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
     read: bool
 
 
+@router.get("/notifications")
+async def notifications(request: Request, user: AuthenticatedUser = Depends(require_user)):
+    return await database_rows(request, "GET", "notifications", params={"user_id":"eq."+str(user.id),
+        "select":FIELDS,"order":"sent_at.desc,id.desc","limit":100})
+
+
 @router.patch("/notifications/{notification_id}")
-def mark_read(notification_id: int, body: ReadIn, uid: str = Depends(current_user)):
-    row = db.one(f"update notifications set read = %s where id = %s and user_id = %s returning {COLS}",
-                 [body.read, notification_id, uid])
-    if not row:
-        raise not_found("알림")
-    return row
+async def mark_read(body: ReadInput, request: Request, notification_id: int = Path(gt=0), user: AuthenticatedUser = Depends(require_user)):
+    rows = await database_rows(request, "PATCH", "notifications", params={"id":f"eq.{notification_id}","user_id":"eq."+str(user.id),"select":FIELDS},
+        headers={"Prefer":"return=representation"},json={"read":body.read})
+    if not rows: raise APIError(404,"NOTIFICATION_NOT_FOUND","알림을 찾을 수 없어요.")
+    return rows[0]

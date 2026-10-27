@@ -1,23 +1,49 @@
-"""서버 시작점. server/ 폴더에서:  uvicorn main:app --reload
-API 문서: http://localhost:8000/docs"""
-import logging
+from contextlib import asynccontextmanager
 
+import httpx
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
-import errors
-from routes import chat, home, me, notifications, school, study, todos
+from server.config import Settings
+from server.errors import register_handlers
+from server.routes.me import router as me_router
+from server.routes.grades import router as grades_router
+from server.routes.graduation import router as graduation_router
+from server.routes.timetable import router as timetable_router
+from server.routes.notices import router as notices_router
+from server.routes.todos import router as todos_router
+from server.routes.calendar import router as calendar_router
+from server.routes.scholarships import router as scholarships_router
+from server.routes.home import router as home_router
+from server.routes.notifications import router as notifications_router
 
-logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="서경 AI 비서 API")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])  # 웹 내보내기 링크용
-errors.install(app)
+def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTransport | None = None):
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        app.state.settings = settings or Settings.from_env()
+        async with httpx.AsyncClient(timeout=10, transport=transport, follow_redirects=False) as client:
+            app.state.http = client
+            yield
 
-for r in (me, home, todos, school, study, chat, notifications):
-    app.include_router(r.router)
+    app = FastAPI(title="서경 AI 비서 API", version="0.1.0", lifespan=lifespan)
+    register_handlers(app)
+    app.include_router(me_router)
+    app.include_router(grades_router)
+    app.include_router(graduation_router)
+    app.include_router(timetable_router)
+    app.include_router(notices_router)
+    app.include_router(todos_router)
+    app.include_router(calendar_router)
+    app.include_router(scholarships_router)
+    app.include_router(home_router)
+    app.include_router(notifications_router)
+
+    @app.get("/health", tags=["운영"])
+    async def health():
+        """서버 실행 여부만 확인한다. DB 연결 확인과는 별개다."""
+        return {"status": "ok"}
+
+    return app
 
 
-@app.get("/health")
-def health():
-    return {"ok": True}
+app = create_app()
