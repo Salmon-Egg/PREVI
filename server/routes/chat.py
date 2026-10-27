@@ -109,7 +109,7 @@ async def _from_docs(request: Request, question: str) -> dict:
 
 
 class Context(BaseModel):
-    kind: Literal["todo", "notice"]
+    kind: Literal["todo", "notice", "status"]  # status: A-3 휴·복학 화면에서 (id는 안 씀, 앱은 0)
     id: int
 
 
@@ -126,7 +126,7 @@ async def _one(request: Request, table: str, **params) -> dict | None:
 
 @router.post("/chat")
 async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends(require_user)):
-    p = await _one(request, "profiles", user_id=f"eq.{user.id}", select="nickname,grade")
+    p = await _one(request, "profiles", user_id=f"eq.{user.id}", select="nickname,grade,semester,status")
     if not p:
         raise APIError(404, "PROFILE_NOT_FOUND", "처음 설정이 필요해요.")
     ret = {"Prefer": "return=representation"}
@@ -142,7 +142,10 @@ async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends
     # ⑭ 맥락 이어받기: 할 일·공지에서 넘어오면 그 내용을 질문 앞에 붙여 AI에게 줌
     question = body.text
     if body.context:
-        if body.context.kind == "todo":
+        if body.context.kind == "status":
+            status = {"enrolled": "재학", "leave": "휴학", "returned": "복학"}.get(p["status"], p["status"])
+            ctx = {"title": "내 학적", "reason": f"{p['grade']}학년 {p['semester']}학기, {status} 중"}
+        elif body.context.kind == "todo":
             ctx = await _one(request, "todos", id=f"eq.{body.context.id}", user_id=f"eq.{user.id}", select="title,reason")
         else:
             ctx = await _one(request, "notices", id=f"eq.{body.context.id}", select="title,summary")

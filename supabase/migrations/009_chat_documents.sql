@@ -74,6 +74,10 @@ grant usage, select on sequence public.unanswered_questions_id_seq to authentica
 create policy unanswered_insert_own on public.unanswered_questions for insert to authenticated
     with check ((select auth.uid()) = user_id);
 
+-- 서버 키(계정 삭제·관리 작업)용. 10/27 실제 Supabase 적용 때 빠져서 보완함
+grant all on public.conversations, public.messages, public.unanswered_questions to service_role;
+grant usage, select on sequence public.conversations_id_seq, public.messages_id_seq, public.unanswered_questions_id_seq to service_role;
+
 -- 벡터 검색: 질문 벡터와 가까운 문단 k개 (REST: POST /rest/v1/rpc/match_doc_chunks)
 create function public.match_doc_chunks(query_embedding vector(768), match_count int default 3)
 returns table (content text, title text, url text, distance float)

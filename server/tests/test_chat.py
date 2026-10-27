@@ -15,7 +15,7 @@ CHUNK = {"content": "[학칙] 제 30 조(휴학) 휴학 기간은 통산 6학기
          "document": {"title": "2026 서경대학교 대학요람 · 학칙", "url": None}}
 
 
-def run_chat(monkeypatch, text, chunks):
+def run_chat(monkeypatch, text, chunks, context=None):
     monkeypatch.setattr(ai_client, "AI_FAKE", True)
     saved = []
 
@@ -25,7 +25,7 @@ def run_chat(monkeypatch, text, chunks):
             return httpx.Response(200, json={"id": USER_ID, "email": "s@skuniv.ac.kr", "email_confirmed_at": "2026-10-27T00:00:00Z"})
         table = path.removeprefix("/rest/v1/")
         if request.method == "GET":
-            return httpx.Response(200, json={"profiles": [{"nickname": "홍길동", "grade": 4}], "doc_chunks": chunks,
+            return httpx.Response(200, json={"profiles": [{"nickname": "홍길동", "grade": 4, "semester": 1, "status": "leave"}], "doc_chunks": chunks,
                                              "academic_calendar": []}.get(table, []))
         body = json.loads(request.content or b"null")
         saved.append((request.method, table, body))
@@ -35,8 +35,13 @@ def run_chat(monkeypatch, text, chunks):
 
     app = create_app(Settings("https://example.supabase.co", "test-key"), httpx.MockTransport(handler))
     with TestClient(app) as client:
-        res = client.post("/chat", headers=HEADERS, json={"text": text})
+        res = client.post("/chat", headers=HEADERS, json={"text": text, "context": context})
     return res, saved
+
+
+def test_status_context_from_leave_screen(monkeypatch):
+    res, _ = run_chat(monkeypatch, "복학 신청은 언제 해?", [CHUNK], {"kind": "status", "id": 0})
+    assert res.status_code == 200
 
 
 def test_answer_from_documents(monkeypatch):

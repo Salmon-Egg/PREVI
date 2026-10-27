@@ -68,7 +68,24 @@ def test_partial_update_and_server_consent_timestamp():
         assert calls == ["POST", "PATCH"]
 
 
-@pytest.mark.parametrize("payload", [{"user_id": USER_ID}, {"grade": 0}, {"status": None}, {"notify": {"time": "25:00"}}, {"notify": {"notice": None}}, {"consent": {"agreed": True, "agreed_at": "fake"}}])
+def test_quiet_time_and_assistant_scope():
+    import json
+    def handler(request):
+        if request.method == "POST":
+            return httpx.Response(201)
+        if request.method == "GET":  # 지금 scope와 합치기
+            return httpx.Response(200, json=[{"assistant_scope": {"grades": True, "timetable": True}}])
+        payload = json.loads(request.content)
+        assert payload == {"notify_quiet": "22:00-07:00", "assistant_scope": {"grades": False, "timetable": True}}
+        return httpx.Response(200, json=[{**ROW, **payload}])
+    with client_for(handler) as client:
+        body = client.put("/me", headers=HEADERS, json={"notify": {"quiet": "22:00-07:00"}, "assistant_scope": {"grades": False}}).json()
+        assert body["notify"]["quiet"] == "22:00-07:00"
+        assert body["assistant_scope"] == {"grades": False, "timetable": True}
+
+
+@pytest.mark.parametrize("payload", [{"user_id": USER_ID}, {"grade": 0}, {"status": None}, {"notify": {"time": "25:00"}}, {"notify": {"notice": None}}, {"consent": {"agreed": True, "agreed_at": "fake"}},
+                                     {"notify": {"quiet": "22-07"}}, {"assistant_scope": {"photos": True}}])
 def test_invalid_updates_never_touch_database(payload):
     def handler(request):
         pytest.fail("잘못된 입력은 DB에 전달되면 안 됨")

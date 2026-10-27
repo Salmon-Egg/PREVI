@@ -25,12 +25,22 @@ class NotifyInput(InputModel):
     calendar: bool | None = None
     chat: bool | None = None
     time: str | None = Field(default=None, pattern=r"^(?:[01]\d|2[0-3]):[0-5]\d$")
+    # 방해 금지 시간 '22:00-07:00', ''이면 끔
+    quiet: str | None = Field(default=None, pattern=r"^$|^(?:[01]\d|2[0-3]):[0-5]\d-(?:[01]\d|2[0-3]):[0-5]\d$")
 
     @model_validator(mode="after")
     def reject_nulls(self):
         if any(getattr(self, name) is None for name in self.model_fields_set):
             raise ValueError("알림 값은 null일 수 없습니다.")
         return self
+
+
+class ScopeInput(InputModel):
+    """M-5 비서가 볼 정보. 보낸 항목만 바뀜."""
+    grades: bool | None = None
+    timetable: bool | None = None
+    status: bool | None = None
+    chat_history: bool | None = None
 
 
 class ProfileInput(InputModel):
@@ -45,10 +55,11 @@ class ProfileInput(InputModel):
     consent: ConsentInput | None = None
     notify: NotifyInput | None = None
     push_token: str | None = Field(default=None, min_length=1, max_length=4096)
+    assistant_scope: ScopeInput | None = None
 
     @model_validator(mode="after")
     def reject_required_nulls(self):
-        for name in {"status", "interests", "consent", "notify"} & self.model_fields_set:
+        for name in {"status", "interests", "consent", "notify", "assistant_scope"} & self.model_fields_set:
             if getattr(self, name) is None:
                 raise ValueError(f"{name}는 null일 수 없습니다.")
         return self
@@ -59,7 +70,9 @@ def profile_output(row: dict):
     return {
         **{key: row[key] for key in fields},
         "consent": {"agreed": row["consent_agreed_at"] is not None, "agreed_at": row["consent_agreed_at"]},
-        "notify": {**{key: row[f"notify_{key}"] for key in ("notice", "deadline", "calendar", "chat")}, "time": row["notify_time"][:5]},
+        "notify": {**{key: row[f"notify_{key}"] for key in ("notice", "deadline", "calendar", "chat")}, "time": row["notify_time"][:5],
+                   "quiet": row.get("notify_quiet", "")},
+        "assistant_scope": row.get("assistant_scope"),
     }
 
 
@@ -102,9 +115,14 @@ async def put_me(body: ProfileInput, request: Request, user: AuthenticatedUser =
     # 다른 요청이 동시에 처음 설정을 만들어도 기존 정보를 덮어쓰지 않는다.
     await profile_request(request, "POST", user, params={"on_conflict": "user_id"},
                           headers={"Prefer": "resolution=ignore-duplicates,return=minimal"}, json={"user_id": str(user.id)})
-    values = body.model_dump(exclude_unset=True, exclude={"notify", "consent"})
+    values = body.model_dump(exclude_unset=True, exclude={"notify", "consent", "assistant_scope"})
     if body.notify is not None:
         values.update({f"notify_{key}": value for key, value in body.notify.model_dump(exclude_unset=True).items()})
+    if body.assistant_scope is not None:
+        # 보낸 항목만 바꾸려고 지금 값과 합침 (FE도 전체를 보내지만 안전하게)
+        rows = await profile_request(request, "GET", user, params={"user_id": f"eq.{user.id}", "select": "assistant_scope"})
+        values["assistant_scope"] = {**((rows[0].get("assistant_scope") if rows else None) or {}),
+                                     **body.assistant_scope.model_dump(exclude_unset=True)}
     if body.consent is not None:
         values["consent_agreed_at"] = datetime.now(timezone.utc).isoformat() if body.consent.agreed else None
     if not values:
