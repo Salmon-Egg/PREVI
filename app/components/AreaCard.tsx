@@ -1,10 +1,11 @@
 // ▶ FE 20번·21번에 해당하는 부분: 졸업 영역(전공 필수·전공 선택·교양 필수·교양 선택) 카드
 // 이수 학점 오른쪽 ⌄를 누르면 그 영역에서 들은 과목과 받은 성적이 펼쳐짐.
-// 성적 탭은 '학기별'로, 여기는 '이수 영역별'로 모아 보여 줌 (같은 성적 기록을 다르게 묶은 것)
+// 성적 조회는 '학기별'로, 여기는 '이수 영역별'로 모아 보여 줌 (같은 성적 기록을 다르게 묶은 것)
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
+import { Text } from './Text';
 import { overall, termLabel } from '../lib/format';
 import { color } from '../lib/theme';
 import type { Graduation } from '../lib/types';
@@ -16,7 +17,7 @@ export function AreaCard({ area, bar = false }: { area: Area; bar?: boolean }) {
   const done = area.earned >= area.required;
   const pct = Math.min(1, area.earned / area.required);
   const courses = [...(area.courses ?? [])].sort((a, b) => a.term.localeCompare(b.term));
-  // 이 영역 평점 (P·F 규칙은 성적 탭과 같음)
+  // 이 영역 평점 (P·F 규칙은 성적 조회와 같음)
   const { gpa } = overall([{ term: '', gpa: null, items: courses.map((c, i) => ({ id: i, area: area.name, ...c })) }]);
 
   return (
@@ -38,7 +39,7 @@ export function AreaCard({ area, bar = false }: { area: Area; bar?: boolean }) {
       {open && (
         <View style={st.list}>
           {courses.length === 0 ? (
-            <Text style={st.empty}>아직 이 영역에서 들은 과목이 없어요. 성적 탭에서 과목을 입력하면 여기에 모여요.</Text>
+            <Text style={st.empty}>아직 이 영역에서 들은 과목이 없어요. 성적 조회에서 과목을 입력하면 여기에 모여요.</Text>
           ) : (
             <>
               {courses.map((c, i) => (
@@ -64,7 +65,7 @@ export function AreaCard({ area, bar = false }: { area: Area; bar?: boolean }) {
 }
 
 const st = StyleSheet.create({
-  card: { borderWidth: 1, borderColor: color.line, borderRadius: 14, padding: 14, gap: 8, backgroundColor: color.bg },
+  card: { borderWidth: 1, borderColor: color.field, borderRadius: 18, padding: 15, gap: 8, backgroundColor: '#fff' },
   head: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   name: { flex: 1, fontSize: 15, color: color.ink },
   credits: { fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },

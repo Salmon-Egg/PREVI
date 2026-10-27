@@ -1,75 +1,81 @@
-// ▶ FE 7번에 해당하는 부분: M-1 로그인 (학교 이메일 인증번호, 시연 모드면 가상 학생 4명)
-// M-1 로그인: 학교 이메일로 인증번호 받기. 시연 모드(DEV_LOGIN)에서는 가상 학생 4명 중 선택.
+// ▶ FE 7번에 해당하는 부분: M-1 로그인 (아이디 = 학번, 비밀번호) + 로그인 오류 표시 (새 시안 '로그인', '로그인(오류)')
+// 확인은 lib/auth.ts (예시 데이터 모드·시연 서버·실제 Supabase). 처음이면 회원가입(signup.tsx)
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { Body, Button, Card, Screen, Sub, Title, s } from '../components/ui';
+import { AuthField, AuthFrame, AuthLink } from '../components/AuthFrame';
+import { Text } from '../components/Text';
+import { Button, showAlert } from '../components/ui';
 import { useSubmit } from '../lib/api';
-import { DEV_LOGIN, EMAIL_DOMAIN, PERSONAS, USE_MOCK } from '../lib/config';
-import { mockPersonaDesc } from '../mocks';
-import { login, supabase } from '../lib/session';
+import { signIn } from '../lib/auth';
+import { DEV_LOGIN, DEV_PASSWORD, PERSONAS, USE_MOCK } from '../lib/config';
+import { PRIVACY } from '../lib/constants';
+import { ApiError } from '../lib/errors';
 import { color } from '../lib/theme';
+import { mockPersonaDesc } from '../mocks';
 
 export default function Login() {
-  const [email, setEmail] = useState('');
-  const [code, setCode] = useState('');
-  const [sent, setSent] = useState(false);
-  const [msg, setMsg] = useState('');
+  const [id, setId] = useState('');
+  const [pw, setPw] = useState('');
+  const [error, setError] = useState('');
+  const [showDemo, setShowDemo] = useState(false);
+  const { busy, run } = useSubmit(); // 여러 번 눌러도 한 번만
 
-  const { busy, run: submit } = useSubmit();
-  const addr = email.trim().toLowerCase(); // 앞뒤 공백·대문자로 도메인 검사가 어긋나지 않게
-
-  // 버튼을 여러 번 눌러 메일이 여러 통 가거나, 네트워크 오류로 멈추지 않게 한 번에 하나만
-  function run(fn: () => Promise<void>) {
-    if (!supabase) return setMsg('로그인 설정(SUPABASE_URL)이 비어 있어요. app/.env를 확인해 주세요.');
-    return submit(() => fn().catch(() => setMsg('서버에 연결할 수 없어요. 인터넷 연결을 확인해 주세요.')));
-  }
-
-  const sendCode = () => run(async () => {
-    if (!/^[^\s@]+@[^\s@]+$/.test(addr)) return setMsg('이메일 주소를 확인해 주세요');
-    if (EMAIL_DOMAIN && !addr.endsWith('@' + EMAIL_DOMAIN.toLowerCase())) return setMsg(`@${EMAIL_DOMAIN} 학교 이메일만 쓸 수 있어요`);
-    const { error } = await supabase!.auth.signInWithOtp({ email: addr });
-    if (error) return setMsg(error.message);
-    setSent(true);
-    setMsg('메일로 받은 인증번호를 입력해 주세요');
+  const submit = () => run(async () => {
+    if (!id.trim() || !pw) return setError('아이디와 비밀번호를 입력해 주세요.');
+    try {
+      await signIn(id.trim(), pw); // 성공하면 맨 위 레이아웃이 홈으로 보냄
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : '서버에 연결할 수 없어요. 인터넷 연결을 확인해 주세요.');
+    }
   });
 
-  const verify = () => run(async () => {
-    const { data, error } = await supabase!.auth.verifyOtp({ email: addr, token: code.trim(), type: 'email' });
-    if (error || !data.session) return setMsg(error?.message ?? '인증번호가 맞지 않아요');
-    login(data.session.access_token);
-  });
+  /** 입력을 고치면 빨간 표시를 지움 */
+  const edit = (set: (v: string) => void) => (v: string) => {
+    set(v);
+    setError('');
+  };
 
   return (
-    <Screen>
-      <View style={{ marginTop: 48, gap: 6 }}>
-        <Text style={{ fontSize: 28, fontWeight: '800', color: color.primary }}>서경 AI</Text>
-        <Sub>서경대학교 스마트 비서</Sub>
-      </View>
+    <AuthFrame title="로그인" sub="학교 아이디로 서경 AI를 시작해요." top={0.12}
+      footer={(
+        <Pressable onPress={() => showAlert('개인정보 수집·이용 안내', PRIVACY)} style={{ paddingTop: 24 }}>
+          <Text style={st.footer}>로그인하면 개인정보 수집·이용에 관한 안내에 동의한 것으로 봐요.</Text>
+        </Pressable>
+      )}>
+      <AuthField label="아이디" placeholder="아이디를 입력하세요" value={id} onChangeText={edit(setId)} error={!!error}
+        autoCapitalize="none" autoComplete="username" />
+      <AuthField label="비밀번호" placeholder="비밀번호를 입력하세요" value={pw} onChangeText={edit(setPw)} error={error}
+        secureTextEntry autoComplete="password" onSubmitEditing={submit} returnKeyType="go" />
+      <View style={{ height: 4 }} />
+      <Button label="로그인" onPress={submit} disabled={busy} />
+      <AuthLink text="처음이신가요?" link="회원가입" onPress={() => router.push('/signup')} />
 
-      {DEV_LOGIN ? (
-        <>
-          <Title>시연용 학생으로 시작하기</Title>
-          {PERSONAS.map((p) => (
-            <Card key={p.id} onPress={() => login(`dev-${p.id}`)}>
-              <Body style={{ fontWeight: '700' }}>{p.name}</Body>
-              {/* 예시 데이터 모드: 마이페이지에서 고친 학년·학과(또는 탈퇴함)를 그대로 보여 줌 */}
-              <Sub>{USE_MOCK ? mockPersonaDesc(p.id) : p.desc}</Sub>
-            </Card>
+      {/* 시연용: 가상 학생 학번을 눌러 채움 (실제 서버에서는 안 보임) */}
+      {DEV_LOGIN && (
+        <View style={st.demo}>
+          <Pressable onPress={() => setShowDemo(!showDemo)}>
+            <Text style={st.demoHead}>시연용 계정 {showDemo ? '접기 ▲' : '보기 ▼'} · 비밀번호 {DEV_PASSWORD}</Text>
+          </Pressable>
+          {showDemo && PERSONAS.map((p) => (
+            <Pressable key={p.id} style={st.demoRow} onPress={() => { setId(p.studentId); setPw(DEV_PASSWORD); setError(''); }}>
+              <Text style={st.demoName}>{p.name} <Text style={st.demoId}>{p.studentId}</Text></Text>
+              <Text style={st.demoDesc}>{USE_MOCK ? mockPersonaDesc(p.id) : p.desc}</Text>
+            </Pressable>
           ))}
-        </>
-      ) : (
-        <>
-          <Title>학교 이메일로 로그인</Title>
-          <TextInput style={input} placeholder={`학번@${EMAIL_DOMAIN || 'skuniv.ac.kr'}`} autoCapitalize="none"
-            keyboardType="email-address" value={email} onChangeText={setEmail} editable={!sent} />
-          {sent && <TextInput style={input} placeholder="인증번호 6자리" keyboardType="number-pad" value={code} onChangeText={setCode} />}
-          <Button label={sent ? '로그인' : '인증번호 받기'} onPress={sent ? verify : sendCode} disabled={busy || !addr || (sent && !code.trim())} />
-        </>
+        </View>
       )}
-      {!!msg && <Sub style={{ color: color.alert }}>{msg}</Sub>}
-    </Screen>
+    </AuthFrame>
   );
 }
 
-const input = [s.card, { fontSize: 15, color: color.ink }];
+const st = StyleSheet.create({
+  footer: { textAlign: 'center', fontSize: 13, color: color.inkSub },
+  demo: { borderTopWidth: 1, borderColor: color.line, paddingTop: 10, gap: 6 },
+  demoHead: { textAlign: 'center', fontSize: 12, color: color.inkSub, fontWeight: '700' },
+  demoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: color.primarySoft, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 },
+  demoName: { fontSize: 14, fontWeight: '800', color: color.ink },
+  demoId: { fontSize: 13, fontWeight: '600', color: color.primary },
+  demoDesc: { fontSize: 12, color: color.inkSub },
+});

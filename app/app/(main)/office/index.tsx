@@ -1,9 +1,10 @@
 // ▶ FE 27번에 해당하는 부분: A-1 나에게 해당하는 공지 (자동 수집 + AI 요약) + 학사 일정·휴복학 안내로 가는 길
 import { Feather } from '@expo/vector-icons';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet } from 'react-native';
 
+import { Text } from '../../../components/Text';
 import { Badge, Chips, ItemCard, Row, Screen, StateView, Sub, Title } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
@@ -24,8 +25,7 @@ export default function Office() {
   const pastCount = all.filter(expired).length;
 
   return (
-    <Screen>
-      <Stack.Screen options={{ title: '학사 행정' }} />
+    <Screen title="학사 행정">
       <Row>
         {/* ▶ FE 28번·29번으로 가는 길 */}
         <Pressable style={st.tile} onPress={() => router.push('/office/calendar')}>

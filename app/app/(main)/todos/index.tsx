@@ -1,9 +1,10 @@
 // ▶ FE 16번에 해당하는 부분: T-1 할 일 목록 — 종류 필터(마감·장학·졸업·학적), D-day 순
 import { Feather } from '@expo/vector-icons';
-import { router, Stack } from 'expo-router';
+import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 
+import { Text } from '../../../components/Text';
 import { Badge, Card, Chips, DdayBadge, Row, Screen, StateView, Sub } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
@@ -18,8 +19,7 @@ export default function TodoList() {
   const list = [...(data ?? [])].sort((a, b) => (a.d_day ?? 999) - (b.d_day ?? 999));
 
   return (
-    <Screen>
-      <Stack.Screen options={{ title: '할 일' }} />
+    <Screen title="할 일">
       <Chips items={FILTERS} value={type} onChange={setType} label={(v) => (v ? TODO_TYPE_KO[v] : '전체')} />
       <StateView loading={loading} error={error} empty={!list.length} emptyText="챙길 일이 없어요" onRetry={reload}>
         {list.map((t) => (

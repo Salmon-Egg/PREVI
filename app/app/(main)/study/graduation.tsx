@@ -1,7 +1,8 @@
 // ▶ FE 21번에 해당하는 부분: L-2 졸업 요건 상세 — 영역별 이수 현황, 남은 요건, 관련 마감
-import { router, Stack } from 'expo-router';
-import { Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { View } from 'react-native';
 
+import { Text } from '../../../components/Text';
 import { AreaCard } from '../../../components/AreaCard';
 import { Body, Card, DdayBadge, Row, Screen, StateView, Sub, Title } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
@@ -14,8 +15,7 @@ export default function GraduationDetail() {
   const deadlines = useApi<Todo[]>('/todos?type=graduation&done=false');
 
   return (
-    <Screen>
-      <Stack.Screen options={{ title: '졸업 요건' }} />
+    <Screen title="졸업 요건">
       <StateView loading={loading} error={error} empty={!data} onRetry={reload}>
         {data && (
           <>

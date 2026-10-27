@@ -2,13 +2,13 @@
 // 서버 없이 화면을 만들 때 쓰는 예시 데이터 (EXPO_PUBLIC_USE_MOCK=1).
 // 모양은 docs/04_API_명세.md 예시와 같음. 내 정보는 학생별로 저장되고, 그 밖의 고친 내용은 앱을 다시 켜면 처음으로 돌아감.
 // 시연용 가상 학생 4명 중 누구로 로그인했는지에 따라 이름·학과·학년이 바뀜 (나머지 예시는 같음)
-import { PERSONAS } from '../lib/config';
+import { DEV_PASSWORD, PERSONAS } from '../lib/config';
 import { overall } from '../lib/format';
 import { ApiError } from '../lib/errors';
 import { checkAdd } from '../lib/schedule';
 import { getToken } from '../lib/session';
 import type {
-  Application, AreaCourse, CalendarEvent, ChatCard, Course, GradeItem, Graduation, ChatReply, ClaimQuestion, Conversation, GradeTerm, Home, LostItem, Me, Message,
+  Application, AreaCourse, CalendarEvent, ChatCard, Course, GradeItem, Graduation, ChatReply, Conversation, GradeTerm, Home, Me, Message,
   NoticeDetail, Notification, Scholarship, TimetableEntry, TodoDetail,
 } from '../lib/types';
 
@@ -16,19 +16,78 @@ const d = (days: number) => new Date(Date.now() + days * 864e5).toISOString().sl
 const dday = (date: string) => Math.round((new Date(date + 'T00:00:00').getTime() - new Date(d(0) + 'T00:00:00').getTime()) / 864e5);
 const now = () => new Date().toISOString();
 
-// ---- 시연용 가상 학생 4명의 내 정보 (학생마다 따로 저장) ----
+// ---- ▶ FE 7번에 해당하는 부분: 계정 (로그인·회원가입·비밀번호 변경) ----
+// 가상 학생 4명(학번 + 비밀번호 DEV_PASSWORD)에, 회원가입한 계정이 더해짐. 이 기기(브라우저·휴대폰 저장소)에만 저장되는 시연용
+type Account = { id: string; studentId: string; name: string; email: string; password: string };
+const ACCOUNT_KEY = 'mock-accounts-v1';
+const accounts: Account[] = PERSONAS.map((p) => ({ id: p.id, studentId: p.studentId, name: p.name, email: `${p.studentId}@skuniv.ac.kr`, password: DEV_PASSWORD }));
+try {
+  // 저장된 것(바꾼 비밀번호, 새로 가입한 계정)으로 덮어씀
+  for (const a of JSON.parse(globalThis.localStorage?.getItem(ACCOUNT_KEY) ?? '[]') as Account[]) {
+    const i = accounts.findIndex((x) => x.id === a.id);
+    if (i >= 0) accounts[i] = a;
+    else accounts.push(a);
+  }
+} catch {}
+function saveAccounts() {
+  try {
+    globalThis.localStorage?.setItem(ACCOUNT_KEY, JSON.stringify(accounts));
+  } catch {}
+}
+const authFail = (message: string) => new ApiError(400, 'AUTH', message);
+const signupCodes: Record<string, string> = {}; // 이메일 → 보낸 인증번호
+const verified = new Set<string>(); // 인증을 마친 이메일
+
+/** lib/auth.ts가 예시 데이터 모드에서 부르는 곳. 로그인 성공이면 토큰(dev-<계정 번호>)을 돌려줌 */
+export const mockAuth = {
+  signIn(id: string, password: string) {
+    const a = accounts.find((x) => x.studentId === id || x.email === id.toLowerCase());
+    if (!a || a.password !== password) throw authFail('아이디 또는 비밀번호가 맞지 않아요. 다시 확인해 주세요.');
+    return `dev-${a.id}`;
+  },
+  sendCode(email: string) {
+    if (accounts.some((a) => a.email === email)) throw authFail('이미 가입한 이메일이에요. 로그인해 주세요.');
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    signupCodes[email] = code;
+    verified.delete(email);
+    return code;
+  },
+  verifyCode(email: string, code: string) {
+    if (!signupCodes[email] || signupCodes[email] !== code) throw authFail('인증번호가 맞지 않아요.');
+    verified.add(email);
+  },
+  signUp(a: { studentId: string; name: string; email: string; password: string }) {
+    if (!verified.has(a.email)) throw authFail('이메일 인증을 먼저 해 주세요.');
+    if (accounts.some((x) => x.studentId === a.studentId)) throw authFail('이미 가입한 학번이에요. 로그인해 주세요.');
+    const account = { ...a, id: `mock-${Date.now()}` };
+    accounts.push(account);
+    saveAccounts();
+    return `dev-${account.id}`; // 내 정보가 없어서 처음 설정(M-2)부터 시작
+  },
+  changePassword(current: string, next: string) {
+    const a = accounts.find((x) => x.id === currentId());
+    if (!a || a.password !== current) throw authFail('지금 비밀번호가 맞지 않아요.');
+    a.password = next;
+    saveAccounts();
+  },
+};
+
+// ---- 학생별 내 정보 (학생마다 따로 저장) ----
 // 마이페이지에서 고친 학적·알림 설정은 그 학생에게만 남고, 로그아웃·새로고침해도 유지됨(브라우저·휴대폰 저장소).
-// 계정을 삭제하면 그 학생 정보가 지워져서, 다시 고르면 처음 설정(M-2)부터 시작함
+// 계정을 삭제하면 그 학생 정보가 지워져서, 다시 로그인하면 처음 설정(M-2)부터 시작함. 새로 가입한 계정도 처음 설정부터
 const PROFILE_KEY = 'mock-profiles-v1';
 const BASE: Me = {
   nickname: '홍길동', department: '소프트웨어학과', minor: null, grade: 4, semester: 2, status: 'enrolled',
   admission_year: 2021, interests: ['장학금'], completed_requirements: ['졸업 영어 인증'],
   consent: { agreed: true, agreed_at: '2026-10-20T10:00:00+09:00' },
-  notify: { notice: true, deadline: true, calendar: true, chat: true, time: '09:00' },
+  notify: { notice: true, deadline: true, calendar: true, chat: true, time: '08:00', quiet: '22:00-07:00' },
   assistant_scope: { grades: true, timetable: true, status: true, chat_history: true },
 };
-/** 처음 상태: config의 PERSONAS 설명("1학년 · 소프트웨어학과")대로 */
-function defaultProfile(p: (typeof PERSONAS)[number]): Me {
+/** 처음 상태: 가상 학생은 config의 설명("1학년 · 소프트웨어학과")대로, 새로 가입한 계정은 이름만 */
+function defaultProfile(id: string): Me {
+  const p = PERSONAS.find((x) => x.id === id);
+  const name = accounts.find((a) => a.id === id)?.name ?? '';
+  if (!p) return { ...BASE, nickname: name, grade: 1, admission_year: 2026, completed_requirements: [], notify: { ...BASE.notify } };
   const [grade, dept] = p.desc.split(' · ');
   const g = Number(grade[0]);
   return { ...BASE, nickname: p.name, department: dept, grade: g, admission_year: 2026 - g + 1, notify: { ...BASE.notify } };
@@ -38,7 +97,7 @@ function loadProfiles(): Record<string, Me | null> {
   try {
     saved = JSON.parse(globalThis.localStorage?.getItem(PROFILE_KEY) ?? '{}');
   } catch {}
-  return Object.fromEntries(PERSONAS.map((p) => [p.id, p.id in saved ? saved[p.id] : defaultProfile(p)]));
+  return { ...Object.fromEntries(PERSONAS.map((p) => [p.id, defaultProfile(p.id)])), ...saved };
 }
 const profiles = loadProfiles();
 function saveProfiles() {
@@ -46,8 +105,8 @@ function saveProfiles() {
     globalThis.localStorage?.setItem(PROFILE_KEY, JSON.stringify(profiles));
   } catch {}
 }
-/** 지금 로그인한 가상 학생 번호 (dev-<id> 토큰). 모르면 홍길동 */
-const currentId = () => PERSONAS.find((x) => getToken() === `dev-${x.id}`)?.id ?? PERSONAS[3].id;
+/** 지금 로그인한 계정 번호 (dev-<id> 토큰). 모르면 홍길동 */
+const currentId = () => accounts.find((a) => getToken() === `dev-${a.id}`)?.id ?? PERSONAS[3].id;
 
 // 아래 예시 데이터가 쓰는 '지금 학생 정보'. 요청마다 applyPersona()로 맞춤
 let me: Me = profiles[currentId()] ?? BASE;
@@ -55,10 +114,10 @@ function applyPersona() {
   me = profiles[currentId()] ?? { ...BASE, nickname: '' };
 }
 
-/** 로그인 화면(M-1)에 보여 줄 가상 학생 설명: 지금 저장된 학년·학과, 삭제했으면 그렇다고 */
+/** 로그인 화면의 '시연용 계정'에 보여 줄 설명: 지금 저장된 학년·학과, 삭제했으면 그렇다고 */
 export function mockPersonaDesc(id: string) {
   const pr = profiles[id];
-  return pr ? `${pr.grade}학년 · ${pr.department}${pr.status !== 'enrolled' ? ` · ${pr.status === 'leave' ? '휴학' : '복학'}` : ''}` : '탈퇴함 · 고르면 처음 설정부터';
+  return pr ? `${pr.grade}학년 · ${pr.department}${pr.status !== 'enrolled' ? ` · ${pr.status === 'leave' ? '휴학' : '복학'}` : ''}` : '탈퇴함 · 로그인하면 처음 설정부터';
 }
 
 const todos: TodoDetail[] = [
@@ -202,21 +261,22 @@ const gradTail = (areas: Graduation['areas'], required_total: number, earned_tot
 const timetable: TimetableEntry[] = [
   { id: 1, course_id: 1, course_name: '캡스톤디자인II', code: 'CS0401', credits: 3, category: '전필', professor: '김서경', room: '북304',
     times: [{ day: '월', start: '10:00', end: '12:00' }, { day: '수', start: '09:00', end: '10:00' }] },
-  { id: 2, course_id: 4, course_name: '금융빅데이터응용', code: 'CS0388', credits: 3, category: '전선', professor: '이금융', room: '정보202',
-    times: [{ day: '화', start: '10:00', end: '12:00' }] },
+  { id: 2, course_id: 2, course_name: '인공지능개론', code: 'CS0312', credits: 3, category: '전선', professor: '이박사', room: '유담102',
+    times: [{ day: '화', start: '12:00', end: '14:00' }, { day: '목', start: '12:00', end: '13:00' }] },
   { id: 3, course_id: 3, course_name: '빅데이터분석', code: 'CS0355', credits: 3, category: '전선', professor: '박데이터', room: '정보301',
     times: [{ day: '수', start: '13:00', end: '16:00' }] },
   { id: 4, course_id: 16, course_name: '서경인성리더십', code: 'GE0101', credits: 1, category: '교양', professor: '서경인', room: '청운홀',
-    times: [{ day: '금', start: '12:00', end: '13:00' }] },
+    times: [{ day: '금', start: '13:00', end: '14:00' }] },
 ];
 
-// 개설 과목 (과목 검색 L-5). 모바일앱디자인은 금 10~13시라 서경인성리더십(금 12~13시)과 겹침 → 등록 불가 창 확인용
+// 개설 과목 (과목 검색 L-5). 모바일앱디자인은 금 03~05교시라 서경인성리더십(금 05교시)과 겹침 → 등록 불가 창 확인용
 const COURSES: Course[] = [
-  { id: 15, name: '모바일앱디자인', code: 'DS0201', credits: 3, area: '교양 선택', category: '일선', professor: '최디자인', room: '예지301', times: [{ day: '금', start: '10:00', end: '13:00' }] },
+  { id: 15, name: '모바일앱디자인', code: 'DS0201', credits: 3, area: '교양 선택', category: '일선', professor: '최디자인', room: '예지301', times: [{ day: '금', start: '11:00', end: '14:00' }] },
+  { id: 3, name: '빅데이터분석', code: 'CS0355', credits: 3, area: '전공', category: '전선', professor: '박데이터', room: '정보301', times: [{ day: '수', start: '13:00', end: '16:00' }] },
   { id: 14, name: '빅데이터개론', code: 'GE0302', credits: 2, area: '교양 선택', category: '교양', professor: '정정보', room: '청운201', times: [{ day: '목', start: '09:00', end: '11:00' }] },
-  { id: 21, name: '소프트웨어설계', code: 'CS0410', credits: 3, area: '전공', category: '전선', professor: '한설계', room: '북401', times: [{ day: '목', start: '13:00', end: '16:00' }] },
+  { id: 4, name: '금융빅데이터응용', code: 'CS0388', credits: 3, area: '전공', category: '전선', professor: '이금융', room: '정보202', times: [{ day: '화', start: '10:00', end: '12:00' }] },
+  { id: 21, name: '소프트웨어설계', code: 'CS0410', credits: 3, area: '전공', category: '전선', professor: '한설계', room: '북401', times: [{ day: '목', start: '14:00', end: '17:00' }] },
   { id: 22, name: '모바일프로그래밍', code: 'CS0322', credits: 3, area: '전공', category: '전선', professor: '윤앱', room: '정보305', times: [{ day: '월', start: '14:00', end: '17:00' }] },
-  { id: 23, name: '데이터시각화', code: 'CS0377', credits: 3, area: '전공', category: '전선', professor: '박데이터', room: '정보301', times: [{ day: '화', start: '10:00', end: '12:00' }] },
   { id: 24, name: '영화와 인문학', code: 'GE0510', credits: 2, area: '교양 선택', category: '교양', professor: '이인문', room: '청운103', times: [{ day: '수', start: '10:00', end: '12:00' }] },
 ];
 
@@ -245,7 +305,6 @@ const home = (): Home => {
       study: `졸업까지 ${graduation().remaining_total}학점`,
       scholarship: `신청 가능 ${eligible}건${scholarships.some((s) => !s.applied && s.verdict !== 'ineligible' && s.deadline?.startsWith(d(0))) ? ' · 오늘 마감' : ''}`,
       admin: `새 공지 ${newNotices}건`,
-      campus: '비슷한 습득물 1건',
     },
     suggested_questions: me.grade === 4
       ? ['졸업까지 뭐가 남았어?', '졸업작품 심사 신청은 언제까지야?', '장학금 신청 마감 언제야?']
@@ -325,11 +384,6 @@ function answer(q: string, ctx: { kind: string; id: number } | null): Reply {
       sources: [], actions: [{ type: 'open_screen', label: '할 일 전체 보기', payload: { screen: 'T-1' } }],
     };
   }
-  if (/지갑|분실|잃어/.test(q)) return {
-    text: '교내 분실물 중 비슷한 물건을 찾아봤어요. 아래 습득물이 가장 비슷해요.',
-    cards: [{ image_url: null, title: '검정 가죽 반지갑', lines: ['일치도 92%', '중앙도서관 1층 로비 · 학생지원팀 보관'], link: null }],
-    sources: [], actions: [{ type: 'open_screen', label: '분실물 센터', payload: { screen: 'C-1' } }],
-  };
   return {
     text: '학교 문서에서 근거를 찾지 못했어요. 질문을 조금 더 구체적으로 적어 주시거나, 학생지원팀(02-940-7000)에 문의해 주세요.',
     cards: [], sources: [], actions: [],
@@ -341,7 +395,7 @@ const conversations: (Conversation & { messages: Message[] })[] = [
   { id: 2, title: '휴학하면 장학금은 어떻게 돼?', pinned: false, updated_at: `${d(-2)}T15:30:00+09:00`, preview: '휴학 중에는 재학생 대상 교내 장학금을…', messages: [] },
   { id: 3, title: '졸업까지 뭐가 남았어?', pinned: false, updated_at: `${d(-4)}T11:00:00+09:00`, preview: '졸업까지 9학점이 남았어요', messages: [] },
   { id: 4, title: '도서관 이용시간', pinned: false, updated_at: `${d(-6)}T18:20:00+09:00`, preview: '중앙도서관 이용시간이 어떻게 돼?', messages: [] },
-  { id: 5, title: '검정 지갑을 잃어버렸어', pinned: false, updated_at: `${d(-9)}T09:40:00+09:00`, preview: '비슷한 습득물 1건을 찾았어요', messages: [] },
+  { id: 5, title: '동계 계절학기 수강신청 일정', pinned: false, updated_at: `${d(-9)}T09:40:00+09:00`, preview: '앞으로 2주 안의 학사 일정은…', messages: [] },
 ];
 // 미리 만든 대화에 질문·답 한 쌍씩 채워 둠
 for (const c of conversations) {
@@ -363,26 +417,6 @@ function chat(body: { conversation_id: number | null; text: string; context: { k
   c.updated_at = now();
   return { conversation_id: c.id, message };
 }
-
-// ---- 분실물 (FE 35번) ----
-const lostItems: LostItem[] = [
-  { id: 901, kind: 'found', title: '검정 가죽 반지갑', category: '지갑', place: '중앙도서관 1층 로비', found_at: `${d(-1)}T15:30:00+09:00`,
-    keep_at: '학생지원팀 (학생회관 1층)', description: '검정 가죽, 카드 3장 들어 있음', image_url: null, mine: false, status: 'matched',
-    match: { item_id: 951, score: 92, reasons: ['종류가 같아요 (지갑)', '색이 같아요 (검정)', '잃어버린 곳과 가까워요 (중앙도서관)', '잃어버린 다음 날 발견됐어요'] } },
-  { id: 902, kind: 'found', title: '흰색 무선 이어폰 케이스', category: '전자기기', place: '인문관 2층 복도', found_at: `${d(-2)}T12:10:00+09:00`,
-    keep_at: '학생지원팀 (학생회관 1층)', description: '흰색, 에어팟 추정', image_url: null, mine: false, status: 'open', match: null },
-  { id: 903, kind: 'found', title: '검정 카드지갑', category: '카드', place: '중앙도서관 3층', found_at: `${d(-5)}T10:00:00+09:00`,
-    keep_at: '중앙도서관 안내데스크', description: '검정, 학생증 없음', image_url: null, mine: false, status: 'open',
-    match: { item_id: 951, score: 61, reasons: ['색이 같아요 (검정)', '장소가 가까워요'] } },
-  { id: 904, kind: 'found', title: '남색 우산', category: '기타', place: '청운관 1층', found_at: `${d(-8)}T18:00:00+09:00`,
-    keep_at: '학생지원팀 (학생회관 1층)', description: '장우산', image_url: null, mine: false, status: 'returned', match: null },
-  { id: 951, kind: 'lost', title: '검정 가죽 반지갑', category: '지갑', place: '중앙도서관 (추정)', found_at: `${d(-2)}T14:00:00+09:00`,
-    keep_at: null, description: '안에 체크카드와 학생증', image_url: null, mine: true, status: 'matched', match: null },
-];
-const claimQuestions: ClaimQuestion[] = [
-  { id: 1, question: '지갑 안에 든 카드는 몇 장인가요?' },
-  { id: 2, question: '지갑의 브랜드나 눈에 띄는 특징을 적어 주세요.' },
-];
 
 /** 서버처럼: 없는 id면 404 (예전에는 다른 공지를 대신 보여 줬음) */
 function found<T>(x: T | undefined): T {
@@ -407,7 +441,7 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
     }
     case 'PUT /me': {
       const id = currentId();
-      const base = profiles[id] ?? { ...defaultProfile(PERSONAS.find((x) => x.id === id)!), consent: { agreed: false, agreed_at: null } };
+      const base = profiles[id] ?? { ...defaultProfile(id), consent: { agreed: false, agreed_at: null } };
       const next: Me = { ...base, ...body, notify: { ...base.notify, ...body.notify } }; // 서버처럼 notify는 합치기
       if (body.consent?.agreed) next.consent = { agreed: true, agreed_at: now() };
       profiles[id] = next;
@@ -500,19 +534,6 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
     case 'PATCH /conversations/:id': return Object.assign(conversations.find((c) => c.id === id) ?? {}, body);
     case 'GET /notifications': return notifications;
     case 'PATCH /notifications/:id': return Object.assign(notifications.find((n) => n.id === id)!, body);
-    // 분실물 (API 명세에 아직 없음)
-    case 'GET /lost-items':
-      if (q.get('matched_for') === 'me') return lostItems.filter((i) => i.kind === 'found' && i.match?.item_id === 951).sort((a, b) => b.match!.score - a.match!.score);
-      return lostItems.filter((i) => !q.get('kind') || i.kind === q.get('kind'));
-    case 'GET /lost-items/:id': return found(lostItems.find((i) => i.id === id));
-    case 'GET /lost-items/:id/questions': return claimQuestions;
-    case 'POST /lost-items/:id/claim': return { ok: true, message: '보관처(학생지원팀, 학생회관 1층)에서 평일 9~18시에 학생증을 보여 주고 받아 가세요.' };
-    case 'POST /lost-items/analyze': return { title: '흰색 무선 이어폰 케이스', category: '전자기기', place: '', description: '흰색 플라스틱 케이스, 에어팟 추정 (AI 초안)' };
-    case 'POST /lost-items': {
-      lostItems.unshift({ id: Date.now(), kind: body.kind, title: body.title, category: body.category, place: body.place, found_at: now(),
-        keep_at: body.keep_at ?? null, description: body.description ?? '', image_url: null, mine: true, status: 'open', match: null });
-      return { matches: body.kind === 'lost' && body.category === '지갑' ? 2 : 0 };
-    }
     default: throw new Error(`예시 데이터 없음: ${key}`);
   }
 }

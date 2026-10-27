@@ -1,13 +1,14 @@
 // AI 대화 본문. 채팅 화면(app/(main)/chat/index.tsx)과 홈의 끌어 올리는 대화창(FE 15번)이 같이 씀
-// ▶ FE 30번에 해당하는 부분: H-1 채팅 시작 (캐릭터 + 추천 질문, 피그마 06_ai_chat ①)
+// ▶ FE 30번에 해당하는 부분: H-1 채팅 시작 (마스코트 PREVI + 추천 질문, 피그마 06_ai_chat ①)
 // ▶ FE 31번에 해당하는 부분: H-2 답변 — 말풍선, 답변 카드(졸업 요건·공지 요약), 출처, 다음 행동 버튼, '답변 작성 중' (시안 ②)
 // ▶ FE 32번에 해당하는 부분: 다른 화면에서 넘어올 때 q(바로 보낼 질문), contextKind·contextId(할 일·공지·학적 맥락)
 // ▶ FE 33번에 해당하는 부분: 답을 기다리다 앱을 나가면 서버가 '답변 도착' 푸시(type=chat) → 누르면 conversation으로 이 화면이 열림
 import { Feather } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useEffect, useRef, useState, type ComponentRef } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
+import { Text, TextInput } from './Text';
 import { Character, InfoCard, openLink, showAlert, Sources, TypingDots } from './ui';
 import { api, ApiError } from '../lib/api';
 import { color } from '../lib/theme';
@@ -25,6 +26,8 @@ const STARTERS: { icon: keyof typeof Feather.glyphMap; q: string }[] = [
 const SCREENS: Record<string, (id?: number) => Href> = {
   'L-1': () => '/study',
   'L-2': () => '/study/graduation',
+  'L-3': () => '/study/timetable',
+  'L-8': () => '/study/grades',
   'T-1': () => '/todos',
   'T-2': (id) => `/todos/${id}`,
   'S-1': () => '/scholarships',
@@ -33,7 +36,6 @@ const SCREENS: Record<string, (id?: number) => Href> = {
   'A-1': () => '/office',
   'A-2': () => '/office/calendar',
   'A-3': () => '/office/leave',
-  'C-1': () => '/campus',
 };
 
 type Context = { kind: string; id: number } | null;
@@ -120,11 +122,11 @@ export function ChatPanel({ q, context = null, conversation, keyboardOffset = 90
           // H-1 시작 화면 (시안 ①)
           <View style={st.start}>
             <View>
-              <Character size={150} />
+              <Character size={160} />
               <View style={st.startBubble}><Text style={st.startBubbleText}>무엇이든{'\n'}물어보세요!</Text></View>
             </View>
             <Text style={st.startTitle}>무엇을 도와드릴까요?</Text>
-            <Text style={st.startSub}>수업, 장학금, 졸업, 캠퍼스 생활까지{'\n'}서경 AI가 학교 문서를 근거로 도와드려요.</Text>
+            <Text style={st.startSub}>수업, 장학금, 졸업, 캠퍼스 생활까지{'\n'}PREVI가 학교 문서를 근거로 도와드려요.</Text>
             <View style={{ alignSelf: 'stretch', gap: 8, marginTop: 8 }}>
               {STARTERS.map((s) => (
                 <Pressable key={s.q} style={st.starter} onPress={() => send(s.q)}>
@@ -201,7 +203,7 @@ export function ChatPanel({ q, context = null, conversation, keyboardOffset = 90
 
 const st = StyleSheet.create({
   start: { alignItems: 'center', gap: 6, paddingTop: 8 },
-  startBubble: { position: 'absolute', top: -6, right: -62, backgroundColor: '#fff', borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10, transform: [{ rotate: '6deg' }] },
+  startBubble: { position: 'absolute', top: 4, right: -84, backgroundColor: '#fff', borderRadius: 14, paddingVertical: 6, paddingHorizontal: 10, transform: [{ rotate: '6deg' }] },
   startBubbleText: { fontSize: 12, color: color.primary, fontWeight: '700', textAlign: 'center' },
   startTitle: { fontSize: 24, fontWeight: '800', color: color.ink, marginTop: 4 },
   startSub: { fontSize: 14, color: color.inkSub, textAlign: 'center', lineHeight: 20 },

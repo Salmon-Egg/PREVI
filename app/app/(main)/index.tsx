@@ -4,30 +4,28 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type PointerEvent, type StyleProp, type TextStyle } from 'react-native';
+import { Image, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type PointerEvent, type StyleProp, type TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ChatSheet, SHEET_BAR } from '../../components/ChatSheet';
+import { Text } from '../../components/Text';
 import { StateView } from '../../components/ui';
 import { useApi } from '../../lib/api';
 import { WEEKDAYS } from '../../lib/constants';
-import { LOST_ENABLED } from '../../lib/config';
+import { useNoInvert } from '../../lib/display';
 import { onPushReceived } from '../../lib/push';
 import { color } from '../../lib/theme';
 import type { Home as HomeData, Todo } from '../../lib/types';
 
-// ▶ FE 14번에 해당하는 부분: 메뉴 칸. status는 GET /home의 menu_status 키 (칸마다 비서 한 줄)
-// 기본 3칸, 분실물이 완성되면(LOST_ENABLED) 캠퍼스 생활까지 4칸 (작업 리스트 결정 7)
-// 아이콘 색은 피그마 '01_홈화면_1'처럼 칸마다 다른 색 (tint: 아이콘 뒤 동그라미)
-const ALL_MENUS: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; tone: string; tint: string; href: Href; status: keyof HomeData['menu_status'] }[] = [
+// ▶ FE 14번에 해당하는 부분: 메뉴 칸 3개 (2026-10-27 캠퍼스 생활·분실물 뺌, 세 칸이 같은 폭으로 나눠 씀)
+// status는 GET /home의 menu_status 키 (칸마다 비서 한 줄). 아이콘 색은 피그마 '01_홈화면_1'처럼 칸마다 다른 색 (tint: 아이콘 뒤 동그라미)
+const MENUS: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; tone: string; tint: string; href: Href; status: keyof HomeData['menu_status'] }[] = [
   { label: '내 학업', icon: 'book-open-variant', tone: '#3B7DDD', tint: '#E6EFFC', href: '/study', status: 'study' },
   { label: '장학금', icon: 'school-outline', tone: '#D99A0B', tint: '#FCF3DC', href: '/scholarships', status: 'scholarship' },
   { label: '학사 행정', icon: 'file-document-outline', tone: '#E0574F', tint: '#FCE9E7', href: '/office', status: 'admin' },
-  { label: '캠퍼스 생활', icon: 'map-marker-outline', tone: '#8A5CD6', tint: '#F0EAFB', href: '/campus', status: 'campus' },
 ];
 // 다음 일정 카드(오늘 챙길 일 마지막 쪽) 아이콘 색: 학사 일정 = 학사 행정 칸과 같은 색
 const EVENT_TONE = { tone: '#E0574F', tint: '#FCE9E7' };
-const MENUS = LOST_ENABLED ? ALL_MENUS : ALL_MENUS.slice(0, 3);
 
 // 홈 위쪽 구성은 새 홈 시안(폭 685) 비율 그대로 화면 폭에 맞춤. 아래 값은 시안에서 잰 위치·크기 ÷ 685 (화면 맨 위 기준)
 const FIG = {
@@ -40,8 +38,8 @@ const FIG = {
 // 위쪽 고정 높이: 스크롤 여백 16 + 로고 줄 52 + 사이 16 / 카드가 위쪽(hero)과 겹치는 길이 18
 const HERO_TOP = 84;
 const CARD_OVERLAP = 18;
-// 홈 전체 배경 그림 885×1777 (위: 학교, 가운데: 하늘, 아래: 풀숲)
-const BG_RATIO = 1777 / 885;
+// 홈 전체 배경 그림 '학교배경1' 941×1672 (위: 하늘, 가운데: 학교 건물, 아래: 광장·나무)
+const BG_RATIO = 1672 / 941;
 // 미어캣(PREVI) 그림은 241×400 (책 아래 끝 y 292 → 키의 73%). 말풍선을 없앤 자리만큼 키움:
 // 키는 화면 폭의 55%(말풍선이 있던 때 44%와 없앤 뒤 66%의 중간), 머리 가운데는 화면 폭의 73%. 책 아래 끝까지 카드 위로 보임
 const MASCOT = { ratio: 241 / 400, h: 0.55, centerX: 0.73, bookBottom: 292 / 400 };
@@ -58,6 +56,7 @@ export default function Home() {
   const [page, setPage] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  const keep = useNoInvert(); // 다크 모드에서도 배경 사진·캐릭터는 원래 색
   // 화면 폭(웹은 휴대폰 폭 최대 480)에 맞춰 피그마 비율로 위치 계산
   const W = Platform.OS === 'web' ? Math.min(screenWidth, 480) : screenWidth;
   const minHeight = W * FIG.cardTop - HERO_TOP + CARD_OVERLAP;
@@ -144,7 +143,7 @@ export default function Home() {
       {/* ▶ FE 12번에 해당하는 부분: 홈 전체 배경 그림(받은 그림 그대로). 스크롤해도 배경은 그 자리, 카드만 위로 지나감
           로고·인사말·미어캣은 그 위에 그림. 눌러도 이동하지 않음(채팅은 아래 바로) */}
       <Image accessibilityLabel="서경대학교 캠퍼스" source={require('../../assets/home-bg.jpg')} pointerEvents="none"
-        style={[st.bg, { width: bgW, height: bgW * BG_RATIO, left: (W - bgW) / 2 }]} />
+        style={[st.bg, { width: bgW, height: bgW * BG_RATIO, left: (W - bgW) / 2 }, keep]} />
       <SafeAreaView style={st.safeInner} edges={['top']}>
         <ScrollView contentContainerStyle={st.scroll}>
           {/* 머리: 로고 · 알림 · 내 정보 */}
@@ -181,7 +180,7 @@ export default function Home() {
                   </View>
                   {/* 마스코트 PREVI(미어캣): 받은 그림 그대로 (투명 여백만 잘라 냄) */}
                   <Image accessibilityLabel="마스코트 PREVI" source={require('../../assets/mascot.png')} pointerEvents="none"
-                    resizeMode="contain" style={[st.mascot, hero.mascot]} />
+                    resizeMode="contain" style={[st.mascot, hero.mascot, keep]} />
                 </View>
 
                 {/* 오늘 챙길 일: 3개씩 넘겨 보기 */}
@@ -225,7 +224,7 @@ export default function Home() {
                   )}
                 </View>
 
-                {/* 어떤 도움이 필요하신가요? 4칸 */}
+                {/* 어떤 도움이 필요하신가요? 3칸 */}
                 <View style={st.helpBox}>
                   <Text style={st.helpTitle}>어떤 도움이 필요하신가요?</Text>
                   <Text style={st.helpSub}>서경 AI가 빠르고 정확하게 도와드릴게요.</Text>

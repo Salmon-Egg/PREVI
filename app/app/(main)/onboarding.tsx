@@ -3,13 +3,14 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
+import { Text } from '../../components/Text';
 import { Body, Button, Card, Character, Row, Screen, Sub, Title } from '../../components/ui';
 import { api, ApiError } from '../../lib/api';
 import { registerPush } from '../../lib/push';
 import { DEPTS, MINORS, STATUSES } from '../../lib/constants';
-import { color } from '../../lib/theme';
+import { color, gradient, gradientBg } from '../../lib/theme';
 import { STATUS_KO, type Status } from '../../lib/types';
 
 const YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026];
@@ -22,8 +23,9 @@ function Choice<T extends string | number>({ items, value, onChange, label = (v:
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
       {items.map((v) => (
         <Pressable key={String(v)} onPress={() => onChange(v)}
-          style={{ borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12, backgroundColor: v === value ? color.primary : color.surface }}>
-          <Text style={{ color: v === value ? '#fff' : color.ink, fontWeight: '600' }}>{label(v)}</Text>
+          style={[{ borderRadius: 12, paddingVertical: 9, paddingHorizontal: 13, borderWidth: 1.5, borderColor: v === value ? 'transparent' : color.field, backgroundColor: '#fff' },
+            v === value && gradientBg(gradient.primary, color.primary)]}>
+          <Text style={{ color: v === value ? '#fff' : color.title, fontWeight: '700' }}>{label(v)}</Text>
         </Pressable>
       ))}
     </View>
@@ -61,7 +63,7 @@ export default function Onboarding() {
   }
 
   return (
-    <Screen>
+    <Screen title="처음 설정" back={false}>
       {/* 진행 막대 */}
       <View style={st.progress}>
         {Array.from({ length: STEPS }, (_, i) => <View key={i} style={[st.step, i <= step && st.stepOn]} />)}
@@ -71,7 +73,7 @@ export default function Onboarding() {
       {step === 0 && (
         <>
           <Title>학적 정보를 알려 주세요</Title>
-          <Sub>비서가 나에게 해당하는 공지·장학금·졸업 요건을 고르는 데 써요. 학번 전체는 받지 않아요.</Sub>
+          <Sub>비서가 나에게 해당하는 공지·장학금·졸업 요건을 고르는 데 써요.</Sub>
           <Body>학과</Body><Choice items={DEPTS} value={dept} onChange={setDept} />
           <Body>복수 / 부전공</Body><Choice items={MINORS} value={minor} onChange={setMinor} />
           <Body>학년</Body><Choice items={[1, 2, 3, 4]} value={grade} onChange={setGrade} label={(v) => `${v}학년`} />
@@ -89,7 +91,7 @@ export default function Onboarding() {
             <Row><Feather name="bar-chart-2" size={20} color={color.primary} /><Body style={{ fontWeight: '700' }}>성적을 입력하면</Body></Row>
             <Sub>· 졸업까지 남은 학점과 영역별 이수 현황을 계산해요</Sub>
             <Sub>· 평점 조건이 있는 장학금의 신청 가능 여부를 알려 드려요</Sub>
-            <Sub>입력 위치: 홈 › 내 학업 › 성적</Sub>
+            <Sub>입력 위치: 홈 › 내 학업 › 성적 조회</Sub>
           </Card>
           <Button label="다음" onPress={() => setStep(2)} />
           <Button label="이전" kind="ghost" onPress={() => setStep(0)} />
