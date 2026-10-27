@@ -181,6 +181,37 @@ AI 처리 전 원문만 저장했으며 맞춤 판정·할 일·알림은 자동
 장학 신청/취소/만료 반영, 다른 사용자 데이터 차단, 캘린더 수정 권한 차단을 통과했습니다.
 임시 가상 계정 2개·일정 2건·장학 공지 및 관련 데이터는 삭제하고 공식 초기 일정은 유지했습니다.
 
+### 알림 기록·발송
+
+`supabase/migrations/008_notifications.sql` 적용 후 `GET /notifications`,
+`PATCH /notifications/{id}` (`{"read":true}`)를 사용할 수 있습니다.
+본인 기록만 보며 학생은 `read`만 바꿀 수 있습니다. 발송 상태·티켓·토큰 해시는 서버 전용입니다.
+
+서버의 발송 진입점은 `server.notify.send_notification(user_id, kind, title, target_id, event_key="once")`입니다.
+알림 설정·정보 동의·대상 소유권을 DB에서 검사하고 고유키로 중복 발송 예약을 막습니다.
+동시 요청에서 예약에 성공한 한 요청만 전송을 시도합니다.
+마감 전날/당일처럼 구별되는 알림은 서버 작업이 `event_key`에 날짜/회차를 넣어야 합니다.
+기본 `once`는 같은 사용자·종류·대상을 한 번만 처리합니다. 이 키는 앱에서 지정할 수 없습니다.
+
+- `.env`의 `PUSH_ENABLED`는 기본 false입니다. 이때는 알림 센터 기록만 만들고 실제 푸시는 보내지 않습니다.
+- 알림을 꺼 두었거나 정보 동의가 없으면 기록·전송을 건너뜁니다.
+- notice는 본인 맞춤 판정이 있는 공지, deadline은 본인 미완료·마감 있는 할 일,
+  calendar는 본인 학년에 해당하는 일정만 허용합니다.
+- chat은 대화 소유권 표 연결 전이라 발송을 보류합니다.
+- 토큰이 없거나 형식이 잘못되면 앱 안 알림만 기록합니다.
+- 유효 토큰과 `PUSH_ENABLED=true`가 있을 때 Expo에 전송합니다. Expo 접근 토큰은 선택 설정입니다.
+- Expo 접수 티켓을 받으면 `accepted`, 이후 receipt가 정상일 때 `delivered`로 기록합니다.
+  여기서 delivered는 Expo의 APNs/FCM 인계 확인이며 휴대폰 화면 표시·사용자 열람 보장이 아닙니다.
+- `NotificationSender.check_receipt(id)`로 후속 결과를 확인할 수 있습니다. 주기적 receipt 작업은 아직 미등록입니다.
+- DeviceNotRegistered가 오면 해당 토큰이 그대로일 때만 제거합니다. 새 기기 토큰은 지우지 않습니다.
+- 전송 결과가 불확실하면 `unknown`으로 남기고 자동 재전송하지 않습니다.
+  프로세스 중단 시 `reserved`, 외부 전송 뒤 DB 저장 실패 시 남은 상태는 운영자가 확인해야 합니다.
+- 알림 센터에는 먼저 기록되므로 푸시 실패/미사용이어도 앱 안에서 확인할 수 있습니다.
+- 발송 시간 계산·수집기 연결·cron·실제 휴대폰 수신은 아직 별도 연결/검증이 필요합니다.
+
+공식 전송·receipt 안내: https://docs.expo.dev/push-notifications/sending-notifications/
+2026-10-27: 실제 외부 전송 없이 모의 Expo 응답과 API 자동 검사를 통과했습니다.
+
 ## 여기에 들어갈 것
 ```
 server/

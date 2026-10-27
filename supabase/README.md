@@ -67,6 +67,15 @@ SQL Editor의 새 쿼리에서 `migrations/003_courses_grades.sql` 전체를 실
 `target_grades`가 빈 배열이면 공통 일정이며, `source_url`은 내부 근거 확인용입니다.
 자동 일정 수집은 아직 없으므로 요람 이후 변경은 교무처 최신 공지와 비교해야 합니다.
 
+## 알림 표
+
+`migrations/008_notifications.sql` 전체를 새 SQL 쿼리에서 실행합니다.
+`notifications`, `rowsecurity=true`가 나오면 됩니다.
+학생은 본인 기록의 공개 필드만 읽고 `read`만 바꿀 수 있습니다.
+발송 예약 함수는 서버 전용이며 설정·동의·대상 검증과 중복 예약을 같은 트랜잭션에서 처리합니다.
+내부 `event_key`는 전날/당일 등 발송 회차를 구분하며 기본값 once는 대상별 한 번입니다.
+실제 휴대폰 전송은 SQL 실행으로 켜지지 않습니다. `PUSH_ENABLED`의 기본값은 false입니다.
+
 ## 여기에 들어갈 것
 ```
 supabase/
