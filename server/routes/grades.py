@@ -1,4 +1,5 @@
 from decimal import Decimal
+import logging
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Path, Query, Request
@@ -8,6 +9,7 @@ from server.auth import AuthenticatedUser, require_user
 from server.database import all_grade_rows, database_rows
 from server.errors import APIError
 from server.logic.grades import grouped_grades
+from server.routes.graduation import graduation_result
 
 router = APIRouter(tags=["성적·과목"])
 
@@ -40,11 +42,15 @@ async def grades(request: Request, user: AuthenticatedUser = Depends(require_use
     return grouped_grades(await all_grade_rows(request, str(user.id)))
 
 
-async def mutation_result(row: dict):
-    # 아직 졸업 기준·장학 판정기가 없다. 확인되지 않은 결과를 0 또는 충족으로 만들지 않는다.
-    # API 공통 약속대로 미확정 값은 null. 실제 재계산 연결 후 숫자로 반환한다.
+async def mutation_result(row: dict, request: Request, user: AuthenticatedUser):
+    remaining = None
+    try:
+        remaining = (await graduation_result(request, user))["remaining_total"]
+    except APIError as exc:
+        # 성적 저장은 이미 성공했다. 재계산 실패를 저장 실패로 오인시켜 재전송하게 하지 않는다.
+        logging.getLogger(__name__).info("졸업 재계산 확인 필요: %s", exc.code)
     return {"item": {key: row[key] for key in ("id", "term", "course_name", "credits", "grade", "area")},
-            "recalculated": {"remaining_total": None, "new_eligible_scholarships": None}}
+            "recalculated": {"remaining_total": remaining, "new_eligible_scholarships": None}}
 
 
 @router.post("/grades")
@@ -53,7 +59,7 @@ async def create_grade(body: GradeInput, request: Request, user: AuthenticatedUs
                                json={**body.database_value(), "user_id": str(user.id)})
     if not rows:
         raise APIError(500, "DATABASE_ERROR", "저장 결과를 확인할 수 없어요.")
-    return await mutation_result(rows[0])
+    return await mutation_result(rows[0], request, user)
 
 
 @router.put("/grades/{grade_id}")
@@ -62,7 +68,7 @@ async def update_grade(body: GradeInput, request: Request, grade_id: int = Path(
                                headers={"Prefer": "return=representation"}, json=body.database_value())
     if not rows:
         raise APIError(404, "GRADE_NOT_FOUND", "성적 항목을 찾을 수 없어요.")
-    return await mutation_result(rows[0])
+    return await mutation_result(rows[0], request, user)
 
 
 @router.delete("/grades/{grade_id}")
@@ -71,4 +77,4 @@ async def delete_grade(request: Request, grade_id: int = Path(gt=0), user: Authe
                                headers={"Prefer": "return=representation"})
     if not rows:
         raise APIError(404, "GRADE_NOT_FOUND", "성적 항목을 찾을 수 없어요.")
-    return await mutation_result(rows[0])
+    return await mutation_result(rows[0], request, user)

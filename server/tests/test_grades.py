@@ -21,6 +21,8 @@ def client_for(db):
         assert request.headers["apikey"] == "test-key"
         if request.url.path == "/auth/v1/user":
             return httpx.Response(200, json={"id": USER_ID, "email": "student@skuniv.ac.kr", "email_confirmed_at": "2026-10-27T00:00:00Z"})
+        if request.url.path == "/rest/v1/profiles":
+            return httpx.Response(200, json=[])
         return db(request)
     return TestClient(create_app(Settings("https://example.supabase.co", "test-key"), httpx.MockTransport(handler)))
 
