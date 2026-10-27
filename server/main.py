@@ -11,6 +11,9 @@ from server.routes.graduation import router as graduation_router
 from server.routes.timetable import router as timetable_router
 from server.routes.notices import router as notices_router
 from server.routes.todos import router as todos_router
+from server.routes.calendar import router as calendar_router
+from server.routes.scholarships import router as scholarships_router
+from server.routes.home import router as home_router
 
 
 def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTransport | None = None):
@@ -29,6 +32,9 @@ def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTrans
     app.include_router(timetable_router)
     app.include_router(notices_router)
     app.include_router(todos_router)
+    app.include_router(calendar_router)
+    app.include_router(scholarships_router)
+    app.include_router(home_router)
 
     @app.get("/health", tags=["운영"])
     async def health():
