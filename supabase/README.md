@@ -2,6 +2,14 @@
 
 담당: BE A
 
+## 첫 실행
+
+`migrations/001_profiles.sql` 전체를 Supabase SQL Editor에 붙여넣고 Run을 누릅니다.
+`profiles`의 `rowsecurity`가 `true`이면 표와 RLS가 생성된 것입니다.
+다른 사용자 접근 차단은 별도 테스트 계정으로 검증해야 합니다.
+이미 생성된 표가 있으면 재실행 시 오류가 납니다. 기존 표를 삭제하지 말고 상태를 확인하세요.
+학교 이메일 제한은 이 SQL에 포함되어 있지 않습니다.
+
 ## 여기에 들어갈 것
 ```
 supabase/
