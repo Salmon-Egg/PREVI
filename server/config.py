@@ -27,6 +27,8 @@ AI_FAKE = _flag("AI_FAKE")
 AI_BASE_URL = os.getenv("AI_BASE_URL", "http://localhost:11434/v1")
 CHAT_MODEL = os.getenv("CHAT_MODEL", "kanana")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "")
+# 문서 검색: 질문과 문단의 거리(0=같음, 클수록 다름)가 이 값보다 크면 근거로 안 씀. 비우면 거르지 않음.
+DOC_MAX_DISTANCE = float(os.getenv("DOC_MAX_DISTANCE") or "inf")
 
 # 푸시: 1이면 실제로 Expo에 보냄. 0이면 notifications 표에만 기록.
 PUSH_ENABLED = _flag("PUSH_ENABLED")

@@ -1,4 +1,4 @@
-"""DB 처음 만들기: 표 만들기 → 시드 → 문서 임베딩 → 공지 수집 → 학생별 계산.
+"""DB 처음 만들기: 표 만들기 → 시드 → 학사요람 PDF 문단 → 문서 임베딩 → 공지 수집 → 학생별 계산.
 server/ 폴더에서:  python -m scripts.init_db
 
 빈 DB에서 한 번만 실행합니다. 이미 표가 있으면 멈춥니다. 로컬 DB를 처음부터 다시 만들려면 --reset
@@ -9,9 +9,8 @@ from pathlib import Path
 import psycopg
 
 import config
-import db
-from ai import client as ai_client
 from jobs import collect_notices, daily_check
+from scripts import load_yoram
 
 ROOT = Path(__file__).resolve().parents[2] / "supabase"
 
@@ -26,15 +25,7 @@ def main() -> None:
             conn.execute(f.read_text(encoding="utf-8"))
             print("실행:", f.name)
 
-    chunks = db.all_rows("select id, content from doc_chunks where embedding is null")
-    vectors = ai_client.embed([c["content"] for c in chunks]) if chunks else None
-    if vectors:
-        for c, v in zip(chunks, vectors):
-            db.run("update doc_chunks set embedding = %s::vector where id = %s", [str(v), c["id"]])
-        print(f"문서 임베딩: {len(vectors)}개")
-    else:
-        print("문서 임베딩 건너뜀 (가짜 AI 모드 또는 EMBED_MODEL 없음) → 챗봇은 글자 검색을 씀")
-
+    load_yoram.main()  # 학사요람 문단 넣기 + 임베딩
     collect_notices.run()
     daily_check.run(all_now=True)
 

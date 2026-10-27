@@ -1,0 +1,13 @@
+# Kanana 1.5 8B 등록: ollama create kanana -f server/ai/kanana.Modelfile
+# 받은 GGUF에는 대화 형식이 빠져 있어서, 카카오 tokenizer_config.json의 형식(Llama 3)을 직접 적음
+FROM hf.co/mradermacher/kanana-1.5-8b-instruct-2505-GGUF:Q4_K_M
+
+TEMPLATE """{{- range .Messages }}<|start_header_id|>{{ .Role }}<|end_header_id|>
+
+{{ .Content }}<|eot_id|>
+{{- end }}<|start_header_id|>assistant<|end_header_id|>
+
+"""
+
+PARAMETER stop <|eot_id|>
+PARAMETER stop <|start_header_id|>
