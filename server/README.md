@@ -116,6 +116,37 @@ https://www.skuniv.ac.kr/academic-status (2026-10-27 확인).
 과목 학점 위조 차단, 동시 요청의 시간·상한 차단, 타인 접근 제한을 통과했습니다.
 검사에서 만든 계정 2개·과목 1개와 관련 데이터는 정리했습니다.
 
+### 공지·할 일
+
+`supabase/migrations/006_notices_todos.sql`을 먼저 실행합니다.
+
+- `GET /notices`: 본인 `eligibility` 판정이 `eligible` 또는 `check`인 공지만 최근순으로 조회합니다.
+  AI 추출·학생별 판정을 연결하기 전까지는 빈 목록이 정상입니다.
+- `GET /notices/{id}`: 공개 공지 상세. AI 처리 전에는 `summary`, `documents`가 빈 목록이고 `deadline`은 null입니다.
+- `GET /todos?type=deadline&done=false`: 마감일순, 날짜가 없는 일은 마지막. D-day는 한국 날짜 기준입니다.
+- `GET /todos/{id}`, `POST /todos`, `PATCH /todos/{id}`: 본인 할 일 상세·등록·완료/완료 취소.
+- `GET /scholarship-applications`: 앱에서 완료로 체크한 본인 장학 신청 기록입니다.
+- 공지 연결은 `source: {"kind":"notice","id":번호}`입니다. 공지당 본인 할 일은 한 번만 등록할 수 있습니다.
+- 장학 할 일은 장학 공지 연결이 필수입니다. 완료 시 신청 기록을 한 번만 만들고,
+  완료 취소 시 앱 내 신청 기록도 제거합니다. 실제 학교 신청/취소를 수행하는 기능은 아닙니다.
+- 상태 시각과 신청 기록은 DB 트리거가 동일 트랜잭션에서 처리합니다.
+- 개인별 판정과 신청 기록은 학생이 임의로 만들거나 수정할 수 없습니다.
+- 현재 목록 API는 최대 100개입니다. 자동 할 일·브리핑·푸시 발송과 장학 판정 계산은 아직 미연결입니다.
+
+수집 미리보기: `.venv\Scripts\python.exe -m server.jobs.collect_notices --max-posts 3`
+실제 저장: `.venv\Scripts\python.exe -m server.jobs.collect_notices --save --pages 3 --max-posts 150`
+학교 요청과 Supabase 요청은 별도 클라이언트를 사용하고, 서버 키는 Supabase에만 전송합니다.
+수집은 글 번호로 중복을 막으며 기존 AI 결과를 덮어쓰지 않습니다.
+오류는 로그와 실패 수에 기록되고, 실패한 글은 저장되지 않아 다음 실행에서 다시 시도합니다.
+현재 첫 수집 범위는 지정 페이지 안의 글입니다. 과거 전체 공지 소급 수집이나 기존 글 수정 감지는 별도 작업입니다.
+
+BE B 연결: `notices.extraction_status=pending` 글의 `body`와 `attachments`를 읽어
+`summary`, `deadline`, `documents`, `target`, `conditions`를 채운 뒤 `ready`로 변경합니다.
+대상 비교 코드가 `eligibility`를 생성해야 맞춤 공지 목록에 나타납니다.
+본문만으로 대상·마감·자격을 추정해서 확정하지 않습니다.
+`attachments`에는 파일명, 확인된 URL 또는 `file_key`를 보관합니다. 식별자만 있는 첨부는 다운로드하지 않습니다.
+2026-10-27: 실제 공개 학사 공지 3건 파싱 성공. 현재 DB 저장·할 일 트리거 검증은 SQL 적용 후 수행합니다.
+
 ## 여기에 들어갈 것
 ```
 server/

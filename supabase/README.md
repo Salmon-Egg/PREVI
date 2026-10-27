@@ -50,6 +50,15 @@ SQL Editor의 새 쿼리에서 `migrations/003_courses_grades.sql` 전체를 실
 `004_graduation_requirements.sql`이 먼저 적용되어 있어야 합니다.
 수강 상한 및 입력 성적 기반 추정의 한계는 `server/README.md`의 시간표 절을 참고하세요.
 
+## 공지·할 일 표
+
+`migrations/006_notices_todos.sql`을 새 SQL 쿼리에서 실행합니다.
+`notices`, `eligibility`, `todos`, `scholarship_applications` 네 줄 모두 RLS가 true여야 합니다.
+공지 원문은 서버 수집기만 저장하고, 학생별 판정은 처리 코드만 기록합니다.
+학생은 본인 할 일을 추가하고 `done`만 변경할 수 있습니다.
+장학 할 일의 완료·완료 취소는 신청 기록과 함께 반영됩니다.
+공지의 AI 처리 대기 상태와 첨부 식별자는 내부 처리용이며 API 응답 모양에는 추가하지 않았습니다.
+
 ## 여기에 들어갈 것
 ```
 supabase/

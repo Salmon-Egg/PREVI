@@ -40,6 +40,8 @@ async def database_rows(request: Request, method: str, table: str, **kwargs) -> 
             status, text = known[message]
             raise APIError(status, message, text)
     if response.status_code == 409:
+        if table == "todos":
+            raise APIError(409, "TODO_ALREADY_EXISTS", "이 공지의 할 일이 이미 있어요.")
         if table == "grades":
             raise APIError(409, "DUPLICATE_GRADE", "같은 학기에 같은 이름의 과목이 이미 있어요. 기존 항목을 수정해 주세요.")
         raise APIError(409, "DATA_CONFLICT", "이미 등록된 항목과 충돌해요.")
