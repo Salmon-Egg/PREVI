@@ -21,7 +21,20 @@ from server.routes.scholarships import scholarship_rows
 router = APIRouter(tags=["챗봇"])
 log = logging.getLogger("chat")
 VERDICT_KO = {"eligible": "신청 가능", "check": "확인 필요", "ineligible": "조건 미충족"}
-UNKNOWN = "학교 문서에서 근거를 찾지 못했어요. 질문을 기록해 두었으니, 문서가 보강되면 답해 드릴게요."
+CAN_DO = "휴학·복학 같은 학사 규정, 장학금 조건, 졸업까지 남은 학점, 할 일 마감을 도와드릴 수 있어요."
+UNKNOWN = "그건 아직 제가 가진 학교 자료에 없어서 정확히 말씀드리기 어려워요. 질문은 기록해 두었어요. " + CAN_DO
+OFF_TOPIC = "그건 제가 도와드리기 어려운 질문이에요. 저는 서경대 생활 비서라서, " + CAN_DO
+# 상담센터: counsel.skuniv.ac.kr (10/29 확인). 109는 2024년부터 자살예방 상담 통합번호
+CRISIS = ("많이 힘드셨겠어요. 혼자 견디지 마시고, 지금 바로 이야기 나눌 수 있는 곳에 연락해 주세요.\n"
+          "· 서경대 학생상담센터 02-940-7607 (청운관 5층)\n· 자살예방 상담전화 109 (24시간)")
+# 학교 생활 질문인데 자료가 없는 것만 기록 (학교와 무관한 질문까지 쌓이면 자료 보강 목록으로 못 씀)
+SCHOOL = re.compile("학교|서경|캠퍼스|학식|식당|도서관|열람실|셔틀|기숙사|생활관|주차|동아리|강의실|교수|수업|시험|등록금|"
+                    "학생증|학과|학사|성적|수강|휴학|복학|졸업|장학|학점|교양|전공|학기|과목")
+# 학생마다 답이 다른 질문에만 학생 정보를 넘김. 넘기면 묻지 않아도 "소프트웨어학과 2023입학생 기준"을 붙여서(10/29 실측),
+# 학과·입학년도는 학과별로 규정이 다른 졸업·학점 질문에만
+PERSONAL = re.compile("휴학|복학|졸업|학점|장학|학년|전공|수강|등록")
+BY_DEPT = re.compile("졸업|학점|전공|교양")
+STATUS_KO = {"enrolled": "재학", "leave": "휴학", "returned": "복학"}
 MSG_COLS = "id,role,text,cards,sources,actions,created_at"
 NOTICE_COLS = "title,summary,body,url,deadline"
 FOLLOW_UP = re.compile("그럼|그러면|그건|그거|그게|그때|거기|이건|이거|그리고|또 ")
@@ -100,7 +113,7 @@ async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: st
             "user_id": f"eq.{user.id}", "done": "eq.false", "select": "title,due_date", "order": "priority.desc,due_date.asc.nullslast", "limit": 3})
         summary = "챙길 일: " + ", ".join(f"{r['title']}({r['due_date'] or '마감 없음'})" for r in rows) if rows else "지금 챙길 일이 없어요."
         actions = [{"type": "open_screen", "label": "할 일 전체 보기", "payload": {"screen": "T-1"}}]
-    text = await run_in_threadpool(tasks.answer_my_info, question, {"summary": summary, "nickname": p["nickname"], "grade": p["grade"]})
+    text = await run_in_threadpool(tasks.answer_my_info, question, {"summary": summary, "grade": p["grade"]})  # 이름은 첫인사에서만 부르니 안 넘김
     return {"text": text, "cards": cards, "actions": actions}
 
 
@@ -122,12 +135,18 @@ async def _from_docs(request: Request, question: str, p: dict, extra: list[dict]
     # 지금 질문만으로 먼저 찾고, 못 찾을 때만 앞 대화·맥락을 붙여 다시 (앞 주제 문단이 새 질문을 덮지 않게)
     asked = question.rsplit("질문:", 1)[-1]
     chunks = extra + (await search_chunks(request, asked) or (asked != question and await search_chunks(request, question)) or [])
-    student = {"학과": p["department"], "입학년도": p["admission_year"], "학년": p["grade"]}
+    student = {"학적": STATUS_KO.get(p["status"], p["status"])} if PERSONAL.search(asked) else {}
+    if BY_DEPT.search(asked):
+        student |= {"학과": p["department"], "입학년도": p["admission_year"], "학년": p["grade"]}
     answer = await run_in_threadpool(tasks.answer_from_docs, question, chunks, student)
     if not answer:
-        return {"text": UNKNOWN, "cards": [], "sources": [], "actions": [], "unknown": True}
+        school = SCHOOL.search(asked)
+        return {"text": UNKNOWN if school else OFF_TOPIC, "cards": [], "sources": [], "actions": [], "unknown": bool(school)}
     sources = list({c["title"]: {"title": c["title"], "url": c["url"]} for c in _used(answer, chunks)}.values())
-    return {"text": answer, "cards": [], "sources": sources, "actions": await _calendar_action(request, question)}
+    actions = await _calendar_action(request, question)
+    if actions:  # 버튼 안내는 코드가 씀 (AI에게 맡기면 없는 버튼을 말할 수 있음)
+        answer += " 아래 버튼으로 마감 알림을 받아 둘 수 있어요."
+    return {"text": answer, "cards": [], "sources": sources, "actions": actions}
 
 
 class Context(BaseModel):
@@ -172,7 +191,7 @@ async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends
         lines.append(f"[이전 질문] {last['text']}")
     if body.context:
         if body.context.kind == "status":
-            status = {"enrolled": "재학", "leave": "휴학", "returned": "복학"}.get(p["status"], p["status"])
+            status = STATUS_KO.get(p["status"], p["status"])
             ctx = {"title": "내 학적", "reason": f"{p['grade']}학년 {p['semester']}학기, {status} 중"}
         elif body.context.kind == "todo":
             ctx = await _one(request, "todos", id=f"eq.{body.context.id}", user_id=f"eq.{user.id}", select="title,reason,source_kind,source_id")
@@ -187,7 +206,13 @@ async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends
     question = "\n".join(lines + [f"질문: {body.text}"]) if lines else body.text
 
     route = await run_in_threadpool(tasks.route_question, question)  # ⑩
-    if route["intent"] == "my_info":
+    if route["intent"] == "crisis":
+        reply = {"text": CRISIS, "cards": [], "actions": []}
+    elif route["intent"] == "smalltalk":
+        text = ("도움이 됐다니 다행이에요. 또 궁금한 게 있으면 언제든 물어봐 주세요." if route["topic"] == "thanks"
+                else f"안녕하세요, {p['nickname']}님! 저는 PREVI예요. {CAN_DO}")  # 이름은 첫인사에서만 부름
+        reply = {"text": text, "cards": [], "actions": []}
+    elif route["intent"] == "my_info":
         reply = await _my_info(request, user, p, route["topic"], question)
     else:
         reply = await _from_docs(request, question, p, [_notice_chunk(notice)] if notice else [])

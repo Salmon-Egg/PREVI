@@ -3,6 +3,7 @@ import json
 from uuid import uuid4
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 
 from server.ai import client as ai_client
@@ -72,7 +73,9 @@ def test_calendar_button_ignores_common_words(monkeypatch):
     assert res.json()["message"]["actions"] == []  # '신청'·'기간'만 겹침
     calendar = [{"title": "2학기 수강신청 정정 기간", "end_date": "2099-01-01"}]
     res, _ = run_chat(monkeypatch, "수강 정정 휴학 기간 언제야?", [CHUNK], calendar=calendar)
-    assert res.json()["message"]["actions"][0]["payload"]["title"] == "2학기 수강신청 정정 기간"
+    msg = res.json()["message"]
+    assert msg["actions"][0]["payload"]["title"] == "2학기 수강신청 정정 기간"
+    assert msg["text"].endswith("아래 버튼으로 마감 알림을 받아 둘 수 있어요.")
 
 
 def test_previous_turn_goes_to_ai(monkeypatch):
@@ -90,6 +93,28 @@ def test_my_info_failure_is_recorded(monkeypatch):
     res, saved = run_chat(monkeypatch, "나 졸업할 수 있어?", [])  # 졸업 기준 표가 비어 있음
     assert "졸업 기준" in res.json()["message"]["text"]
     assert any(t == "unanswered_questions" for _, t, _ in saved)
+
+
+def test_crisis_gets_hotlines_without_ai(monkeypatch):
+    monkeypatch.setattr(tasks, "_ask", lambda *a, **k: pytest.fail("AI를 부르면 안 됨"))
+    res, saved = run_chat(monkeypatch, "요즘 너무 힘들어서 죽고 싶어", [])
+    text = res.json()["message"]["text"]
+    assert "02-940-7607" in text and "109" in text
+    assert not any(t == "unanswered_questions" for _, t, _ in saved)
+
+
+@pytest.mark.parametrize("q, want", [("안녕!", "안녕하세요, 홍길동님!"), ("넌 누구야?", "저는 PREVI예요"), ("고마워", "다행이에요")])
+def test_smalltalk_without_ai(monkeypatch, q, want):
+    monkeypatch.setattr(tasks, "_ask", lambda *a, **k: pytest.fail("AI를 부르면 안 됨"))
+    res, saved = run_chat(monkeypatch, q, [])
+    assert want in res.json()["message"]["text"]
+    assert not any(t == "unanswered_questions" for _, t, _ in saved)
+
+
+def test_off_topic_is_not_recorded(monkeypatch):
+    res, saved = run_chat(monkeypatch, "근처 맛집 추천해줘", [])
+    assert "도와드리기 어려운" in res.json()["message"]["text"]
+    assert not any(t == "unanswered_questions" for _, t, _ in saved)
 
 
 def test_unknown_is_recorded(monkeypatch):

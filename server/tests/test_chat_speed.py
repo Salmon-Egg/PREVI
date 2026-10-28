@@ -71,6 +71,18 @@ def test_made_up_number_becomes_unknown(monkeypatch):
     assert tasks.answer_from_docs("휴학 최대?", chunks, {"입학년도": 2023})  # 학생 정보 숫자는 허용
 
 
+def test_not_in_docs_sentence_becomes_unknown(monkeypatch):
+    monkeypatch.setattr(tasks, "_ask", lambda *a, **k: {"answer": "선발 인원은 문서에 명시되어 있지 않아요."})
+    assert tasks.answer_from_docs("몇 명 뽑아?", [{"content": "성적우수장학금 선발기준"}]) is None
+
+
+@pytest.mark.parametrize("q, intent", [("요즘 너무 힘들어", "crisis"), ("죽고 싶다는 생각이 들어", "crisis"),
+                                       ("안녕", "smalltalk"), ("지도교수 누구야?", "document")])  # 마지막: "누구"만으론 인사 아님
+def test_code_handled_intents(q, intent, monkeypatch):
+    monkeypatch.setattr(tasks, "_ask", lambda *a, **k: None)
+    assert tasks.route_question(q)["intent"] == intent
+
+
 def test_short_cuts_at_sentence_end():
     text = "평점 3.5 이상이면 신청할 수 있어요. " + "가" * 200
     assert tasks._short(text, 150) == "평점 3.5 이상이면 신청할 수 있어요."

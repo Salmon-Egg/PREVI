@@ -125,15 +125,32 @@ def _route_by_rule(q: str) -> dict | None:
     return None
 
 
+CRISIS = re.compile(r"죽고\s*싶|자살|자해|살기\s*싫|사라지고\s*싶|극단적\s*선택|목숨을?\s*끊")
+# 위기 낱말이 없는 힘든 마음. 짧은 말일 때만 (긴 문장은 "수강신청 힘들어"처럼 학사 질문인 경우가 많음).
+# 상담 안내를 받는 쪽으로 틀리는 게 "도와드리기 어려운 질문"이라고 답하는 것보다 나음
+DISTRESS = re.compile("힘들어|힘들다|우울|외로워|불안해|지쳤어|버티기")
+THANKS = re.compile("고마워|고맙|감사|땡큐|ㄱㅅ")
+HELLO = re.compile(r"^(안녕|하이|ㅎㅇ|반가워|hi|hello)|(넌|너는|너)\s*누구|뭐\s*할\s*수\s*있|뭘\s*도와|도움말", re.I)
+
+
 def route_question(text: str) -> dict:
-    """⑩ 의도 파악: {"intent": "my_info" | "document", "topic": "graduation" | "scholarship" | "todo" | null}"""
-    if hit := _route_by_rule(text.rsplit("질문:", 1)[-1]):  # 할 일·공지에서 넘어온 질문은 "질문:" 뒤만 봄
+    """⑩ 의도 파악: {"intent": "my_info" | "document" | "crisis" | "smalltalk", "topic": ...}
+    crisis(힘든 마음)·smalltalk(인사·감사)는 코드로 바로 답함. AI 판단에 맡기지 않음."""
+    asked = text.rsplit("질문:", 1)[-1].strip()  # 할 일·공지에서 넘어온 질문은 "질문:" 뒤만 봄
+    if CRISIS.search(asked) or (len(asked) <= 20 and DISTRESS.search(asked)):
+        return {"intent": "crisis", "topic": None}
+    if len(asked) <= 15 and (THANKS.search(asked) or HELLO.search(asked)):  # "안녕, 휴학 언제야?"처럼 긴 건 보통 질문으로
+        return {"intent": "smalltalk", "topic": "thanks" if THANKS.search(asked) else "hello"}
+    if hit := _route_by_rule(asked):
         return hit
     out = _ask("chat_router", {"question": text}) or {}
     # 내 정보인데 주제가 셋 밖(성적·시간표 등)이면 할 일 목록으로 엉뚱하게 답하게 되니 문서 검색으로
     if out.get("intent") != "my_info" or out.get("topic") not in ("graduation", "scholarship", "todo"):
         return {"intent": "document", "topic": None}
     return {"intent": "my_info", "topic": out["topic"]}
+
+
+NO_ANSWER = re.compile(r"명시되어\s*있지\s*않|나와\s*있지\s*않|적혀\s*있지\s*않|문서에\s*(없|는\s*없)|확인할\s*수\s*없|알\s*수\s*없")
 
 
 def answer_from_docs(question: str, chunks: list[dict], student: dict | None = None) -> str | None:
@@ -143,6 +160,8 @@ def answer_from_docs(question: str, chunks: list[dict], student: dict | None = N
     docs = [c["content"] for c in chunks]
     out = _ask("chat_answer", {"question": question, "student": student or {}, "documents": docs}) or {}
     answer = _short(out.get("answer"), 150)
+    if answer and NO_ANSWER.search(answer):  # 지시문으로 막아도 "문서에 명시되어 있지 않아요"를 씀: 코드의 '모른다' 문장으로
+        return None
     # 문서·질문·학생 정보에 없는 숫자가 답에 있으면 지어낸 것으로 보고 '모른다'로
     if answer and not set(re.findall(r"\d+", answer)) <= set(re.findall(r"\d+", f"{question} {student} {' '.join(docs)}")):
         log.warning("근거에 없는 숫자라 버림: %s", answer)
