@@ -18,6 +18,9 @@ CHAT_MODEL = os.getenv("CHAT_MODEL", "kanana")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "")
 # 문서 검색: 질문과 문단의 거리가 이 값보다 크면 근거로 안 씀. 비우면 거르지 않음
 DOC_MAX_DISTANCE = float(os.getenv("DOC_MAX_DISTANCE") or "inf")
+# embeddinggemma 권장 머리말. 붙이면 1위 정답이 6→8/15로 늘어남(10/28). 바꾸면 load_yoram으로 문단 임베딩을 다시 넣어야 함
+QUERY_FMT = "task: search result | query: {}"
+DOC_FMT = "title: {} | text: {}"
 
 
 class AiError(Exception):

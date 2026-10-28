@@ -107,11 +107,11 @@ def main() -> None:
 
 def embed_missing(db: httpx.Client) -> None:
     """임베딩이 빈 문단을 채움. 가짜 AI 모드면 건너뜀(챗봇은 글자 검색)."""
-    chunks = db.get("/doc_chunks", params={"embedding": "is.null", "select": "id,content", "limit": 5000}).raise_for_status().json()
+    chunks = db.get("/doc_chunks", params={"embedding": "is.null", "select": "id,content,documents(title)", "limit": 5000}).raise_for_status().json()
     done = 0
     for i in range(0, len(chunks), 32):  # 한 번에 다 보내면 문단이 많을 때 Ollama가 실패함
         part = chunks[i:i + 32]
-        vectors = ai_client.embed([c["content"] for c in part])
+        vectors = ai_client.embed([ai_client.DOC_FMT.format(c["documents"]["title"], c["content"]) for c in part])
         if not vectors:
             break
         for c, v in zip(part, vectors):

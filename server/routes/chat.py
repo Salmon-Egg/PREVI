@@ -33,7 +33,7 @@ def _bigrams(s: str) -> set[str]:
 
 async def search_chunks(request: Request, question: str, k: int = 3) -> list[dict]:
     """문서 검색. 임베딩이 있으면 벡터 검색(match_doc_chunks), 없으면(가짜 AI 모드) 두 글자 묶음이 많이 겹치는 문단."""
-    vec = await run_in_threadpool(ai_client.embed, [question])
+    vec = await run_in_threadpool(ai_client.embed, [ai_client.QUERY_FMT.format(question)])
     if vec:
         rows = await database_rows(request, "POST", "rpc/match_doc_chunks",
                                    json={"query_embedding": str(vec[0]), "match_count": k})

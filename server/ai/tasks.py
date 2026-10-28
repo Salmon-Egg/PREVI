@@ -2,6 +2,7 @@
 AI가 실패해도 서비스가 멈추지 않게, 함수마다 문장 틀(템플릿)로 대신하는 길이 있습니다."""
 import json
 import logging
+import re
 
 from server.ai.client import ask_json
 from server.logic.schedule import DEFAULT_SEVERITY
@@ -18,19 +19,36 @@ def _ask(prompt: str, payload: dict) -> dict | None:
 
 
 DEPARTMENTS = ["소프트웨어학과", "전자컴퓨터공학과"]  # routes/me.py에서 고를 수 있는 학과와 같게
+PROCEDURE_WORDS = ("이중수혜", "문의", "접수", "제출", "면접", "방문", "첨부파일 참고")  # 자격이 아니라 신청 절차
 STATUS = {"enrolled": "enrolled", "leave": "leave", "returned": "returned", "재학생": "enrolled", "휴학생": "leave", "복학생": "returned"}
 
 
 def summarize_notice(title: str, body: str) -> dict:
     """① 공지 해석 + ② 대상 분류. 실패하면 요약 없이 원문만 둠 (빈 조건 = 모두 대상)."""
     out = _ask("notice_summary", {"title": title, "body": body}) or {}
+    target, conditions = clean_target(out.get("target")), clean_conditions(out.get("conditions"))
+    # 학과 칸에 "신입생"·"○○군 출신"이 오면 우리 학생이 모두 '조건 미충족'으로 잘못 뜸 → '확인 필요'로
+    odd = [d for d in target["departments"] if not d.endswith(("학과", "학부", "전공"))]
+    if odd:
+        target["departments"] = [d for d in target["departments"] if d not in odd]
+        conditions["unknown"] = conditions.get("unknown", []) + odd
+    # AI가 "총 평점 3.5", "1학년(33학점) 수료"를 직전 학기 칸에도 넣는 일이 잦음: 같은 숫자가 '직전' 없는 문장에 있으면 칸에서 뺌
+    sentences = [s for s in conditions.get("unknown", []) if "직전" not in s]
+    for key in ("min_gpa", "min_credits"):
+        v = conditions.get(key)
+        if v is not None and any(re.search(rf"(?<![\d.]){re.escape(n)}(?!\.?\d)", s) for n in {f"{v:g}", f"{v:.1f}"} for s in sentences):
+            del conditions[key]
+    category = out.get("category") or "일반"
+    # 장학인데 대상·조건이 하나도 없으면 대개 자격이 첨부에만 있는 공지 → '신청 가능'으로 띄우지 않음
+    if (category == "장학" or "장학" in title) and not target["grades"] and not target["departments"] and not conditions:
+        conditions["unknown"] = ["자격 조건은 첨부 공고문 확인"]
     return {
-        "category": out.get("category") or "일반",
+        "category": category,
         "summary": (out.get("summary") or [title])[:3],
         "deadline": out.get("deadline"),
         "documents": out.get("documents") or [],
-        "target": clean_target(out.get("target")),
-        "conditions": clean_conditions(out.get("conditions")),
+        "target": target,
+        "conditions": conditions,
     }
 
 
@@ -38,6 +56,7 @@ def clean_target(t) -> dict:
     """AI가 쓴 대상을 BE A 대조 코드가 읽는 모양으로. 학과는 짧게 써도('소프트웨어') 정식 이름으로 맞춤."""
     t = t if isinstance(t, dict) else {}
     grades = [int(g) for g in t.get("grades") or [] if str(g).strip() in ("1", "2", "3", "4")]
+    grades = [] if set(grades) == {1, 2, 3, 4} else grades  # 전 학년 = 제한 없음 (이유 문장에 학년 줄이 안 생기게)
     depts = [next((k for k in DEPARTMENTS if d in k or k in d), d)
              for d in (str(x).strip() for x in t.get("departments") or []) if d]
     statuses = [STATUS[s] for s in t.get("statuses") or [] if s in STATUS]
@@ -50,12 +69,14 @@ def clean_conditions(c) -> dict:
     out = {}
     for key, cast in (("min_gpa", float), ("min_credits", int), ("income_max", int)):
         try:
-            if c.get(key) is not None:
+            if c.get(key) is not None and float(c[key]) > 0:  # 0은 AI가 '없음' 대신 쓴 값
                 out[key] = cast(float(c[key]))
         except (TypeError, ValueError):
             log.warning("공지 조건 %s 무시: %r", key, c[key])
     # 칸에 못 넣은 조건: 판정 코드가 보고 '확인 필요'로 돌림 (조용히 버리면 '신청 가능'으로 잘못 뜸)
-    unknown = [s for s in (str(u).strip() for u in c.get("unknown") or [] if u) if s]
+    # shortcut: 신청 절차 문장은 낱말로 거름. 진짜 자격 조건이 걸러지는 일이 보이면 지시문 쪽에서 고치기
+    unknown = [s for s in (str(u).strip() for u in c.get("unknown") or [] if u)
+               if s and not any(w in s for w in PROCEDURE_WORDS)]
     if unknown:
         out["unknown"] = unknown
     return out
