@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from server.config import Settings
 from server.errors import register_handlers
@@ -28,6 +29,8 @@ def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTrans
 
     app = FastAPI(title="서경 AI 비서 API", version="0.1.0", lifespan=lifespan)
     register_handlers(app)
+    # 웹 앱(다른 주소)에서 부를 수 있게. 로그인은 쿠키가 아니라 Bearer 토큰이라 모든 주소를 열어도 토큰 없이는 못 씀
+    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
     app.include_router(me_router)
     app.include_router(grades_router)
     app.include_router(graduation_router)
