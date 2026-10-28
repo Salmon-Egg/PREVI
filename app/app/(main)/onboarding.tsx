@@ -5,16 +5,17 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '../../components/Text';
-import { Select } from '../../components/form';
+import { DeptPicker, MinorPicker } from '../../components/DeptPicker';
 import { Body, Button, Card, Character, Row, Screen, Sub, Title } from '../../components/ui';
 import { api, ApiError } from '../../lib/api';
 import { signupName } from '../../lib/auth';
 import { registerPush } from '../../lib/push';
-import { DEPTS, MINORS, STATUSES } from '../../lib/constants';
+import { STATUSES } from '../../lib/constants';
 import { color, gradient, gradientBg } from '../../lib/theme';
 import { STATUS_KO, type Status } from '../../lib/types';
 
-const YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026];
+// 옛 학과 이름(2017~2024 입학)도 고를 수 있게 넉넉히. 입학연도는 학과 목록의 추천 정렬에 씀
+const YEARS = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
 const STEPS = 3;
 
 function Choice<T extends string | number>({ items, value, onChange, label = (v: T) => String(v) }: {
@@ -35,7 +36,7 @@ function Choice<T extends string | number>({ items, value, onChange, label = (v:
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
-  const [dept, setDept] = useState(DEPTS[0]);
+  const [dept, setDept] = useState(''); // 직접 고르기 전까지 비워 둠 (첫 항목으로 잘못 저장되지 않게)
   const [minor, setMinor] = useState('없음');
   const [grade, setGrade] = useState<number | null>(null);
   const [semester, setSemester] = useState<number | null>(null);
@@ -78,14 +79,15 @@ export default function Onboarding() {
           <Title>학적 정보를 알려 주세요</Title>
           <Sub>비서가 나에게 해당하는 공지·장학금·졸업 요건을 고르는 데 써요.</Sub>
           {/* 학과가 많아서 버튼 대신 목록에서 고름 */}
-          <Body>학과</Body><Select value={dept} items={DEPTS} onChange={setDept} title="학과" />
-          <Body>복수 / 부전공</Body><Select value={minor} items={MINORS} onChange={setMinor} title="복수 / 부전공" />
+          {/* 입학연도를 먼저 받아서 학과 목록에서 그 학번에 맞는 학과를 위로 올림 */}
+          <Body>입학년도</Body><Choice items={YEARS} value={year} onChange={setYear} />
+          <Body>학과</Body><DeptPicker value={dept} year={year} onChange={setDept} title="학과" />
+          <Body>복수 / 부전공</Body><MinorPicker value={minor} year={year} onChange={setMinor} />
           <Body>학년</Body><Choice items={[1, 2, 3, 4]} value={grade} onChange={setGrade} label={(v) => `${v}학년`} />
           <Body>학기</Body><Choice items={[1, 2]} value={semester} onChange={setSemester} label={(v) => `${v}학기`} />
           <Body>학적 상태</Body>
           <Choice items={STATUSES} value={status} onChange={setStatus} label={(v) => STATUS_KO[v]} />
-          <Body>입학년도</Body><Choice items={YEARS} value={year} onChange={setYear} />
-          <Button label="다음" disabled={!grade || !semester || !year} onPress={() => setStep(1)} />
+          <Button label="다음" disabled={!dept || !grade || !semester || !year} onPress={() => setStep(1)} />
         </>
       )}
       {step === 1 && (

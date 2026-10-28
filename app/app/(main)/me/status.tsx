@@ -5,18 +5,19 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
+import { DeptPicker, MinorPicker } from '../../../components/DeptPicker';
 import { Confirm, Label, Segmented, Select } from '../../../components/form';
 import { Text } from '../../../components/Text';
 import { Button, Character, Screen, showAlert, StateView } from '../../../components/ui';
 import { api, ApiError, useApi, useSubmit } from '../../../lib/api';
-import { DEPTS, MINORS, STATUSES } from '../../../lib/constants';
+import { STATUSES } from '../../../lib/constants';
 import { color } from '../../../lib/theme';
 import { STATUS_KO, type Me, type Status } from '../../../lib/types';
 
 type Form = { department: string; minor: string; status: Status; grade: number; semester: number };
 
 const formOf = (me: Me): Form => ({
-  department: me.department ?? DEPTS[0], minor: me.minor ?? '없음', status: me.status, grade: me.grade ?? 1, semester: me.semester ?? 1,
+  department: me.department ?? '', minor: me.minor ?? '없음', status: me.status, grade: me.grade ?? 1, semester: me.semester ?? 1,
 });
 
 export default function StatusEdit() {
@@ -42,14 +43,15 @@ export default function StatusEdit() {
   const set = (patch: Partial<Form>) => form && setEdit({ ...form, ...patch });
 
   return (
-    <Screen title="학적 정보 변경" footer={form && <Button label="학적 정보 변경하기" disabled={busy} onPress={() => setAsking(true)} />}>
+    <Screen title="학적 정보 변경" footer={form && <Button label="학적 정보 변경하기" disabled={busy || !form.department} onPress={() => setAsking(true)} />}>
       <StateView loading={loading} error={error} empty={!form} onRetry={reload}>
         {form && (
           <>
             <Label required>주전공</Label>
-            <Select value={form.department} items={DEPTS} onChange={(department) => set({ department })} title="주전공" />
+            {/* 입학연도(내 정보)에 맞는 학과를 위로 올려 보여 줌 */}
+            <DeptPicker value={form.department} year={me?.admission_year ?? null} onChange={(department) => set({ department })} />
             <Label>복수 / 부전공 선택</Label>
-            <Select value={form.minor} items={MINORS} onChange={(minor) => set({ minor })} title="복수 / 부전공" />
+            <MinorPicker value={form.minor} year={me?.admission_year ?? null} onChange={(minor) => set({ minor })} />
             <Label required>학적 상태 변경</Label>
             <Segmented value={form.status} items={STATUSES} label={(v) => STATUS_KO[v]} onChange={(status) => set({ status })} />
             <Label required>현재 학년 및 이수 학기</Label>
