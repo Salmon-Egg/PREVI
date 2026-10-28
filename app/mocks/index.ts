@@ -328,15 +328,19 @@ function answer(q: string, ctx: { kind: string; id: number } | null): Reply {
       ],
     };
   }
-  if (/휴학|복학/.test(q)) return {
-    text: '학칙에 따르면 일반휴학은 한 번에 최대 2학기, 통산 6학기까지 할 수 있어요. 휴학 중에는 재학생 대상 교내 장학금을 신청할 수 없고, 복학한 학기부터 다시 판정해요. 복학 신청은 학사일정의 복학 신청 기간에 해야 해요.',
-    cards: [{ image_url: null, title: '2027-1학기 복학 신청 기간', lines: [calendar()[3].start_date, `${calendar()[3].end_date}까지`], link: null }],
-    sources: [HAKSA, { title: '2027-1학기 휴·복학 신청 안내', url: null }],
-    actions: [
-      { type: 'add_todo', label: '복학 신청 마감 알림 받기', payload: { title: '2027-1학기 복학 신청', due_date: calendar()[3].end_date } },
-      { type: 'open_screen', label: '휴·복학 안내', payload: { screen: 'A-3' } },
-    ],
-  };
+  if (/휴학|복학/.test(q)) {
+    const e = calendar()[/복학/.test(q) ? 3 : 4]; // 묻는 쪽(휴학·복학)의 신청 기간
+    const title = e.title.replace(/ 기간$/, '');
+    return {
+      text: '학칙에 따르면 일반휴학은 한 번에 최대 2학기, 통산 6학기까지 할 수 있어요. 휴학 중에는 재학생 대상 교내 장학금을 신청할 수 없고, 복학한 학기부터 다시 판정해요. 휴·복학 신청은 학사일정의 신청 기간에 해야 해요.',
+      cards: [{ image_url: null, title: e.title, lines: [e.start_date, `${e.end_date}까지`], link: null }],
+      sources: [HAKSA, { title: '2027-1학기 휴·복학 신청 안내', url: null }],
+      actions: [
+        { type: 'add_todo', label: '마감 알림 받기', payload: { title, due_date: e.end_date } },
+        { type: 'open_screen', label: '휴·복학 안내', payload: { screen: 'A-3' } },
+      ],
+    };
+  }
   if (/장학/.test(q)) {
     const ok = scholarships.filter((s) => !s.applied && s.verdict !== 'ineligible');
     return {

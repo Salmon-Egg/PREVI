@@ -80,7 +80,8 @@ export function ChatPanel({ q, context = null, conversation, keyboardOffset = 90
       try {
         // 서버(POST /todos)는 source로 공지(notice)만 받아서, 채팅에서 만든 할 일은 source 없이 보냄
         await api.post('/todos', { ...a.payload, type: 'deadline' });
-        showAlert('할 일에 등록했어요', '마감 전날과 당일에 알려 드릴게요.');
+        const due = a.payload.due_date ? ` (${a.payload.due_date.slice(5).replace('-', '/')}까지)` : '';
+        showAlert('할 일에 등록했어요', `'${a.payload.title}'${due}\n마감 전날과 당일에 알려 드릴게요.`);
       } catch (e) {
         setAdded((s) => {
           const next = new Set(s);
@@ -153,7 +154,7 @@ export function ChatPanel({ q, context = null, conversation, keyboardOffset = 90
                       const done = added.has(key);
                       return (
                         <Pressable key={a.label} style={[st.action, a === m.actions[0] && st.actionMain, done && { opacity: 0.5 }]} disabled={done} onPress={() => act(a, key)}>
-                          <Text style={{ color: a === m.actions[0] ? '#fff' : color.primary, fontWeight: '700' }}>{done ? '✓ 할 일에 등록됨' : a.label}</Text>
+                          <Text style={{ color: a === m.actions[0] ? '#fff' : color.primary, fontWeight: '700' }}>{done ? '✓ 할 일에 등록됨' : a.type === 'add_todo' ? `${a.label} · ${a.payload.title}` : a.label}</Text>
                         </Pressable>
                       );
                     })}

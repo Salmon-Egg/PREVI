@@ -1,14 +1,16 @@
-// ▶ FE 15번에 해당하는 부분: 홈 아래 '프리비에게 물어보세요!' 바 = 끌어 올리는 AI 대화창 (삼성페이처럼)
+// ▶ FE 15번에 해당하는 부분: 홈 아래 'PREVI에게 물어보세요!' 바 = 끌어 올리는 AI 대화창 (삼성페이처럼)
 // 바를 잡고 위로 올리면 대화 화면(H-1·H-2, ChatPanel)이 손가락·마우스를 따라 아래에서 올라오고,
 // 끝까지 올리면 화면을 옮기지 않고 그 자리에서 바로 대화함. 위쪽 화살표(또는 바)를 누르면 끝까지 올린 것과 같음.
 // 열린 상태에서 머리줄을 잡고 내리거나 ⌄를 누르면(안드로이드는 뒤로 가기도) 다시 바로 내려감.
+// ⏱(대화 기록)도 이 창 안에서 열리고, 기록에서 고른 대화도 이 창에서 이어서 봄 (FE 34번)
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
-import { Animated, BackHandler, PanResponder, Platform, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Animated, BackHandler, PanResponder, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { loadChat } from '../lib/chatStore';
 import { color } from '../lib/theme';
+import { ChatHistory } from './ChatHistory';
 import { ChatPanel } from './ChatPanel';
 import { Text } from './Text';
 import { Character } from './ui';
@@ -34,6 +36,7 @@ export function ChatSheet() {
   const [y] = useState(() => new Animated.Value(closedY));
   const pos = useRef(closedY); // 지금(또는 움직이는 중인 목표) 위치
   const [open, setOpen] = useState(false);
+  const [history, setHistory] = useState(false); // 창 안에 대화 기록을 보는 중
   const [grabbing, setGrabbing] = useState(false);
 
   // 화면 크기가 바뀌면(웹 창 크기 등) 접힌 위치 다시 맞춤
@@ -48,6 +51,7 @@ export function ChatSheet() {
     const to = toOpen ? 0 : closedY;
     pos.current = to;
     setOpen(toOpen);
+    if (!toOpen) setHistory(false);
     Animated.timing(y, { toValue: to, duration: 240, useNativeDriver: native }).start();
     // 탭이 가려져 애니메이션이 멈춰도 끝 위치로 가도록
     setTimeout(() => y.setValue(pos.current), 280);
@@ -57,11 +61,12 @@ export function ChatSheet() {
   useEffect(() => {
     if (!open) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
-      moveTo(false);
+      if (history) setHistory(false); // 대화 기록이면 먼저 대화로
+      else moveTo(false);
       return true;
     });
     return () => sub.remove();
-  }, [open, moveTo]);
+  }, [open, history, moveTo]);
 
   // PanResponder 처리 함수는 그리는 중이 아니라 손가락·마우스 움직임 때만 불리므로 ref를 읽고 바꿔도 안전함
   /* eslint-disable react-hooks/refs, react-hooks/immutability */
@@ -101,19 +106,27 @@ export function ChatSheet() {
           <View style={st.handle} />
           {open ? (
             <View style={st.header}>
-              <Pressable accessibilityLabel="대화창 내리기" hitSlop={8} onPress={() => moveTo(false)} style={st.headerBtn}>
-                <Feather name="chevron-down" size={24} color={color.ink} />
-              </Pressable>
-              <Text style={st.headerTitle}>PREVI</Text>
-              <Pressable accessibilityLabel="대화 기록" hitSlop={8} onPress={() => router.push('/chat/history')} style={st.headerBtn}>
-                <Feather name="clock" size={21} color={color.ink} />
-              </Pressable>
+              {history ? (
+                <Pressable accessibilityLabel="대화로 돌아가기" hitSlop={8} onPress={() => setHistory(false)} style={st.headerBtn}>
+                  <Feather name="chevron-left" size={24} color={color.ink} />
+                </Pressable>
+              ) : (
+                <Pressable accessibilityLabel="대화창 내리기" hitSlop={8} onPress={() => moveTo(false)} style={st.headerBtn}>
+                  <Feather name="chevron-down" size={24} color={color.ink} />
+                </Pressable>
+              )}
+              <Text style={st.headerTitle}>{history ? '대화 기록' : 'PREVI'}</Text>
+              {history ? <View style={st.headerBtn} /> : (
+                <Pressable accessibilityLabel="대화 기록" hitSlop={8} onPress={() => setHistory(true)} style={st.headerBtn}>
+                  <Feather name="clock" size={21} color={color.ink} />
+                </Pressable>
+              )}
             </View>
           ) : (
-            <Pressable style={st.ask} accessibilityLabel="프리비 대화창 열기" onPress={() => moveTo(true)}>
+            <Pressable style={st.ask} accessibilityLabel="PREVI 대화창 열기" onPress={() => moveTo(true)}>
               <View style={st.askAvatar}><Character face size={44} /></View>
               {/* 폭이 좁은 휴대폰(360 미만)에서도 한 줄에 들어가게 글자를 조금 줄임 */}
-              <Text style={[st.askText, windowWidth < 360 && { fontSize: 14 }]} numberOfLines={1}>프리비에게 물어보세요!</Text>
+              <Text style={[st.askText, windowWidth < 360 && { fontSize: 14 }]} numberOfLines={1}>PREVI에게 물어보세요!</Text>
               {/* 위쪽 화살표: 누르면 끝까지 끌어 올린 것처럼 대화창이 올라옴 */}
               <View style={st.askBtn}><Feather name="arrow-up" size={22} color="#fff" /></View>
             </Pressable>
@@ -121,7 +134,14 @@ export function ChatSheet() {
         </View>
         {/* 대화 본문: 접혀 있어도 그려 둬서, 끌어 올리는 동안 대화 화면이 그대로 따라 올라옴 */}
         <View style={{ flex: 1 }} pointerEvents={open ? 'auto' : 'none'}>
-          <ChatPanel keyboardOffset={insets.top + HEADER} />
+          {history ? (
+            // 기록에서 대화를 고르면 그 대화를 불러와 이 창에서 이어서 봄
+            <ScrollView contentContainerStyle={st.history} keyboardShouldPersistTaps="handled">
+              <ChatHistory onOpen={(id) => { loadChat(id); setHistory(false); }} />
+            </ScrollView>
+          ) : (
+            <ChatPanel keyboardOffset={insets.top + HEADER} />
+          )}
         </View>
       </Animated.View>
     </View>
@@ -147,4 +167,5 @@ const st = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', height: HEADER - 14, paddingBottom: 6 },
   headerBtn: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
   headerTitle: { flex: 1, textAlign: 'center', fontSize: 18, fontWeight: '800', color: color.primary },
+  history: { padding: 16, gap: 12 },
 });

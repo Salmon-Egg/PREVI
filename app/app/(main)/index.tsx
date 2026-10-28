@@ -179,7 +179,7 @@ export default function Home() {
                   {/* 인사말: 줄마다 그 글자 길이만큼만 흐림 판을 깔아 가독성을 높임 (흐림 판은 글자와 따로 둔 뒤판이라 글자는 또렷함) */}
                   <View style={[st.heroText, { paddingTop: hero.padTop }]}>
                     <BlurBlock text={`안녕하세요,\n${nickname || '서경인'}님!`} style={[st.hello, { fontSize: fs.hello, lineHeight: fs.hello * 1.18 }]} />
-                    <BlurBlock text={'오늘도 프리비와\n편리한 캠퍼스 생활을 시작해요.'} style={[st.helloSub, { fontSize: fs.sub, lineHeight: fs.sub * 1.45 }]} />
+                    <BlurBlock text={'오늘도 PREVI와\n편리한 캠퍼스 생활을 시작해요.'} style={[st.helloSub, { fontSize: fs.sub, lineHeight: fs.sub * 1.45 }]} />
                   </View>
                   {/* 마스코트 PREVI(미어캣): 받은 그림 그대로 (투명 여백만 잘라 냄) */}
                   <Image accessibilityLabel="마스코트 PREVI" source={require('../../assets/mascot.png')} pointerEvents="none"
@@ -230,7 +230,7 @@ export default function Home() {
                 {/* 어떤 도움이 필요하신가요? 3칸 */}
                 <View style={st.helpBox}>
                   <Text style={st.helpTitle}>어떤 도움이 필요하신가요?</Text>
-                  <Text style={st.helpSub}>프리비가 빠르고 정확하게 도와드릴게요.</Text>
+                  <Text style={st.helpSub}>PREVI가 빠르고 정확하게 도와드릴게요.</Text>
                   <View style={st.grid}>
                     {MENUS.map((m) => (
                       <Pressable key={m.label} style={st.tile} onPress={() => router.push(m.href)}>
@@ -249,7 +249,7 @@ export default function Home() {
         </ScrollView>
 
       </SafeAreaView>
-      {/* ▶ FE 15번에 해당하는 부분: 아래 '프리비에게 물어보세요!' 바 — 잡고 올리거나 ↑를 누르면 AI 대화창이 홈 위로 올라옴 */}
+      {/* ▶ FE 15번에 해당하는 부분: 아래 'PREVI에게 물어보세요!' 바 — 잡고 올리거나 ↑를 누르면 AI 대화창이 홈 위로 올라옴 */}
       <ChatSheet />
     </View>
   );

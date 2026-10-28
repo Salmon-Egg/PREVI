@@ -5,11 +5,11 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Confirm, Input, Label, Segmented, Select } from '../../../components/form';
+import { Confirm, Label, MinorSelect, Segmented, Select } from '../../../components/form';
 import { Text } from '../../../components/Text';
 import { Button, Character, Screen, showAlert, StateView } from '../../../components/ui';
 import { api, ApiError, useApi, useSubmit } from '../../../lib/api';
-import { DEPT_OTHER, DEPTS, MINORS, STATUSES } from '../../../lib/constants';
+import { DEPTS, STATUSES } from '../../../lib/constants';
 import { color } from '../../../lib/theme';
 import { STATUS_KO, type Me, type Status } from '../../../lib/types';
 
@@ -31,7 +31,7 @@ export default function StatusEdit() {
     if (!form) return;
     setAsking(false);
     try {
-      await api.put('/me', { ...form, department: form.department.trim(), minor: form.minor === '없음' ? null : form.minor });
+      await api.put('/me', { ...form, minor: form.minor === '없음' || !form.minor.trim() ? null : form.minor.trim() });
     } catch (e) {
       return showAlert('저장하지 못했어요', (e as ApiError).message);
     }
@@ -40,24 +40,16 @@ export default function StatusEdit() {
   });
 
   const set = (patch: Partial<Form>) => form && setEdit({ ...form, ...patch });
-  // 학과가 목록에 없으면(직접 입력한 학과) 처음부터 '직접 입력'으로 보여 줌
-  const [customDept, setCustomDept] = useState<boolean | null>(null);
-  const isCustom = customDept ?? (!!form && !DEPTS.includes(form.department));
-  const pickDept = (d: string) => {
-    setCustomDept(d === DEPT_OTHER);
-    set({ department: d === DEPT_OTHER ? '' : d });
-  };
 
   return (
-    <Screen title="학적 정보 변경" footer={form && <Button label="학적 정보 변경하기" disabled={busy || !form.department.trim()} onPress={() => setAsking(true)} />}>
+    <Screen title="학적 정보 변경" footer={form && <Button label="학적 정보 변경하기" disabled={busy} onPress={() => setAsking(true)} />}>
       <StateView loading={loading} error={error} empty={!form} onRetry={reload}>
         {form && (
           <>
             <Label required>주전공</Label>
-            <Select value={isCustom ? DEPT_OTHER : form.department} items={[...DEPTS, DEPT_OTHER]} onChange={pickDept} title="주전공" />
-            {isCustom && <Input value={form.department} onChangeText={(department) => set({ department })} placeholder="학과 이름 (예: 경영학부)" />}
+            <Select value={form.department} items={DEPTS} onChange={(department) => set({ department })} title="주전공" />
             <Label>복수 / 부전공 선택</Label>
-            <Select value={form.minor} items={MINORS} onChange={(minor) => set({ minor })} title="복수 / 부전공" />
+            <MinorSelect value={form.minor} onChange={(minor) => set({ minor })} />
             <Label required>학적 상태 변경</Label>
             <Segmented value={form.status} items={STATUSES} label={(v) => STATUS_KO[v]} onChange={(status) => set({ status })} />
             <Label required>현재 학년 및 이수 학기</Label>
@@ -83,7 +75,7 @@ export default function StatusEdit() {
           <>
             <View style={st.box}>
               <Text style={st.boxMain}>{form.department} ({form.grade}학년 {form.semester}학기 {STATUS_KO[form.status]})</Text>
-              {form.minor !== '없음' && <Text style={st.boxSub}>{form.minor.replace(/^(.+) \((.+)\)$/, '$2: $1')}</Text>}
+              {form.minor !== '없음' && !!form.minor.trim() && <Text style={st.boxSub}>{form.minor.replace(/^(.+) \((.+)\)$/, '$2: $1')}</Text>}
             </View>
             <Text style={st.ask}>위 정보가 본인의 실제 학적 정보와 일치합니까?</Text>
             <Text style={st.warn}>※ 잘못된 학적 정보 입력 시 과목 추천, 졸업 요건 계산 및{'\n'}AI 시스템 전체 안내 서비스에서 에러가 발생할 수 있습니다.</Text>

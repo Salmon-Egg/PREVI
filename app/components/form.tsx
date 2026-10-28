@@ -4,7 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View, type TextInputProps } from 'react-native';
 
-import { PRIVACY } from '../lib/constants';
+import { MINOR_OTHER, MINORS, PRIVACY } from '../lib/constants';
 import { color, gradient, gradientBg } from '../lib/theme';
 import { Text, TextInput } from './Text';
 import { Button } from './ui';
@@ -50,6 +50,22 @@ export function OptionSheet<T extends string | number>({ visible, onClose, title
         ))}
       </ScrollView>
     </Sheet>
+  );
+}
+
+/** 복수/부전공 고르기: 목록 + '직접 입력'(고르면 아래에 입력칸). 처음 설정·학적 정보 변경이 같이 씀 */
+export function MinorSelect({ value, onChange }: { value: string; onChange: (minor: string) => void }) {
+  // 목록에 없는 값(직접 입력한 것)이면 처음부터 '직접 입력'으로
+  const [custom, setCustom] = useState(!MINORS.includes(value));
+  return (
+    <>
+      <Select value={custom ? MINOR_OTHER : value} items={[...MINORS, MINOR_OTHER]} title="복수 / 부전공"
+        onChange={(m) => {
+          setCustom(m === MINOR_OTHER);
+          onChange(m === MINOR_OTHER ? '' : m);
+        }} />
+      {custom && <Input value={value} onChangeText={onChange} placeholder="예: 경영학부 (부전공)" />}
+    </>
   );
 }
 

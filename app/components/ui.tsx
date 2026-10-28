@@ -109,10 +109,10 @@ export function Screen({ title, right, footer, children, scroll = true, back = t
     <View style={s.screen}>
       <Stack.Screen options={{ title }} />
       <AppBackground />
-      <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+      <View style={[s.header, { paddingTop: insets.top + 16 }]}>
         {back && (
           <Pressable accessibilityLabel="뒤로" hitSlop={10} onPress={goBack} style={s.back}>
-            <Feather name="chevron-left" size={26} color={color.title} />
+            <Feather name="chevron-left" size={30} color={color.title} />
           </Pressable>
         )}
         <Text style={s.headerTitle} numberOfLines={1}>{title}</Text>
@@ -335,9 +335,9 @@ export function Row({ children, style }: { children: ReactNode; style?: ViewStyl
 export const s = StyleSheet.create({
   screen: { flex: 1 },
   blob: { position: 'absolute', borderRadius: 999, backgroundColor: 'rgba(122, 196, 138, 0.42)', ...(web ? ({ filter: 'blur(46px)' } as object) : { opacity: 0.35 }) },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 18, paddingBottom: 12 },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 18, paddingBottom: 18 },
   back: { marginLeft: -6 },
-  headerTitle: { flex: 1, fontSize: 19, fontWeight: '800', color: color.title },
+  headerTitle: { flex: 1, fontSize: 22, fontWeight: '800', color: color.title },
   // 반투명 흰 판: 테두리는 흰색, 웹은 뒤 배경을 흐리게
   panel: { flex: 1, marginHorizontal: 16, borderRadius: 28, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.58)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.95)', ...(webBlur(14) ?? {}) },
   content: { padding: 18, flexGrow: 1 },

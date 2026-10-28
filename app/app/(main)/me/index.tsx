@@ -7,12 +7,12 @@ import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
-import { Input, Label, OptionSheet, PrivacySheet, Sheet } from '../../../components/form';
+import { Input, Label, OptionSheet, PrivacySheet, Select, Sheet } from '../../../components/form';
 import { Text } from '../../../components/Text';
 import { Button, confirmAsk, Screen, showAlert, StateView } from '../../../components/ui';
 import { api, attempt, ApiError, useApi, useSubmit } from '../../../lib/api';
 import { changePassword, PASSWORD_MIN } from '../../../lib/auth';
-import { BRIEF_TIMES, QUIET_TIMES } from '../../../lib/constants';
+import { BRIEF_TIMES, HALF_HOURS, QUIET_CUSTOM, QUIET_TIMES } from '../../../lib/constants';
 import { setDisplay, useDisplay } from '../../../lib/display';
 import { logout } from '../../../lib/session';
 import { color, gradient, gradientBg } from '../../../lib/theme';
@@ -22,13 +22,13 @@ const timeLabel = (t: string) => {
   const h = Number(t.slice(0, 2));
   return `${h < 12 ? '오전' : '오후'} ${h % 12 || 12}:${t.slice(3)}`;
 };
-const quietLabel = (q: string) => (q ? q.replace('-', ' - ') : '끔');
+const quietLabel = (q: string) => (q === QUIET_CUSTOM ? q : q ? q.replace('-', ' - ') : '끔');
 
 export default function MyPage() {
   const { data: me, error, loading, reload, setData } = useApi<Me>('/me');
   const grad = useApi<Graduation>('/graduation');
   const display = useDisplay();
-  const [picker, setPicker] = useState<null | 'time' | 'quiet' | 'password' | 'privacy'>(null);
+  const [picker, setPicker] = useState<null | 'time' | 'quiet' | 'quietCustom' | 'password' | 'privacy'>(null);
   const allOn = !!me && me.notify.notice && me.notify.deadline && me.notify.calendar && me.notify.chat;
 
   async function setNotify(notify: Partial<Me['notify']>) {
@@ -111,14 +111,37 @@ export default function MyPage() {
 
             <OptionSheet visible={picker === 'time'} onClose={() => setPicker(null)} title="마감 임박 및 브리핑 알림"
               value={me.notify.time} items={BRIEF_TIMES} label={timeLabel} onChange={(time) => setNotify({ time })} />
-            <OptionSheet visible={picker === 'quiet'} onClose={() => setPicker(null)} title="방해 금지 시간"
-              value={me.notify.quiet ?? ''} items={QUIET_TIMES} label={quietLabel} onChange={(quiet) => setNotify({ quiet })} />
+            {/* '직접 입력'을 고르면 목록 창이 닫히면서 시각 고르는 창이 열림 (닫기가 그 창을 닫지 않게 'quiet'일 때만 닫음) */}
+            <OptionSheet visible={picker === 'quiet'} onClose={() => setPicker((p) => (p === 'quiet' ? null : p))} title="방해 금지 시간"
+              value={me.notify.quiet ?? ''} items={[...QUIET_TIMES, QUIET_CUSTOM]} label={quietLabel}
+              onChange={(quiet) => (quiet === QUIET_CUSTOM ? setPicker('quietCustom') : setNotify({ quiet }))} />
+            {picker === 'quietCustom' && (
+              <QuietSheet value={me.notify.quiet ?? ''} onClose={() => setPicker(null)} onSave={(quiet) => setNotify({ quiet })} />
+            )}
           </>
         )}
       </StateView>
       <PasswordSheet visible={picker === 'password'} onClose={() => setPicker(null)} />
       <PrivacySheet visible={picker === 'privacy'} onClose={() => setPicker(null)} />
     </Screen>
+  );
+}
+
+/** 방해 금지 시간 직접 입력: 시작·끝 시각 (밤을 넘겨도 됨, 예 23:30 - 06:30) */
+function QuietSheet({ value, onClose, onSave }: { value: string; onClose: () => void; onSave: (quiet: string) => void }) {
+  const [from, to] = value ? value.split('-') : ['22:00', '07:00'];
+  const [start, setStart] = useState(from);
+  const [end, setEnd] = useState(to);
+  return (
+    <Sheet visible onClose={onClose} title="방해 금지 시간 직접 입력" sub="이 시간에는 알림을 보내지 않아요">
+      <View style={{ flexDirection: 'row', gap: 10 }}>
+        <View style={{ flex: 1, gap: 6 }}><Label>시작</Label><Select value={start} items={HALF_HOURS} onChange={setStart} title="시작" /></View>
+        <View style={{ flex: 1, gap: 6 }}><Label>끝</Label><Select value={end} items={HALF_HOURS} onChange={setEnd} title="끝" /></View>
+      </View>
+      {start === end && <Text style={st.error}>시작과 끝이 같아요.</Text>}
+      <View style={{ height: 4 }} />
+      <Button label="저장하기" disabled={start === end} onPress={() => { onSave(`${start}-${end}`); onClose(); }} />
+    </Sheet>
   );
 }
 
