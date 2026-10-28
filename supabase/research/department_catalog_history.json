@@ -1,0 +1,1339 @@
+{
+  "checked_at": "2026-10-29",
+  "purpose": "가입 후 처음 설정 및 학적정보 수정에서 쓰는 개편 전 학과 선택 자료",
+  "scope": "2024 요람의 학과·학부·세부전공과 2018~2024 개편 계보. 현 재적자·완전 폐과 전체 명부를 뜻하지 않는다.",
+  "policy": [
+    "selectable은 기존 재학생의 소속 선택을 뜻하며 해당 연도 신입학 가능 여부가 아니다.",
+    "admission_year_hint는 추천 정렬용 상한이다. 시작 연도 null은 미확인이며 모든 과거 연도 허용을 뜻하지 않는다.",
+    "편입·재입학·전과·자동 소속 변경이 있으므로 학번만으로 선택을 차단하지 않는다.",
+    "related_names는 학과 계보·관련 명칭이다. 졸업 기준 자동 치환표가 아니다.",
+    "현재 2025 이후 목록과 합칠 때 name으로 중복 제거하고 기존 profiles.department 값은 자동 변경하지 않는다."
+  ],
+  "sources": {
+    "catalog2024": {
+      "title": "2024 대학요람",
+      "url": "https://www.skuniv.ac.kr/wp-content/uploads/2025/10/7e7da6d9-b727-4c30-9434-8293497eba74.pdf",
+      "pages": [
+        8,
+        9,
+        27,
+        28,
+        29,
+        30
+      ]
+    },
+    "reform2025": {
+      "title": "학생처: 서경대학교 학생 여러분께 (2024-04-13)",
+      "url": "https://www.skuniv.ac.kr/notice/46583"
+    },
+    "admission2023": {
+      "title": "2023 수시 모집요강: 전자·컴퓨터 통합",
+      "url": "https://go.skuniv.ac.kr/share/data/2023_sku_rolling_admission_guide_update20220623.pdf"
+    },
+    "ce_status": {
+      "title": "컴퓨터공학과: 현 학적에 따른 수강신청 안내 (2025-02-09)",
+      "url": "https://ce.skuniv.ac.kr/10630"
+    },
+    "ee_status": {
+      "title": "전자공학과: 현 학적에 따른 수강신청 안내",
+      "url": "https://ee.skuniv.ac.kr/index.php?document_srl=135318&l=ko&listStyle=webzine&mid=ee_notice&oldact=dispBoardWrite&order_type=desc&sort_index=readed_count"
+    },
+    "ce_graduation": {
+      "title": "컴퓨터공학과 졸업요건 (2024·2025 개정 표기 포함)",
+      "url": "https://ce.skuniv.ac.kr/ce_requirements_for_graduation"
+    },
+    "cs_history": {
+      "title": "소프트웨어학과 연혁",
+      "url": "https://cs.skuniv.ac.kr/cs_history"
+    },
+    "cs_rename": {
+      "title": "소프트웨어학과 명칭변경 안내 (2018-08-31)",
+      "url": "https://cs.skuniv.ac.kr/7918"
+    },
+    "beauty_history": {
+      "title": "미용예술대학 학과 연혁",
+      "url": "https://eh.skuniv.ac.kr/eh_history"
+    },
+    "admission2024": {
+      "title": "홍보실: 2024학년도 학과 명칭 변경·폐지·신설",
+      "url": "https://www.skuniv.ac.kr/sku-today/44560"
+    },
+    "child_notice": {
+      "title": "아동청소년학과: 기존 아동학 교육과정 안내",
+      "url": "https://cr.skuniv.ac.kr/index.php?document_srl=5495&l=en&m=0&mid=cr_notice&page=1"
+    }
+  },
+  "entries": [
+    {
+      "id": "sku-history-001",
+      "name": "컴퓨터공학과",
+      "category": "merged_legacy",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2022
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "전자컴퓨터공학과"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2023학년도 전자공학과와 통합. 기존 학과 졸업 경로가 남아 있으며 자동변경·학적회복·전과 이력에 따라 적용 기준이 다르다.",
+      "source_ids": [
+        "admission2023",
+        "ce_status",
+        "ce_graduation"
+      ]
+    },
+    {
+      "id": "sku-history-002",
+      "name": "전자공학과",
+      "category": "merged_legacy",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2022
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "전자컴퓨터공학과"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2023학년도 컴퓨터공학과와 통합. 전자공학과 기준과 통합 학과 기준의 전공핵심이 서로 다르므로 독립 선택값을 유지한다.",
+      "source_ids": [
+        "admission2023",
+        "ee_status"
+      ]
+    },
+    {
+      "id": "sku-history-003",
+      "name": "전자컴퓨터공학과",
+      "category": "pre2025_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "컴퓨터공학과",
+        "전자공학과",
+        "인텔리전트컴퓨팅전공",
+        "인텔리전트디바이스전공"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2023~2024 신입학 학과이며 이전 학번도 자동 소속 변경 이력이 있을 수 있다. 관련 이름은 교육과정 동등성을 뜻하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "ce_status",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-004",
+      "name": "소프트웨어학과",
+      "category": "pre2025_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "컴퓨터과학과",
+        "컴퓨터소프트웨어전공"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2019학년도부터 이 이름으로 신입생 모집. 2025 이후 전공명과 기존 학번을 구분한다.",
+      "source_ids": [
+        "catalog2024",
+        "cs_history",
+        "cs_rename",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-005",
+      "name": "금융정보공학과",
+      "category": "pre2025_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-006",
+      "name": "나노화학생명공학과",
+      "category": "pre2025_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-007",
+      "name": "물류시스템공학과",
+      "category": "pre2025_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-008",
+      "name": "도시공학과",
+      "category": "pre2025_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-009",
+      "name": "토목건축공학과",
+      "category": "pre2025_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-010",
+      "name": "아동청소년학과",
+      "category": "pre2025_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-011",
+      "name": "글로벌비즈니스어학부",
+      "category": "pre2025_parent",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "학부만 저장된 기존 계정도 유지한다. 영어·일어·중어·노어·불어 세부전공을 선택할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-012",
+      "name": "글로벌비즈니스어학부 영어전공",
+      "category": "pre2025_major",
+      "selectable": true,
+      "parent": "글로벌비즈니스어학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-013",
+      "name": "글로벌비즈니스어학부 일어전공",
+      "category": "pre2025_major",
+      "selectable": true,
+      "parent": "글로벌비즈니스어학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-014",
+      "name": "글로벌비즈니스어학부 중어전공",
+      "category": "pre2025_major",
+      "selectable": true,
+      "parent": "글로벌비즈니스어학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-015",
+      "name": "글로벌비즈니스어학부 노어전공",
+      "category": "pre2025_major",
+      "selectable": true,
+      "parent": "글로벌비즈니스어학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-016",
+      "name": "글로벌비즈니스어학부 불어전공",
+      "category": "pre2025_major",
+      "selectable": true,
+      "parent": "글로벌비즈니스어학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-017",
+      "name": "공공인재학부",
+      "category": "pre2025_parent",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-018",
+      "name": "공공인재전공",
+      "category": "pre2025_major",
+      "selectable": true,
+      "parent": "공공인재학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-019",
+      "name": "경찰행정전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "공공인재학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "개편 전 공공인재학부와 개편 후 미래융합학부2에서 같은 이름을 사용한다. 이름만으로 교육과정을 식별할 수 없다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-020",
+      "name": "경영학부",
+      "category": "pre2025_parent",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-021",
+      "name": "경영전공",
+      "category": "pre2025_major",
+      "selectable": true,
+      "parent": "경영학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-022",
+      "name": "글로벌경영전공",
+      "category": "pre2025_major",
+      "selectable": true,
+      "parent": "경영학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람에 존재하는 기존 소속. 2025 개편 후 전공과 졸업 교육과정을 자동 치환하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-023",
+      "name": "코스메틱&뷰티테라피학과",
+      "category": "renamed_legacy",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "코스메틱뷰티매니지먼트학과"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2024학년도 이름. 미용예술대학 연혁은 2025학년도 후속 학과를 명시한다.",
+      "source_ids": [
+        "catalog2024",
+        "admission2024",
+        "beauty_history"
+      ]
+    },
+    {
+      "id": "sku-history-024",
+      "name": "관광비즈니스한국어학과",
+      "category": "pre2025_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2024
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람의 외국인 전담학과. 글로벌관광경영학과와 교육과정 승계 여부는 별도 확인한다.",
+      "source_ids": [
+        "catalog2024",
+        "reform2025"
+      ]
+    },
+    {
+      "id": "sku-history-025",
+      "name": "컴퓨터과학과",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2018
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "소프트웨어학과"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2019학년도 소프트웨어학과로 명칭 변경.",
+      "source_ids": [
+        "cs_history",
+        "cs_rename"
+      ]
+    },
+    {
+      "id": "sku-history-026",
+      "name": "산업경영시스템공학과",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2019
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "물류시스템공학과"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2020학년도 물류시스템공학과로 명칭 변경. 2024 요람 PDF 27쪽.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-027",
+      "name": "국제비즈니스어학부",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2020
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "글로벌비즈니스어학부"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2021학년도 명칭 변경. 세부전공을 함께 확인한다. PDF 28쪽.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-028",
+      "name": "공공인적자원학과",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2020
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "공공인재학부"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2021학년도 학부 전환. PDF 28쪽.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-029",
+      "name": "공공인적자원학부",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2017
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "공공인적자원학과",
+        "공공인재학부"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2018학년도 학과 전환 후 2021학년도 학부 재편. PDF 27~28쪽.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-030",
+      "name": "아동학과",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2023
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "아동청소년학과"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2024 모집 안내와 현 학과 공지에서 변경 확인. 요람 연혁의 아동가족학과 표기와 충돌하므로 최종 모집 안내·현 학과명을 우선한다.",
+      "source_ids": [
+        "admission2024",
+        "child_notice",
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-031",
+      "name": "화학생명공학과",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2020
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "나노화학생명공학과"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2021학년도 나노융합공학과와 통합. PDF 28쪽.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-032",
+      "name": "나노융합공학과",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2020
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "나노화학생명공학과"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2021학년도 화학생명공학과와 통합. PDF 28쪽.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-033",
+      "name": "헤어·메이크업디자인학과",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2020
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "헤어디자인학과",
+        "메이크업디자인학과"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2021학년도 두 학과로 분리. 한 이름으로 임의 정규화하지 않는다.",
+      "source_ids": [
+        "catalog2024",
+        "beauty_history"
+      ]
+    },
+    {
+      "id": "sku-history-034",
+      "name": "뷰티테라피&메이크업학과",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2023
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "코스메틱&뷰티테라피학과",
+        "코스메틱뷰티매니지먼트학과"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2024 명칭 변경 및 2025 후속 개편. 계약학과와 일반학과 교육과정은 별도 구분.",
+      "source_ids": [
+        "admission2024",
+        "beauty_history"
+      ]
+    },
+    {
+      "id": "sku-history-035",
+      "name": "뮤지컬학과",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2021
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "뮤지컬전공"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2022학년도 학과 폐지와 공연예술학부 뮤지컬전공 신설이 함께 명시됨. 승계 전공이 있으므로 완전 폐과로 일괄 제외하지 않는다. PDF 29쪽.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-036",
+      "name": "실용음악학과",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2021
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "실용음악학부"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2022학년도 학부 전환. PDF 29쪽.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-037",
+      "name": "무용예술학과",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2021
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "무용예술학부"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2022학년도 학부 전환. PDF 29쪽.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-038",
+      "name": "시각정보디자인전공",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2022
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "VD_비주얼디자인전공"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2023학년도 디자인학부 전공 명칭 변경. PDF 30쪽.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-039",
+      "name": "생활문화디자인전공",
+      "category": "older_renamed_or_reorganized",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": 2022
+      },
+      "year_hint_is_validation": false,
+      "related_names": [
+        "LF_라이프스타일디자인전공"
+      ],
+      "automatic_graduation_mapping": false,
+      "note": "2023학년도 디자인학부 전공 명칭 변경. PDF 30쪽.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-040",
+      "name": "군사학과",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-041",
+      "name": "아트앤테크놀로지학과",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-042",
+      "name": "스포츠앤테크놀로지학과",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-043",
+      "name": "공연예술학부",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-044",
+      "name": "음악학부",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-045",
+      "name": "실용음악학부",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-046",
+      "name": "무용예술학부",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-047",
+      "name": "디자인학부",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-048",
+      "name": "영화영상학과",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-049",
+      "name": "광고홍보영상학과",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-050",
+      "name": "헤어디자인학과",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-051",
+      "name": "메이크업디자인학과",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-052",
+      "name": "글로벌메이크업디자인학과",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-053",
+      "name": "글로벌뷰티테라피&코스메틱학과",
+      "category": "continuing_department",
+      "selectable": true,
+      "parent": null,
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차에서 확인. 기존 선택값이 있으면 중복 추가하지 않고 유지한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-054",
+      "name": "연기전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "공연예술학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-055",
+      "name": "연출전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "공연예술학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-056",
+      "name": "모델연기전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "공연예술학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-057",
+      "name": "무대기술전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "공연예술학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-058",
+      "name": "무대패션전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "공연예술학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-059",
+      "name": "뮤지컬전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "공연예술학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-060",
+      "name": "피아노전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "음악학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-061",
+      "name": "관현악전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "음악학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-062",
+      "name": "한국무용전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "무용예술학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-063",
+      "name": "실용무용전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "무용예술학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-064",
+      "name": "VD_비주얼디자인전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "디자인학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    },
+    {
+      "id": "sku-history-065",
+      "name": "LF_라이프스타일디자인전공",
+      "category": "continuing_major",
+      "selectable": true,
+      "parent": "디자인학부",
+      "admission_year_hint": {
+        "from": null,
+        "to": null
+      },
+      "year_hint_is_validation": false,
+      "related_names": [],
+      "automatic_graduation_mapping": false,
+      "note": "2024 요람 목차의 세부전공. 학부만 선택한 기존 계정은 유지하고 세부전공을 보완할 수 있게 한다.",
+      "source_ids": [
+        "catalog2024"
+      ]
+    }
+  ],
+  "excluded_or_review": [
+    {
+      "name": "광고홍보콘텐츠학과",
+      "selectable": false,
+      "reason": "공식 2024 모집 안내에서 폐지, 광고홍보영상학과 신설로 구분. 명칭 변경으로 확정하지 않아 요청한 기본 추가 목록에서 제외. 기존 저장 계정은 유지하고 현 재적자·승계 확인 후 별도 검토.",
+      "source_ids": [
+        "admission2024",
+        "catalog2024"
+      ]
+    },
+    {
+      "name": "아동가족학과",
+      "selectable": false,
+      "reason": "2024 요람 연혁에 등장하지만 같은 요람 교육과정·최종 모집 안내는 아동청소년학과. 독립 선택값 추가 보류.",
+      "source_ids": [
+        "catalog2024",
+        "admission2024"
+      ]
+    }
+  ]
+}
