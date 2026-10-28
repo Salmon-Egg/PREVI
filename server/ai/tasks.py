@@ -127,8 +127,26 @@ def _default_questions(facts: dict) -> list[str]:
     return by_grade.get(facts.get("grade") or 4, by_grade[4])
 
 
+MINE = re.compile(r"(?<![가-힣])(나|내|제|저)(가|는|도|의|한테)?(?![가-힣])|남았|남은")
+TOPICS = (("graduation", re.compile("졸업|학점")), ("scholarship", re.compile("장학")), ("todo", re.compile("할 일|마감")))
+RULE_WORDS = re.compile("조건|방법|어떻게|언제|기간|절차|서류|최대|몇 학점까지")
+
+
+def _route_by_rule(q: str) -> dict | None:
+    """뻔한 질문은 AI 없이 분류 (AI 분류 약 5초 절약). 애매하면 None → AI가 분류."""
+    mine, rule = MINE.search(q), RULE_WORDS.search(q)
+    topic = next((t for t, p in TOPICS if p.search(q)), None)
+    if mine and topic and not rule:
+        return {"intent": "my_info", "topic": topic}
+    if not mine and (rule or re.search("뭐야|뭔가요|이란", q)):
+        return {"intent": "document", "topic": None}
+    return None
+
+
 def route_question(text: str) -> dict:
     """⑩ 의도 파악: {"intent": "my_info" | "document", "topic": "graduation" | "scholarship" | "todo" | null}"""
+    if hit := _route_by_rule(text.rsplit("질문:", 1)[-1]):  # 할 일·공지에서 넘어온 질문은 "질문:" 뒤만 봄
+        return hit
     out = _ask("chat_router", {"question": text}) or {}
     if out.get("intent") not in ("my_info", "document"):
         return {"intent": "document", "topic": None}
@@ -140,10 +158,18 @@ def answer_from_docs(question: str, chunks: list[dict]) -> str | None:
     if not chunks:
         return None
     out = _ask("chat_answer", {"question": question, "documents": [c["content"] for c in chunks]}) or {}
-    return out.get("answer") or None
+    return _short(out.get("answer"), 150) or None
 
 
 def answer_my_info(question: str, facts: dict) -> str:
     """⑫ 내 상황 답변. facts는 아침에 계산해 둔 결과."""
     out = _ask("my_info_answer", {"question": question, "facts": facts}) or {}
-    return out.get("answer") or facts.get("summary") or "내 정보를 정리했어요."
+    return _short(out.get("answer"), 100) or facts.get("summary") or "내 정보를 정리했어요."
+
+
+def _short(text, limit: int):
+    """지시문을 어기고 길게 쓴 답을 limit 글자 안의 마지막 문장 끝에서 자름. 문장 끝이 없으면 '…'."""
+    if not isinstance(text, str) or len(text) <= limit:
+        return text
+    ends = [m.end() for m in re.finditer(r"[.?!](?!\S)", text) if m.end() <= limit]  # "3.5"의 점은 문장 끝 아님
+    return text[:ends[-1]] if ends else text[:limit].rstrip() + "…"

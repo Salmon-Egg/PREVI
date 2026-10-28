@@ -1,9 +1,11 @@
+import threading
 from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from server.ai import client as ai_client
 from server.config import Settings
 from server.errors import register_handlers
 from server.routes.me import router as me_router
@@ -22,6 +24,8 @@ from server.routes.chat import router as chat_router
 def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTransport | None = None):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        if settings is None:  # 실제 실행일 때만 (테스트는 settings를 넘김)
+            threading.Thread(target=ai_client.warm_up, daemon=True).start()
         app.state.settings = settings or Settings.from_env()
         async with httpx.AsyncClient(timeout=10, transport=transport, follow_redirects=False) as client:
             app.state.http = client

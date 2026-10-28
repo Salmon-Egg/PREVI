@@ -1,6 +1,7 @@
 """AI를 부르는 곳은 이 파일 하나 (팀 규칙 8번).
 AI_FAKE=1 이면 Ollama 대신 ai/fake.py가 답합니다. 학교 서버가 준비되면 .env에서 0으로 바꾸기만 하면 됩니다."""
 import json
+import logging
 import os
 from pathlib import Path
 
@@ -50,6 +51,20 @@ def ask_json(prompt_name: str, user: str) -> dict:
         except (json.JSONDecodeError, TypeError):
             continue
     raise AiError(f"{prompt_name}: JSON 형식이 두 번 깨짐")
+
+
+def warm_up():
+    """서버가 켜질 때 모델을 그래픽카드에 미리 올림 (첫 질문 대기 없앰). 계속 올려 두는 건 Ollama의 OLLAMA_KEEP_ALIVE=-1 몫."""
+    if AI_FAKE:
+        return
+    import httpx
+    base = AI_BASE_URL.rstrip("/").removesuffix("/v1")
+    try:
+        httpx.post(f"{base}/api/generate", json={"model": CHAT_MODEL, "keep_alive": -1}, timeout=120).raise_for_status()
+        if EMBED_MODEL:
+            httpx.post(f"{base}/api/embed", json={"model": EMBED_MODEL, "input": "warm up", "keep_alive": -1}, timeout=120).raise_for_status()
+    except httpx.HTTPError as e:  # Ollama가 꺼져 있어도 서버는 뜸 (AI는 템플릿으로 대신함)
+        logging.getLogger("ai").warning("모델 미리 올리기 실패: %s", e)
 
 
 def embed(texts: list[str]) -> list[list[float]] | None:
