@@ -171,3 +171,20 @@ def test_no_consent_cleans_only_unfinished_automatic_data():
         assert [t['id'] for t in db.data['todos']] == [2,3]
         sender.send.assert_not_called()
     asyncio.run(run())
+
+
+def test_profile_refresh_does_not_wait_for_ai_or_send_push(monkeypatch):
+    db = MemoryDB()
+    def forbidden(*args,**kwargs):
+        raise AssertionError('profile refresh must not call AI')
+    monkeypatch.setattr(tasks,'severity',forbidden)
+    monkeypatch.setattr(tasks,'explain_reason',forbidden)
+    async def run():
+        sender = AsyncMock()
+        async with httpx.AsyncClient(base_url='https://test',transport=httpx.MockTransport(db.handle)) as client:
+            pipeline = Pipeline(client,sender,now=NOW)
+            result = await pipeline.recalculate(UID,use_ai=False,notify=False)
+        assert result['errors'] == 0
+        assert len(db.data['todos']) == 1
+        sender.send.assert_not_called()
+    asyncio.run(run())

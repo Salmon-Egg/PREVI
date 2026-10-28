@@ -45,6 +45,29 @@ def test_profile_not_created_yet():
         assert client.get("/me", headers=HEADERS).status_code == 404
 
 
+def test_quiet_time_roundtrip_and_profile_refresh_finishes_before_response(monkeypatch):
+    import json
+    state = {**ROW,'notify_quiet':''}
+    refreshed = []
+    async def refresh(uid):
+        refreshed.append(uid)
+    monkeypatch.setattr('server.jobs.pipeline.refresh_student',refresh)
+    def handler(request):
+        if request.method == 'POST':
+            return httpx.Response(201)
+        if request.method == 'PATCH':
+            state.update(json.loads(request.content))
+        return httpx.Response(200,json=[state])
+    with client_for(handler) as client:
+        response = client.put('/me',headers=HEADERS,json={'status':'leave','notify':{'quiet':'22:00-07:00'}})
+        assert response.status_code == 200
+        assert refreshed == [USER_ID]
+        assert response.json()['notify']['quiet'] == '22:00-07:00'
+        assert client.get('/me',headers=HEADERS).json()['status'] == 'leave'
+        response = client.put('/me',headers=HEADERS,json={'notify':{'quiet':''}})
+        assert response.json()['notify']['quiet'] == ''
+
+
 def test_partial_update_and_server_consent_timestamp():
     import json
     calls = []

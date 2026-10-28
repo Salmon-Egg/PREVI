@@ -4,13 +4,14 @@ from fastapi import APIRouter, Depends, Query, Request
 
 from server.auth import AuthenticatedUser, require_user
 from server.database import database_rows
+from server.logic.student_context import calendar_applies
 
 router = APIRouter(tags=["학사일정"])
 
 
 async def calendar_rows(request: Request, user: AuthenticatedUser, year: int | None = None):
-    profiles = await database_rows(request, "GET", "profiles", params={"user_id": f"eq.{user.id}", "select": "grade"})
-    grade = profiles[0].get("grade") if profiles else None
+    profiles = await database_rows(request, "GET", "profiles", params={"user_id": f"eq.{user.id}", "select": "grade,status"})
+    profile = profiles[0] if profiles else {}
     params = {"select": "id,title,start_date,end_date,target_grades", "order": "start_date.asc,id.asc"}
     if year is not None:
         params["start_date"] = f"lte.{year}-12-31"
@@ -22,7 +23,7 @@ async def calendar_rows(request: Request, user: AuthenticatedUser, year: int | N
         if not page:
             break
     # 학년 미입력자는 전체 공통 일정만 표시한다. 12~1월처럼 연도를 넘는 일정도 포함한다.
-    return [row for row in rows if not row["target_grades"] or grade in row["target_grades"]]
+    return [row for row in rows if calendar_applies(row,profile)]
 
 
 @router.get("/calendar")
