@@ -1,6 +1,6 @@
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Path, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Path, Request
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, model_validator
 
 from server.auth import AuthenticatedUser, require_user
@@ -50,7 +50,7 @@ async def timetable(request: Request, user: AuthenticatedUser = Depends(require_
 
 
 @router.post("/timetable")
-async def add_timetable(body: TimetableInput, request: Request, user: AuthenticatedUser = Depends(require_user)):
+async def add_timetable(body: TimetableInput, request: Request, background_tasks: BackgroundTasks, user: AuthenticatedUser = Depends(require_user)):
     term = await current_term(request, user)
     if body.course_id is not None:
         courses = await database_rows(request, "GET", "courses", params={"id": f"eq.{body.course_id}", "select": "id,name,credits,times"})
@@ -70,13 +70,17 @@ async def add_timetable(body: TimetableInput, request: Request, user: Authentica
         json={**values, "user_id": str(user.id), "term": term})
     if not rows:
         raise APIError(500, "DATABASE_ERROR", "시간표 저장 결과를 확인할 수 없어요.")
+    from server.jobs.pipeline import refresh_student
+    background_tasks.add_task(refresh_student, str(user.id))
     return output(rows[0])
 
 
 @router.delete("/timetable/{item_id}")
-async def delete_timetable(request: Request, item_id: int = Path(gt=0), user: AuthenticatedUser = Depends(require_user)):
+async def delete_timetable(request: Request, background_tasks: BackgroundTasks, item_id: int = Path(gt=0), user: AuthenticatedUser = Depends(require_user)):
     rows = await database_rows(request, "DELETE", "timetable", params={"id": f"eq.{item_id}", "user_id": f"eq.{user.id}"},
         headers={"Prefer": "return=representation"})
     if not rows:
         raise APIError(404, "TIMETABLE_NOT_FOUND", "시간표 항목을 찾을 수 없어요.")
+    from server.jobs.pipeline import refresh_student
+    background_tasks.add_task(refresh_student, str(user.id))
     return output(rows[0])

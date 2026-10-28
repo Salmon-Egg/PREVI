@@ -10,10 +10,12 @@ from server.logic.schedule import DEFAULT_SEVERITY
 log = logging.getLogger("ai")
 
 
-def _ask(prompt: str, payload: dict) -> dict | None:
+def _ask(prompt: str, payload: dict, *, strict=False) -> dict | None:
     try:
         return ask_json(prompt, json.dumps(payload, ensure_ascii=False, default=str))
     except Exception as e:  # AiError, 연결 실패 등. AI 서버가 꺼져 있어도 템플릿으로 계속 감
+        if strict:
+            raise
         log.warning("AI %s 실패: %s", prompt, e)
         return None
 
@@ -23,9 +25,12 @@ PROCEDURE_WORDS = ("이중수혜", "문의", "접수", "제출", "면접", "방�
 STATUS = {"enrolled": "enrolled", "leave": "leave", "returned": "returned", "재학생": "enrolled", "휴학생": "leave", "복학생": "returned"}
 
 
-def summarize_notice(title: str, body: str) -> dict:
+def summarize_notice(title: str, body: str, *, strict=False) -> dict:
     """① 공지 해석 + ② 대상 분류. 실패하면 요약 없이 원문만 둠 (빈 조건 = 모두 대상)."""
-    out = _ask("notice_summary", {"title": title, "body": body}) or {}
+    payload = {"title": title, "body": body}
+    out = (_ask("notice_summary", payload, strict=True) if strict else _ask("notice_summary", payload)) or {}
+    if strict and (not isinstance(out, dict) or not isinstance(out.get("summary"), list) or not out["summary"]):
+        raise ValueError("공지 해석 결과가 비어 있습니다.")
     target, conditions = clean_target(out.get("target")), clean_conditions(out.get("conditions"))
     # 학과 칸에 "신입생"·"○○군 출신"이 오면 우리 학생이 모두 '조건 미충족'으로 잘못 뜸 → '확인 필요'로
     odd = [d for d in target["departments"] if not d.endswith(("학과", "학부", "전공"))]

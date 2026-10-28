@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from typing import Literal
 
 import httpx
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from server.auth import AuthenticatedUser, bearer, require_user
@@ -111,7 +111,7 @@ async def get_me(request: Request, user: AuthenticatedUser = Depends(require_use
 
 
 @router.put("/me")
-async def put_me(body: ProfileInput, request: Request, user: AuthenticatedUser = Depends(require_user)):
+async def put_me(body: ProfileInput, request: Request, background_tasks: BackgroundTasks, user: AuthenticatedUser = Depends(require_user)):
     # 다른 요청이 동시에 처음 설정을 만들어도 기존 정보를 덮어쓰지 않는다.
     await profile_request(request, "POST", user, params={"on_conflict": "user_id"},
                           headers={"Prefer": "resolution=ignore-duplicates,return=minimal"}, json={"user_id": str(user.id)})
@@ -131,4 +131,6 @@ async def put_me(body: ProfileInput, request: Request, user: AuthenticatedUser =
                                  headers={"Prefer": "return=representation"}, json=values)
     if not rows:
         raise APIError(404, "PROFILE_NOT_FOUND", "내 정보를 찾을 수 없어요.")
+    from server.jobs.pipeline import refresh_student
+    background_tasks.add_task(refresh_student, str(user.id))
     return profile_output(rows[0])

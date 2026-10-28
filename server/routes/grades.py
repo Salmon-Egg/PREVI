@@ -2,7 +2,7 @@ from decimal import Decimal
 import logging
 from typing import Literal
 
-from fastapi import APIRouter, Depends, Path, Query, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, Path, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from server.auth import AuthenticatedUser, require_user
@@ -42,7 +42,9 @@ async def grades(request: Request, user: AuthenticatedUser = Depends(require_use
     return grouped_grades(await all_grade_rows(request, str(user.id)))
 
 
-async def mutation_result(row: dict, request: Request, user: AuthenticatedUser):
+async def mutation_result(row: dict, request: Request, user: AuthenticatedUser, background_tasks: BackgroundTasks):
+    from server.jobs.pipeline import refresh_student
+    background_tasks.add_task(refresh_student, str(user.id))
     remaining = None
     try:
         remaining = (await graduation_result(request, user))["remaining_total"]
@@ -54,27 +56,27 @@ async def mutation_result(row: dict, request: Request, user: AuthenticatedUser):
 
 
 @router.post("/grades")
-async def create_grade(body: GradeInput, request: Request, user: AuthenticatedUser = Depends(require_user)):
+async def create_grade(body: GradeInput, request: Request, background_tasks: BackgroundTasks, user: AuthenticatedUser = Depends(require_user)):
     rows = await database_rows(request, "POST", "grades", headers={"Prefer": "return=representation"},
                                json={**body.database_value(), "user_id": str(user.id)})
     if not rows:
         raise APIError(500, "DATABASE_ERROR", "저장 결과를 확인할 수 없어요.")
-    return await mutation_result(rows[0], request, user)
+    return await mutation_result(rows[0], request, user, background_tasks)
 
 
 @router.put("/grades/{grade_id}")
-async def update_grade(body: GradeInput, request: Request, grade_id: int = Path(gt=0), user: AuthenticatedUser = Depends(require_user)):
+async def update_grade(body: GradeInput, request: Request, background_tasks: BackgroundTasks, grade_id: int = Path(gt=0), user: AuthenticatedUser = Depends(require_user)):
     rows = await database_rows(request, "PATCH", "grades", params={"id": f"eq.{grade_id}", "user_id": f"eq.{user.id}"},
                                headers={"Prefer": "return=representation"}, json=body.database_value())
     if not rows:
         raise APIError(404, "GRADE_NOT_FOUND", "성적 항목을 찾을 수 없어요.")
-    return await mutation_result(rows[0], request, user)
+    return await mutation_result(rows[0], request, user, background_tasks)
 
 
 @router.delete("/grades/{grade_id}")
-async def delete_grade(request: Request, grade_id: int = Path(gt=0), user: AuthenticatedUser = Depends(require_user)):
+async def delete_grade(request: Request, background_tasks: BackgroundTasks, grade_id: int = Path(gt=0), user: AuthenticatedUser = Depends(require_user)):
     rows = await database_rows(request, "DELETE", "grades", params={"id": f"eq.{grade_id}", "user_id": f"eq.{user.id}"},
                                headers={"Prefer": "return=representation"})
     if not rows:
         raise APIError(404, "GRADE_NOT_FOUND", "성적 항목을 찾을 수 없어요.")
-    return await mutation_result(rows[0], request, user)
+    return await mutation_result(rows[0], request, user, background_tasks)
