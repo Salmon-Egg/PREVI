@@ -65,7 +65,9 @@ def main():
                 response = app.get("/graduation", headers=headers)
                 check(response.status_code == 404 and response.json()["error"]["code"] == "GRADUATION_RULES_NOT_FOUND", "unknown pre-merger cohort not guessed")
                 check(app.put("/me", headers=headers, json={"admission_year": 2024, "minor": "경영학과"}).status_code == 200, "minor profile saved")
-                check(app.get("/graduation", headers=headers).status_code == 409, "minor curriculum requires review")
+                result = app.get("/graduation", headers=headers)
+                check(result.status_code == 200 and result.json()['requirements'][-1]['done'] is None,
+                      "minor keeps major progress and marks extra curriculum for review")
 
             db_headers = {"apikey": settings.publishable_key, **headers}
             response = remote.patch("/rest/v1/grad_requirements", headers=db_headers, params={"department": "eq.소프트웨어학과", "admission_year": "eq.2023"}, json={"total_credits": 1})
