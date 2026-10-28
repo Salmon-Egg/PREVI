@@ -1,22 +1,21 @@
 // ▶ FE 8번에 해당하는 부분: M-2 처음 설정
-// 학적(학과·부전공·학년·학기·학적 상태) → 성적 입력 안내(나중에 해도 됨) → 개인정보 동의(성적 포함) → 알림 허용
-import { Feather } from '@expo/vector-icons';
+// 학적(학과·부전공·학년·학기·학적 상태) → 개인정보 동의(성적 포함) → 알림 허용
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '../../components/Text';
-import { Input } from '../../components/form';
+import { MinorSelect, Select } from '../../components/form';
 import { Body, Button, Card, Character, Row, Screen, Sub, Title } from '../../components/ui';
 import { api, ApiError } from '../../lib/api';
 import { signupName } from '../../lib/auth';
 import { registerPush } from '../../lib/push';
-import { DEPT_OTHER, DEPTS, MINORS, STATUSES } from '../../lib/constants';
+import { DEPTS, STATUSES } from '../../lib/constants';
 import { color, gradient, gradientBg } from '../../lib/theme';
 import { STATUS_KO, type Status } from '../../lib/types';
 
 const YEARS = [2020, 2021, 2022, 2023, 2024, 2025, 2026];
-const STEPS = 4;
+const STEPS = 3;
 
 function Choice<T extends string | number>({ items, value, onChange, label = (v: T) => String(v) }: {
   items: T[]; value: T | null; onChange: (v: T) => void; label?: (v: T) => string;
@@ -36,9 +35,7 @@ function Choice<T extends string | number>({ items, value, onChange, label = (v:
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
-  const [deptChoice, setDeptChoice] = useState<string | null>(null);
-  const [customDept, setCustomDept] = useState(''); // '직접 입력'을 골랐을 때 적은 학과
-  const dept = deptChoice === DEPT_OTHER ? customDept.trim() || null : deptChoice;
+  const [dept, setDept] = useState(DEPTS[0]);
   const [minor, setMinor] = useState('없음');
   const [grade, setGrade] = useState<number | null>(null);
   const [semester, setSemester] = useState<number | null>(null);
@@ -47,17 +44,17 @@ export default function Onboarding() {
   const [agreed, setAgreed] = useState(false);
   const [msg, setMsg] = useState('');
 
-  // 3단계(동의)까지 마치면 학적·동의를 먼저 저장 → 4단계에서 알림 허용만 따로 물음
+  // 2단계(동의)까지 마치면 학적·동의를 먼저 저장 → 3단계에서 알림 허용만 따로 물음
   // 이름은 회원가입 때 적은 것을 같이 저장 (홈 인사말·마이페이지에 보임)
   async function saveProfile() {
     try {
       const nickname = await signupName();
       await api.put('/me', {
-        department: dept, minor: minor === '없음' ? null : minor, grade, semester, status, admission_year: year,
+        department: dept, minor: minor === '없음' || !minor.trim() ? null : minor.trim(), grade, semester, status, admission_year: year,
         consent: { agreed: true }, ...(nickname ? { nickname } : null),
       });
       setMsg('');
-      setStep(3);
+      setStep(2);
     } catch (e) {
       setMsg((e as ApiError).message);
     }
@@ -80,31 +77,18 @@ export default function Onboarding() {
         <>
           <Title>학적 정보를 알려 주세요</Title>
           <Sub>비서가 나에게 해당하는 공지·장학금·졸업 요건을 고르는 데 써요.</Sub>
-          <Body>학과</Body><Choice items={[...DEPTS, DEPT_OTHER]} value={deptChoice} onChange={setDeptChoice} />
-          {deptChoice === DEPT_OTHER && <Input value={customDept} onChangeText={setCustomDept} placeholder="학과 이름 (예: 경영학부)" />}
-          <Body>복수 / 부전공</Body><Choice items={MINORS} value={minor} onChange={setMinor} />
+          {/* 학과가 많아서 버튼 대신 목록에서 고름 */}
+          <Body>학과</Body><Select value={dept} items={DEPTS} onChange={setDept} title="학과" />
+          <Body>복수 / 부전공</Body><MinorSelect value={minor} onChange={setMinor} />
           <Body>학년</Body><Choice items={[1, 2, 3, 4]} value={grade} onChange={setGrade} label={(v) => `${v}학년`} />
           <Body>학기</Body><Choice items={[1, 2]} value={semester} onChange={setSemester} label={(v) => `${v}학기`} />
           <Body>학적 상태</Body>
           <Choice items={STATUSES} value={status} onChange={setStatus} label={(v) => STATUS_KO[v]} />
           <Body>입학년도</Body><Choice items={YEARS} value={year} onChange={setYear} />
-          <Button label="다음" disabled={!dept || !grade || !semester || !year} onPress={() => setStep(1)} />
+          <Button label="다음" disabled={!grade || !semester || !year} onPress={() => setStep(1)} />
         </>
       )}
       {step === 1 && (
-        <>
-          <Title>성적은 나중에 입력해도 돼요</Title>
-          <Card style={{ backgroundColor: color.primarySoft, borderWidth: 0 }}>
-            <Row><Feather name="bar-chart-2" size={20} color={color.primary} /><Body style={{ fontWeight: '700' }}>성적을 입력하면</Body></Row>
-            <Sub>· 졸업까지 남은 학점과 영역별 이수 현황을 계산해요</Sub>
-            <Sub>· 평점 조건이 있는 장학금의 신청 가능 여부를 알려 드려요</Sub>
-            <Sub>입력 위치: 홈 › 내 학업 › 성적 조회</Sub>
-          </Card>
-          <Button label="다음" onPress={() => setStep(2)} />
-          <Button label="이전" kind="ghost" onPress={() => setStep(0)} />
-        </>
-      )}
-      {step === 2 && (
         <>
           <Title>개인정보 수집·이용 동의</Title>
           <Card>
@@ -116,10 +100,10 @@ export default function Onboarding() {
             <Row><Text style={{ fontSize: 20 }}>{agreed ? '☑' : '☐'}</Text><Body>위 내용에 동의해요 (필수)</Body></Row>
           </Pressable>
           <Button label="동의하고 다음" disabled={!agreed} onPress={saveProfile} />
-          <Button label="이전" kind="ghost" onPress={() => setStep(1)} />
+          <Button label="이전" kind="ghost" onPress={() => setStep(0)} />
         </>
       )}
-      {step === 3 && (
+      {step === 2 && (
         <View style={{ alignItems: 'center', gap: 12 }}>
           <Character size={150} />
           <Title>마감을 놓치지 않게 알려 드릴까요?</Title>
