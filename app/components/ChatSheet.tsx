@@ -2,13 +2,16 @@
 // 바를 잡고 위로 올리면 대화 화면(H-1·H-2, ChatPanel)이 손가락·마우스를 따라 아래에서 올라오고,
 // 끝까지 올리면 화면을 옮기지 않고 그 자리에서 바로 대화함. 위쪽 화살표(또는 바)를 누르면 끝까지 올린 것과 같음.
 // 열린 상태에서 머리줄을 잡고 내리거나 ⌄를 누르면(안드로이드는 뒤로 가기도) 다시 바로 내려감.
-// ⏱(대화 기록)도 이 창 안에서 열리고, 기록에서 고른 대화도 이 창에서 이어서 봄 (FE 34번)
+// ⏱(대화 기록)도 이 창 안에서 열리고, 기록에서 고른 대화도 이 창에서 이어서 봄 (FE 34번). ✎는 새 대화
+// 모든 화면 위에 하나 ((main)/_layout.tsx): 홈에서는 아래 바로 접히고, 다른 화면에서는 접으면 숨었다가
+// 할 일·공지·휴복학의 '묻기'(chatStore askChat)를 누르면 그 화면 위로 올라옴
 import { Feather } from '@expo/vector-icons';
+import { usePathname } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { Animated, BackHandler, PanResponder, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { loadChat } from '../lib/chatStore';
+import { loadChat, newChat, onChatSheet } from '../lib/chatStore';
 import { color } from '../lib/theme';
 import { ChatHistory } from './ChatHistory';
 import { ChatPanel } from './ChatPanel';
@@ -31,7 +34,9 @@ export function ChatSheet() {
   }, []);
   const H = measured || windowHeight;
   const sheetH = H - insets.top; // 끝까지 올렸을 때 높이 (상태 표시줄 아래부터)
-  const closedY = Math.max(0, sheetH - SHEET_BAR - insets.bottom); // 접혔을 때 아래로 내려간 거리
+  const home = usePathname() === '/';
+  // 접혔을 때 아래로 내려간 거리: 홈은 바만 보이게, 다른 화면은 화면 밖으로 숨김
+  const closedY = home ? Math.max(0, sheetH - SHEET_BAR - insets.bottom) : sheetH + 40;
 
   const [y] = useState(() => new Animated.Value(closedY));
   const pos = useRef(closedY); // 지금(또는 움직이는 중인 목표) 위치
@@ -56,6 +61,9 @@ export function ChatSheet() {
     // 탭이 가려져 애니메이션이 멈춰도 끝 위치로 가도록
     setTimeout(() => y.setValue(pos.current), 280);
   }, [closedY, y]);
+
+  // 다른 화면에서 '묻기'·답변 버튼 → 올리기·내리기
+  useEffect(() => onChatSheet(moveTo), [moveTo]);
 
   // 안드로이드 뒤로 가기: 펼쳐져 있으면 먼저 내림
   useEffect(() => {
@@ -116,13 +124,17 @@ export function ChatSheet() {
                 </Pressable>
               )}
               <Text style={st.headerTitle}>{history ? '대화 기록' : 'PREVI'}</Text>
+              {/* ✎ 새 대화(시작 화면), ⏱ 대화 기록 */}
+              <Pressable accessibilityLabel="새 대화" hitSlop={8} onPress={() => { newChat(); setHistory(false); }} style={st.headerBtn}>
+                <Feather name="edit" size={21} color={color.ink} />
+              </Pressable>
               {history ? <View style={st.headerBtn} /> : (
                 <Pressable accessibilityLabel="대화 기록" hitSlop={8} onPress={() => setHistory(true)} style={st.headerBtn}>
                   <Feather name="clock" size={21} color={color.ink} />
                 </Pressable>
               )}
             </View>
-          ) : (
+          ) : home && (
             <Pressable style={st.ask} accessibilityLabel="PREVI 대화창 열기" onPress={() => moveTo(true)}>
               <View style={st.askAvatar}><Character face size={44} /></View>
               {/* 폭이 좁은 휴대폰(360 미만)에서도 한 줄에 들어가게 글자를 조금 줄임 */}

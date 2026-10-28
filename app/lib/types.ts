@@ -2,7 +2,8 @@
 
 export type TodoType = 'deadline' | 'scholarship' | 'graduation' | 'status';
 // ▶ FE 16번에 해당하는 부분: 할 일 종류 이름 (필터 칩·배지)
-export const TODO_TYPE_KO: Record<TodoType, string> = { deadline: '마감', scholarship: '장학', graduation: '졸업', status: '학적' };
+// deadline(일반 할 일: 학사 공지·직접·채팅 등록)은 배지·필터 없이 '전체'에서만 보임
+export const TODO_TYPE_KO: Record<Exclude<TodoType, 'deadline'>, string> = { scholarship: '장학', graduation: '졸업', status: '학적' };
 export type Verdict = 'eligible' | 'ineligible' | 'check';
 export type NotifyType = 'notice' | 'deadline' | 'calendar' | 'chat';
 

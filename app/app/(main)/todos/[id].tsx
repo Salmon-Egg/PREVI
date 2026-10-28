@@ -4,6 +4,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 
 import { Body, Button, Card, DdayBadge, openLink, Row, Screen, showAlert, StateView, Sub, Title } from '../../../components/ui';
 import { api, ApiError, useApi } from '../../../lib/api';
+import { askChat } from '../../../lib/chatStore';
 import type { TodoDetail } from '../../../lib/types';
 
 export default function TodoDetailScreen() {
@@ -40,7 +41,7 @@ export default function TodoDetailScreen() {
             )}
             {t.link && <Button label="신청 페이지 열기" kind="ghost" onPress={() => openLink(t.link)} />}
             <Button label="채팅으로 묻기" kind="ghost"
-              onPress={() => router.push({ pathname: '/chat', params: { contextKind: 'todo', contextId: String(t.id), q: `${t.title} 어떻게 해?` } })} />
+              onPress={() => askChat(`${t.title} 어떻게 해?`, { kind: 'todo', id: t.id })} />
             <Button label={t.done ? '완료 취소' : '완료했어요'} onPress={toggle} />
           </>
         )}

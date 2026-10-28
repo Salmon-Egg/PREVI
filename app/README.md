@@ -42,12 +42,12 @@ app/
 │     ├─ scholarships/   index 시안 12 (+ 비서 판정), applications S-3
 │     ├─ notices/[id]    시안 13 공지 상세 (AI 요약·판정·원문·신청 완료 체크)
 │     ├─ office/         A-1 공지, calendar A-2, leave A-3
-│     ├─ chat/           H-1·H-2 채팅, history H-3
 │     └─ me/             index 시안 14, status 시안 15·16, assistant M-5
 ├─ components/ui.tsx     공통 부품: 화면 틀(Screen: 배경 + ‹ 제목 + 흰 판 + 아래 버튼), 카드, 배지, 마스코트, 로딩·오류·빈 화면, 알림창
 ├─ components/form.tsx   입력 부품: 드롭다운, 선택 버튼 묶음, 창(Sheet), 목록 창(OptionSheet), 확인 창(Confirm)
 ├─ components/Text.tsx   글자 (글자 크기 '크게' 반영) — Text·TextInput은 react-native 대신 여기서 가져오기
 ├─ components/AuthFrame.tsx   로그인·회원가입 공통 틀
+├─ components/ChatSheet.tsx · ChatPanel.tsx · ChatHistory.tsx   끌어 올리는 AI 대화창(모든 화면 위에 하나), 대화 본문, 대화 기록
 ├─ components/TimetableGrid.tsx · GradesView.tsx   시간표 표, 성적 조회·수정
 ├─ lib/
 │  ├─ api.ts             서버 부르기는 이 파일만 (토큰 자동 첨부, mock 전환, useApi 훅)

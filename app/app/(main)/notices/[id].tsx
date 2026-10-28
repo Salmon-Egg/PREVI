@@ -8,6 +8,7 @@ import { CloseButton } from '../../../components/form';
 import { Text } from '../../../components/Text';
 import { Button, goBack, isSafeUrl, openLink, Screen, StateView } from '../../../components/ui';
 import { api, attempt, useApi } from '../../../lib/api';
+import { askChat } from '../../../lib/chatStore';
 import { deadlineText, dotDate } from '../../../lib/format';
 import { color } from '../../../lib/theme';
 import type { NoticeDetail } from '../../../lib/types';
@@ -72,7 +73,7 @@ export default function Notice() {
                   <Button compact label="☑️ 신청 완료 체크" onPress={markApplied} />
                 ) : (
                   <Button compact label="💬 프리비에게 묻기"
-                    onPress={() => router.push({ pathname: '/chat', params: { contextKind: 'notice', contextId: String(n.id), q: '이 공지 나도 해당돼?' } })} />
+                    onPress={() => askChat('이 공지 나도 해당돼?', { kind: 'notice', id: n.id })} />
                 )}
               </View>
             </View>

@@ -5,12 +5,12 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '../../components/Text';
-import { MinorSelect, Select } from '../../components/form';
+import { Select } from '../../components/form';
 import { Body, Button, Card, Character, Row, Screen, Sub, Title } from '../../components/ui';
 import { api, ApiError } from '../../lib/api';
 import { signupName } from '../../lib/auth';
 import { registerPush } from '../../lib/push';
-import { DEPTS, STATUSES } from '../../lib/constants';
+import { DEPTS, MINORS, STATUSES } from '../../lib/constants';
 import { color, gradient, gradientBg } from '../../lib/theme';
 import { STATUS_KO, type Status } from '../../lib/types';
 
@@ -50,7 +50,7 @@ export default function Onboarding() {
     try {
       const nickname = await signupName();
       await api.put('/me', {
-        department: dept, minor: minor === '없음' || !minor.trim() ? null : minor.trim(), grade, semester, status, admission_year: year,
+        department: dept, minor: minor === '없음' ? null : minor, grade, semester, status, admission_year: year,
         consent: { agreed: true }, ...(nickname ? { nickname } : null),
       });
       setMsg('');
@@ -79,7 +79,7 @@ export default function Onboarding() {
           <Sub>비서가 나에게 해당하는 공지·장학금·졸업 요건을 고르는 데 써요.</Sub>
           {/* 학과가 많아서 버튼 대신 목록에서 고름 */}
           <Body>학과</Body><Select value={dept} items={DEPTS} onChange={setDept} title="학과" />
-          <Body>복수 / 부전공</Body><MinorSelect value={minor} onChange={setMinor} />
+          <Body>복수 / 부전공</Body><Select value={minor} items={MINORS} onChange={setMinor} title="복수 / 부전공" />
           <Body>학년</Body><Choice items={[1, 2, 3, 4]} value={grade} onChange={setGrade} label={(v) => `${v}학년`} />
           <Body>학기</Body><Choice items={[1, 2]} value={semester} onChange={setSemester} label={(v) => `${v}학기`} />
           <Body>학적 상태</Body>

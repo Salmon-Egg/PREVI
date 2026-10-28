@@ -1,4 +1,4 @@
-// ▶ FE 16번에 해당하는 부분: T-1 할 일 목록 — 종류 필터(마감·장학·졸업·학적), D-day 순
+// ▶ FE 16번에 해당하는 부분: T-1 할 일 목록 — 종류 필터(장학·졸업·학적, 일반 할 일은 '전체'에서만), D-day 순
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -10,10 +10,10 @@ import { useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
 import { TODO_TYPE_KO, type Todo, type TodoType } from '../../../lib/types';
 
-const FILTERS: (TodoType | null)[] = [null, 'deadline', 'scholarship', 'graduation', 'status'];
+const FILTERS: (Exclude<TodoType, 'deadline'> | null)[] = [null, 'scholarship', 'graduation', 'status'];
 
 export default function TodoList() {
-  const [type, setType] = useState<TodoType | null>(null);
+  const [type, setType] = useState<Exclude<TodoType, 'deadline'> | null>(null);
   const { data, error, loading, reload } = useApi<Todo[]>(`/todos?done=false${type ? `&type=${type}` : ''}`);
   // 서버가 D-day 순으로 주지만, 예시 데이터·직접 등록한 일까지 한 번 더 정렬 (마감 없는 일은 맨 뒤)
   const list = [...(data ?? [])].sort((a, b) => (a.d_day ?? 999) - (b.d_day ?? 999));
@@ -26,7 +26,7 @@ export default function TodoList() {
           <Card key={t.id} onPress={() => router.push(`/todos/${t.id}`)}>
             <Row>
               <DdayBadge dDay={t.d_day} />
-              <Badge label={TODO_TYPE_KO[t.type]} tone="soft" />
+              {t.type !== 'deadline' && <Badge label={TODO_TYPE_KO[t.type]} tone="soft" />}
               <View style={{ flex: 1 }} />
               <Feather name="chevron-right" size={18} color={color.inkSub} />
             </Row>

@@ -12,7 +12,7 @@ import { Text } from '../../../components/Text';
 import { Button, confirmAsk, Screen, showAlert, StateView } from '../../../components/ui';
 import { api, attempt, ApiError, useApi, useSubmit } from '../../../lib/api';
 import { changePassword, PASSWORD_MIN } from '../../../lib/auth';
-import { BRIEF_TIMES, HALF_HOURS, QUIET_CUSTOM, QUIET_TIMES } from '../../../lib/constants';
+import { BRIEF_TIMES, HALF_HOURS, QUIET_CUSTOM } from '../../../lib/constants';
 import { setDisplay, useDisplay } from '../../../lib/display';
 import { logout } from '../../../lib/session';
 import { color, gradient, gradientBg } from '../../../lib/theme';
@@ -113,7 +113,7 @@ export default function MyPage() {
               value={me.notify.time} items={BRIEF_TIMES} label={timeLabel} onChange={(time) => setNotify({ time })} />
             {/* '직접 입력'을 고르면 목록 창이 닫히면서 시각 고르는 창이 열림 (닫기가 그 창을 닫지 않게 'quiet'일 때만 닫음) */}
             <OptionSheet visible={picker === 'quiet'} onClose={() => setPicker((p) => (p === 'quiet' ? null : p))} title="방해 금지 시간"
-              value={me.notify.quiet ?? ''} items={[...QUIET_TIMES, QUIET_CUSTOM]} label={quietLabel}
+              value={me.notify.quiet ?? ''} items={['', QUIET_CUSTOM]} label={quietLabel}
               onChange={(quiet) => (quiet === QUIET_CUSTOM ? setPicker('quietCustom') : setNotify({ quiet }))} />
             {picker === 'quietCustom' && (
               <QuietSheet value={me.notify.quiet ?? ''} onClose={() => setPicker(null)} onSave={(quiet) => setNotify({ quiet })} />
