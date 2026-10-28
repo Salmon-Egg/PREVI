@@ -20,6 +20,11 @@ NOTICE = {'id':1,'title':'장학 신청','body':'공지 본문','category':'장�
 GRADE = {'id':1,'user_id':UID,'term':'2-1','course_name':'자료구조','credits':3,'grade':'A0','area':'전공'}
 
 
+@pytest.fixture(autouse=True)
+def template_reason(monkeypatch):
+    monkeypatch.setattr(tasks,'explain_reason',lambda title,verdict,reasons:' · '.join(reasons))
+
+
 class MemoryDB:
     def __init__(self):
         self.data = {'profiles':[copy.deepcopy(PROFILE)], 'notices':[copy.deepcopy(NOTICE)], 'grades':[copy.deepcopy(GRADE)],
@@ -62,6 +67,9 @@ class MemoryDB:
 
 def test_pipeline_idempotence_completion_and_withdrawal(monkeypatch):
     monkeypatch.setattr(tasks,'severity',lambda *_:2)
+    from unittest.mock import Mock
+    reason = Mock(return_value='직전 학기 기준에 해당해요.')
+    monkeypatch.setattr(tasks,'explain_reason',reason)
     db = MemoryDB()
     async def run():
         async with httpx.AsyncClient(base_url='https://test',transport=httpx.MockTransport(db.handle)) as client:
@@ -69,6 +77,8 @@ def test_pipeline_idempotence_completion_and_withdrawal(monkeypatch):
             await pipeline.recalculate(UID)
             await pipeline.recalculate(UID)
             assert len(db.data['todos']) == len(db.data['eligibility']) == 1
+            reason.assert_called_once()
+            assert '직전 학기 기준에 해당해요.' in db.data['todos'][0]['reason']
             assert db.data['eligibility'][0]['verdict'] == 'eligible'
             db.data['todos'][0]['done'] = True
             await pipeline.recalculate(UID)

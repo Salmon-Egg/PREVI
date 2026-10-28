@@ -60,7 +60,7 @@ async def main(skip_notifications=False):
                 from unittest.mock import AsyncMock
                 sender = AsyncMock()
             pipeline = Pipeline(db,sender,now=now)
-            with patch('server.ai.tasks.summarize_notice',return_value=result), patch('server.ai.tasks.severity',return_value=2):
+            with patch('server.ai.tasks.summarize_notice',return_value=result), patch('server.ai.tasks.severity',return_value=2), patch('server.ai.tasks.explain_reason',return_value='가상 검사 기준에 해당해요.'):
                 check((await pipeline.extract(notice_id=notice_id))['ready'] == 1,'pending notice becomes ready')
                 for _ in range(2):
                     stats = await pipeline.recalculate(uid)

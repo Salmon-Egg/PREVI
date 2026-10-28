@@ -47,3 +47,21 @@ CRON_TZ를 지원하는 cron인지 확인하고, 미지원 환경은 서버 시�
 011은 함수를 교체하며 기존 데이터는 지우지 않습니다.
 `PUSH_ENABLED=false`에서는 알림 센터에만 기록합니다. 실제 폰 수신은 GPU 서버·Expo·앱의 별도 통합 검사가 필요합니다.
 한 서버에서 cron만 등록하고, 다른 PC에 같은 cron을 중복 등록하지 마세요.
+
+## GPU PC가 Windows인 경우
+
+Linux cron 대신 GPU PC에서 아래 파일을 사용합니다. 이 개발 PC에는 작업을 등록하지 않습니다.
+먼저 011 적용과 실제 AI 설정을 확인하고 `Run-AssistantJob.ps1 -Mode Daily`로 수동 실행을 확인합니다.
+
+```powershell
+# 저장소 최상위에서. 가상환경이 server/.venv라면 -PythonPath .\server\.venv\Scripts\python.exe 추가
+.\server\jobs\Register-AssistantTasks.ps1
+# 위 명령은 미리 보기만 수행합니다. GPU PC에서 확인 후 등록:
+.\server\jobs\Register-AssistantTasks.ps1 -Register
+```
+
+수집 09·13·18시, 아침 점검 08:50, 알림 점검 5분 간격 작업 세 개를 만듭니다.
+각 작업은 콘솔 창을 숨기고 같은 전역 mutex를 사용해 동시 실행을 막습니다.
+로그는 `logs/`에 날짜별로 저장하며 작업 종료 코드는 Windows 작업 스케줄러에서 확인합니다.
+등록한 Windows 사용자가 로그인돼 있어야 실행됩니다. GPU PC의 절전은 꺼야 합니다.
+재부팅 후 다시 로그인하고 Ollama와 API 서버도 켜야 합니다. 서버 주소 고정은 별도 배포 작업입니다.

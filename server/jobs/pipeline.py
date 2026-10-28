@@ -169,9 +169,16 @@ class Pipeline:
                         self.severities[n['id']] = await run_in_threadpool(tasks.severity, kind, n['title'])
                     severity = self.severities[n['id']]
                     due = deadline.astimezone(KST).date() if deadline else None
+                    facts = ' · '.join(reasons) or '공지 대상에 해당해요. 원문 조건을 확인해 주세요.'
+                    # 근거가 바뀐 경우만 문장을 다시 생성. 원래 판정 근거도 함께 남긴다.
+                    if old and old['reason'].endswith('\n근거: ' + facts):
+                        explanation = old['reason']
+                    else:
+                        text = await run_in_threadpool(tasks.explain_reason, n['title'], verdict, reasons)
+                        explanation = AUTO_REASON + (text if isinstance(text,str) and text.strip() else facts) + '\n근거: ' + facts
                     value = {'user_id':uid,'source_kind':'notice','source_id':n['id'],'type':kind,
                         'title':n['title'][:200], 'due_date':due.isoformat() if due else None,
-                        'reason':AUTO_REASON + (' · '.join(reasons) or '공지 대상에 해당해요. 원문 조건을 확인해 주세요.'),
+                        'reason':explanation,
                         'link':n['url'],'priority':priority(severity,d_day(due,self.now.astimezone(KST).date()))}
                     # 완료 여부를 보내지 않아 학생이 동시에 완료한 상태를 유지한다.
                     await self.write('POST','todos',params={'on_conflict':'user_id,source_kind,source_id'},
