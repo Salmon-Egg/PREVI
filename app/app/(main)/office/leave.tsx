@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/Text';
 import { Body, Button, Card, Row, Screen, showAlert, StateView, Sub, Title } from '../../../components/ui';
 import { api, attempt, useApi } from '../../../lib/api';
+import { ddayOf } from '../../../lib/format';
 import { color } from '../../../lib/theme';
 import { STATUS_KO, type CalendarEvent, type Me, type Scholarship } from '../../../lib/types';
 
@@ -21,13 +22,15 @@ export default function Leave() {
   const me = useApi<Me>('/me');
   const cal = useApi<CalendarEvent[]>('/calendar');
   const sch = useApi<Scholarship[]>('/scholarships');
-  const period = cal.data?.find((e) => (e.title.includes('휴학') || e.title.includes('복학')) && e.d_day >= 0);
+  // 서버(GET /calendar)는 d_day를 안 줌 → 앱에서 계산
+  const period = cal.data?.map((e) => ({ ...e, d_day: e.d_day ?? ddayOf(e.start_date) }))
+    .find((e) => (e.title.includes('휴학') || e.title.includes('복학')) && e.d_day >= 0);
   // 장학 영향: 지금 신청했거나 신청 가능한 장학금 (휴학하면 대부분 재학생 대상이라 다시 확인 필요)
   const affected = (sch.data ?? []).filter((s) => s.applied || s.verdict === 'eligible');
 
   async function addTodo() {
     if (!period) return;
-    const ok = await attempt(() => api.post('/todos', { title: period.title, due_date: period.end_date ?? period.start_date, type: 'status', source: { kind: 'calendar', id: period.id } }), '할 일에 등록하지 못했어요');
+    const ok = await attempt(() => api.post('/todos', { title: period.title, due_date: period.end_date ?? period.start_date, type: 'status' }), '할 일에 등록하지 못했어요');
     if (ok) showAlert('할 일에 등록했어요', '마감 전날과 당일에 알려 드릴게요.');
   }
 

@@ -8,6 +8,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/Text';
 import { Badge, Card, Row, Screen, StateView, Sub } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
+import { ddayOf } from '../../../lib/format';
 import { color } from '../../../lib/theme';
 import type { CalendarEvent } from '../../../lib/types';
 
@@ -23,7 +24,8 @@ export default function Calendar() {
   const { data, error, loading, reload } = useApi<CalendarEvent[]>('/calendar');
   const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [picked, setPicked] = useState<string | null>(null);
-  const events = data ?? [];
+  // 서버(GET /calendar)는 d_day를 안 줌 → 앱에서 계산 (예시 데이터는 줌)
+  const events = (data ?? []).map((e) => ({ ...e, d_day: e.d_day ?? ddayOf(e.start_date) }));
   const today = ymd(new Date());
 
   // 달력 칸: 첫 주 앞쪽 빈칸 + 그 달 날짜

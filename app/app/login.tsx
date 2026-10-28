@@ -6,11 +6,11 @@ import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AuthField, AuthFrame, AuthLink } from '../components/AuthFrame';
 import { Text } from '../components/Text';
-import { Button, showAlert } from '../components/ui';
+import { PrivacySheet } from '../components/form';
+import { Button } from '../components/ui';
 import { useSubmit } from '../lib/api';
 import { signIn } from '../lib/auth';
 import { DEV_LOGIN, DEV_PASSWORD, PERSONAS, USE_MOCK } from '../lib/config';
-import { PRIVACY } from '../lib/constants';
 import { ApiError } from '../lib/errors';
 import { color } from '../lib/theme';
 import { mockPersonaDesc } from '../mocks';
@@ -20,6 +20,7 @@ export default function Login() {
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
   const [showDemo, setShowDemo] = useState(false);
+  const [privacy, setPrivacy] = useState(false);
   const { busy, run } = useSubmit(); // 여러 번 눌러도 한 번만
 
   const submit = () => run(async () => {
@@ -38,9 +39,9 @@ export default function Login() {
   };
 
   return (
-    <AuthFrame title="로그인" sub="학교 아이디로 서경 AI를 시작해요." top={0.12}
+    <AuthFrame title="로그인" sub="학교 아이디로 프리비를 시작해요." top={0.12}
       footer={(
-        <Pressable onPress={() => showAlert('개인정보 수집·이용 안내', PRIVACY)} style={{ paddingTop: 24 }}>
+        <Pressable onPress={() => setPrivacy(true)} style={{ paddingTop: 24 }}>
           <Text style={st.footer}>로그인하면 개인정보 수집·이용에 관한 안내에 동의한 것으로 봐요.</Text>
         </Pressable>
       )}>
@@ -66,6 +67,7 @@ export default function Login() {
           ))}
         </View>
       )}
+      <PrivacySheet visible={privacy} onClose={() => setPrivacy(false)} />
     </AuthFrame>
   );
 }

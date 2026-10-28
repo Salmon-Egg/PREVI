@@ -143,7 +143,8 @@ export default function TimetableEdit() {
 
       {/* 직접 입력 */}
       <Sheet visible={popup === 'direct'} onClose={() => setPopup(null)} title="직접 입력으로 추가">
-        <Direct onAdd={(b) => add({ course_id: null, code: null, ...b, body: b })} />
+        {/* 서버는 과목명·학점·시간만 받음(나머지 칸을 보내면 400). 구분·강의실·교수는 목록 표시용으로만 */}
+        <Direct onAdd={(b) => add({ course_id: null, code: null, ...b, body: { course_name: b.course_name, credits: b.credits, times: b.times } })} />
       </Sheet>
 
       {/* 등록 불가 */}

@@ -1,4 +1,4 @@
-// ▶ FE 15번에 해당하는 부분: 홈 아래 '서경 AI에게 물어보세요!' 바 = 끌어 올리는 AI 대화창 (삼성페이처럼)
+// ▶ FE 15번에 해당하는 부분: 홈 아래 '프리비에게 물어보세요!' 바 = 끌어 올리는 AI 대화창 (삼성페이처럼)
 // 바를 잡고 위로 올리면 대화 화면(H-1·H-2, ChatPanel)이 손가락·마우스를 따라 아래에서 올라오고,
 // 끝까지 올리면 화면을 옮기지 않고 그 자리에서 바로 대화함. 위쪽 화살표(또는 바)를 누르면 끝까지 올린 것과 같음.
 // 열린 상태에서 머리줄을 잡고 내리거나 ⌄를 누르면(안드로이드는 뒤로 가기도) 다시 바로 내려감.
@@ -110,10 +110,10 @@ export function ChatSheet() {
               </Pressable>
             </View>
           ) : (
-            <Pressable style={st.ask} accessibilityLabel="서경 AI 대화창 열기" onPress={() => moveTo(true)}>
+            <Pressable style={st.ask} accessibilityLabel="프리비 대화창 열기" onPress={() => moveTo(true)}>
               <View style={st.askAvatar}><Character face size={44} /></View>
               {/* 폭이 좁은 휴대폰(360 미만)에서도 한 줄에 들어가게 글자를 조금 줄임 */}
-              <Text style={[st.askText, windowWidth < 360 && { fontSize: 14 }]} numberOfLines={1}>서경 AI에게 물어보세요!</Text>
+              <Text style={[st.askText, windowWidth < 360 && { fontSize: 14 }]} numberOfLines={1}>프리비에게 물어보세요!</Text>
               {/* 위쪽 화살표: 누르면 끝까지 끌어 올린 것처럼 대화창이 올라옴 */}
               <View style={st.askBtn}><Feather name="arrow-up" size={22} color="#fff" /></View>
             </Pressable>

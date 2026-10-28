@@ -9,7 +9,32 @@ import { ApiError } from './errors';
 import { login, supabase } from './session';
 
 export const WRONG_LOGIN = '아이디 또는 비밀번호가 맞지 않아요. 다시 확인해 주세요.';
+/** 비밀번호 최소 길이 = Supabase 기본값(6자). 앱에서 먼저 막아서 영어 오류가 나오지 않게 */
+export const PASSWORD_MIN = 6;
 const fail = (message: string) => new ApiError(400, 'AUTH', message);
+
+/** Supabase가 영어로 주는 오류를 한국어로. 모르는 문장이면 일반 안내 */
+const KOREAN: [RegExp, string | ((m: RegExpMatchArray) => string)][] = [
+  [/invalid login credentials/i, WRONG_LOGIN],
+  [/password should be at least (\d+)/i, (m) => `비밀번호는 ${m[1]}자 이상이어야 해요.`],
+  [/password should contain|weak.?password|known to be weak|easy to guess/i, '너무 쉬운 비밀번호예요. 영문·숫자·특수문자를 섞어 주세요.'],
+  [/new password should be different/i, '지금과 다른 비밀번호를 입력해 주세요.'],
+  [/already (been )?registered|already exists/i, '이미 가입한 이메일이에요. 로그인해 주세요.'],
+  [/rate limit|too many|security purposes/i, '요청이 너무 많아요. 잠시 뒤 다시 시도해 주세요.'],
+  [/token has expired|otp.*(expired|invalid)|invalid.*(otp|token)/i, '인증번호가 맞지 않거나 시간이 지났어요. 다시 받아 주세요.'],
+  [/email not confirmed/i, '이메일 인증이 끝나지 않았어요.'],
+  [/invalid.*email|unable to validate email|email address .* invalid/i, '이메일 주소를 확인해 주세요.'],
+  [/signups? not allowed|signup.*disabled/i, '지금은 회원가입을 할 수 없어요.'],
+  [/학교 이메일/, (m) => m.input ?? ''], // 서버(가입 제한 훅)가 이미 한국어로 준 문장은 그대로
+  [/network|fetch|failed to fetch/i, '서버에 연결할 수 없어요. 인터넷 연결을 확인해 주세요.'],
+];
+function korean(message: string | undefined, fallback = '문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.') {
+  for (const [re, ko] of KOREAN) {
+    const m = message?.match(re);
+    if (m) return typeof ko === 'string' ? ko : ko(m);
+  }
+  return fallback;
+}
 
 function sb() {
   if (!supabase) throw fail('로그인 설정(SUPABASE_URL)이 비어 있어요. app/.env를 확인해 주세요.');
@@ -32,7 +57,7 @@ export async function signIn(id: string, password: string) {
     return login(`dev-${p.id}`);
   }
   const { data, error } = await sb().auth.signInWithPassword({ email: emailOf(id), password });
-  if (error || !data.session) throw fail(error?.status === 400 || !error ? WRONG_LOGIN : error.message);
+  if (error || !data.session) throw fail(error?.status === 400 || !error ? WRONG_LOGIN : korean(error.message));
   login(data.session.access_token);
 }
 
@@ -41,7 +66,7 @@ export async function sendSignupCode(email: string): Promise<string | null> {
   if (USE_MOCK) return mockAuth.sendCode(email);
   if (DEV_LOGIN) throw fail('시연 서버에서는 회원가입을 할 수 없어요. 시연용 학번으로 로그인해 주세요.');
   const { error } = await sb().auth.signInWithOtp({ email, options: { shouldCreateUser: true } });
-  if (error) throw fail(error.message);
+  if (error) throw fail(korean(error.message));
   return null;
 }
 
@@ -49,14 +74,14 @@ export async function verifySignupCode(email: string, code: string) {
   if (USE_MOCK) return mockAuth.verifyCode(email, code);
   // 인증이 끝나면 Supabase 세션이 생기지만, 가입하기를 누르기 전까지는 앱 로그인 상태로 바꾸지 않음 (session.ts)
   const { error } = await sb().auth.verifyOtp({ email, token: code, type: 'email' });
-  if (error) throw fail('인증번호가 맞지 않아요.');
+  if (error) throw fail(korean(error.message, '인증번호가 맞지 않아요.'));
 }
 
 export async function signUp(a: { studentId: string; name: string; email: string; password: string }) {
   if (USE_MOCK) return login(mockAuth.signUp(a));
   const { error } = await sb().auth.updateUser({ password: a.password, data: { student_id: a.studentId, name: a.name } });
   const { data } = await sb().auth.getSession();
-  if (error || !data.session) throw fail(error?.message ?? '이메일 인증을 먼저 해 주세요.');
+  if (error || !data.session) throw fail(error ? korean(error.message) : '이메일 인증을 먼저 해 주세요.');
   login(data.session.access_token);
 }
 
@@ -78,5 +103,5 @@ export async function changePassword(current: string, next: string) {
   const check = await sb().auth.signInWithPassword({ email, password: current });
   if (check.error) throw fail('지금 비밀번호가 맞지 않아요.');
   const { error } = await sb().auth.updateUser({ password: next });
-  if (error) throw fail(error.message);
+  if (error) throw fail(korean(error.message));
 }

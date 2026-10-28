@@ -14,8 +14,10 @@ type Area = Graduation['areas'][number];
 
 export function AreaCard({ area, bar = false }: { area: Area; bar?: boolean }) {
   const [open, setOpen] = useState(false);
-  const done = area.earned >= area.required;
-  const pct = Math.min(1, area.earned / area.required);
+  // earned가 null = 서버가 확정 못 함 → '확인 필요'
+  const earned = area.earned;
+  const done = earned !== null && earned >= area.required;
+  const pct = earned === null ? 0 : Math.min(1, earned / area.required);
   const courses = [...(area.courses ?? [])].sort((a, b) => a.term.localeCompare(b.term));
   // 이 영역 평점 (P·F 규칙은 성적 조회와 같음)
   const { gpa } = overall([{ term: '', gpa: null, items: courses.map((c, i) => ({ id: i, area: area.name, ...c })) }]);
@@ -23,10 +25,10 @@ export function AreaCard({ area, bar = false }: { area: Area; bar?: boolean }) {
   return (
     <View style={st.card}>
       <Pressable style={st.head} onPress={() => setOpen(!open)} accessibilityRole="button"
-        accessibilityLabel={`${area.name} ${area.earned} / ${area.required}학점, 들은 과목 ${open ? '접기' : '펼치기'}`}>
+        accessibilityLabel={`${area.name} ${earned ?? '확인 필요'} / ${area.required}학점, 들은 과목 ${open ? '접기' : '펼치기'}`}>
         <Text style={st.name}>{area.name}</Text>
         <Text style={[st.credits, { color: done ? color.primary : color.alert }]}>
-          {area.earned} / {area.required}{bar ? '학점' : ''}
+          {earned ?? '확인 필요'} / {area.required}{bar ? '학점' : ''}
         </Text>
         <Feather name={open ? 'chevron-up' : 'chevron-down'} size={20} color={color.inkSub} />
       </Pressable>
@@ -54,7 +56,7 @@ export function AreaCard({ area, bar = false }: { area: Area; bar?: boolean }) {
               <Text style={st.sum}>
                 {courses.length}과목 · {courses.filter((c) => c.grade !== 'F').reduce((n, c) => n + c.credits, 0)}학점
                 {gpa !== null ? ` · 영역 평점 ${gpa.toFixed(2)}` : ''}
-                {done ? '' : ` · ${area.required - area.earned}학점 더 들어야 해요`}
+                {done || earned === null ? '' : ` · ${area.required - earned}학점 더 들어야 해요`}
               </Text>
             </>
           )}

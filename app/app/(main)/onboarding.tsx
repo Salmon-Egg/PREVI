@@ -6,11 +6,12 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from '../../components/Text';
+import { Input } from '../../components/form';
 import { Body, Button, Card, Character, Row, Screen, Sub, Title } from '../../components/ui';
 import { api, ApiError } from '../../lib/api';
 import { signupName } from '../../lib/auth';
 import { registerPush } from '../../lib/push';
-import { DEPTS, MINORS, STATUSES } from '../../lib/constants';
+import { DEPT_OTHER, DEPTS, MINORS, STATUSES } from '../../lib/constants';
 import { color, gradient, gradientBg } from '../../lib/theme';
 import { STATUS_KO, type Status } from '../../lib/types';
 
@@ -35,7 +36,9 @@ function Choice<T extends string | number>({ items, value, onChange, label = (v:
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
-  const [dept, setDept] = useState<string | null>(null);
+  const [deptChoice, setDeptChoice] = useState<string | null>(null);
+  const [customDept, setCustomDept] = useState(''); // '직접 입력'을 골랐을 때 적은 학과
+  const dept = deptChoice === DEPT_OTHER ? customDept.trim() || null : deptChoice;
   const [minor, setMinor] = useState('없음');
   const [grade, setGrade] = useState<number | null>(null);
   const [semester, setSemester] = useState<number | null>(null);
@@ -77,7 +80,8 @@ export default function Onboarding() {
         <>
           <Title>학적 정보를 알려 주세요</Title>
           <Sub>비서가 나에게 해당하는 공지·장학금·졸업 요건을 고르는 데 써요.</Sub>
-          <Body>학과</Body><Choice items={DEPTS} value={dept} onChange={setDept} />
+          <Body>학과</Body><Choice items={[...DEPTS, DEPT_OTHER]} value={deptChoice} onChange={setDeptChoice} />
+          {deptChoice === DEPT_OTHER && <Input value={customDept} onChangeText={setCustomDept} placeholder="학과 이름 (예: 경영학부)" />}
           <Body>복수 / 부전공</Body><Choice items={MINORS} value={minor} onChange={setMinor} />
           <Body>학년</Body><Choice items={[1, 2, 3, 4]} value={grade} onChange={setGrade} label={(v) => `${v}학년`} />
           <Body>학기</Body><Choice items={[1, 2]} value={semester} onChange={setSemester} label={(v) => `${v}학기`} />

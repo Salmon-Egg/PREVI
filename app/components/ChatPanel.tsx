@@ -11,8 +11,9 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View
 import { Text, TextInput } from './Text';
 import { Character, InfoCard, openLink, showAlert, Sources, TypingDots } from './ui';
 import { api, ApiError } from '../lib/api';
+import { loadChat, newChat, sendChat, useChat, type ChatContext } from '../lib/chatStore';
 import { color } from '../lib/theme';
-import type { ChatAction, ChatReply, Message } from '../lib/types';
+import type { ChatAction, Message } from '../lib/types';
 
 // 시안 ①의 추천 질문 (아이콘 + 질문)
 const STARTERS: { icon: keyof typeof Feather.glyphMap; q: string }[] = [
@@ -38,51 +39,38 @@ const SCREENS: Record<string, (id?: number) => Href> = {
   'A-3': () => '/office/leave',
 };
 
-type Context = { kind: string; id: number } | null;
+/** q: 열자마자 보낼 질문(새 대화로), context: 할 일·공지·학적 맥락(첫 질문에만), conversation: 이어서 볼 이전 대화 번호
+ *  keyboardOffset: 위에 머리줄이 있으면 그 높이 (iOS 키보드가 입력창을 가리지 않게)
+ *  대화 내용은 lib/chatStore.ts에 있어서, 답을 기다리다 화면을 나갔다 와도 그대로 보임 */
+/** 서버가 빈 칸(cards·sources·actions)을 빼고 줘도 그리다 멈추지 않게 */
+const filled = (m: Message): Message => ({ ...m, cards: m.cards ?? [], sources: m.sources ?? [], actions: m.actions ?? [] });
 
-/** q: 열자마자 보낼 질문, context: 할 일·공지·학적 맥락(첫 질문에만), conversation: 이어서 볼 이전 대화 번호
- *  keyboardOffset: 위에 머리줄이 있으면 그 높이 (iOS 키보드가 입력창을 가리지 않게) */
 export function ChatPanel({ q, context = null, conversation, keyboardOffset = 90 }: {
-  q?: string; context?: Context; conversation?: string; keyboardOffset?: number;
+  q?: string; context?: ChatContext; conversation?: string; keyboardOffset?: number;
 }) {
-  const p = { q, conversation };
-  const [convId, setConvId] = useState<number | null>(p.conversation ? Number(p.conversation) : null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const { messages, waiting } = useChat();
   const [text, setText] = useState('');
-  const [waiting, setWaiting] = useState(false);
   const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({});
   const [added, setAdded] = useState<Set<string>>(() => new Set()); // 이미 할 일로 등록한 버튼 (두 번 눌러 같은 할 일이 두 번 생기지 않게)
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
-  const sentInitial = useRef(false);
-  // 맥락은 첫 질문에만 붙이고, 같은 대화 안에서는 서버가 이어서 기억함
+  const opened = useRef(false);
 
   useEffect(() => {
-    if (p.conversation) {
+    if (opened.current) return; // 처음 열릴 때 한 번만 (넘겨받은 질문을 두 번 보내지 않게)
+    opened.current = true;
+    if (conversation) {
       // 대화 목록(H-3) 또는 '답변 도착' 푸시에서 열림 → 이전 대화 불러오기
-      api.get<{ messages: Message[] }>(`/conversations/${p.conversation}`).then((c) => setMessages(c.messages))
-        .catch((e) => showAlert('이전 대화를 불러오지 못했어요', (e as ApiError).message));
-    } else if (p.q && !sentInitial.current) {
-      sentInitial.current = true;
-      send(p.q, context);
+      loadChat(Number(conversation));
+    } else if (q) {
+      // 다른 화면에서 질문을 들고 옴 → 새 대화. 맥락은 첫 질문에만 붙이고, 같은 대화 안에서는 서버가 이어서 기억함
+      newChat();
+      sendChat(q, context);
     }
-    // 처음 열릴 때 한 번만 (넘겨받은 질문을 두 번 보내지 않게)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [conversation, q, context]);
 
-  async function send(question: string, ctx: Context = null) {
-    if (!question.trim() || waiting) return;
+  function send(question: string) {
     setText('');
-    setMessages((m) => [...m, { id: -Date.now(), role: 'user', text: question, cards: [], sources: [], actions: [], created_at: new Date().toISOString() }]);
-    setWaiting(true);
-    try {
-      const res = await api.post<ChatReply>('/chat', { conversation_id: convId, text: question, context: ctx });
-      setConvId(res.conversation_id);
-      setMessages((m) => [...m, res.message]);
-    } catch (e) {
-      showAlert('답변을 받지 못했어요', (e as ApiError).message);
-    } finally {
-      setWaiting(false);
-    }
+    sendChat(question);
   }
 
   async function act(a: ChatAction, key: string) {
@@ -90,7 +78,8 @@ export function ChatPanel({ q, context = null, conversation, keyboardOffset = 90
       if (added.has(key)) return;
       setAdded((s) => new Set(s).add(key));
       try {
-        await api.post('/todos', { ...a.payload, type: 'deadline', source: { kind: 'chat', id: convId } });
+        // 서버(POST /todos)는 source로 공지(notice)만 받아서, 채팅에서 만든 할 일은 source 없이 보냄
+        await api.post('/todos', { ...a.payload, type: 'deadline' });
         showAlert('할 일에 등록했어요', '마감 전날과 당일에 알려 드릴게요.');
       } catch (e) {
         setAdded((s) => {
@@ -126,7 +115,7 @@ export function ChatPanel({ q, context = null, conversation, keyboardOffset = 90
               <View style={st.startBubble}><Text style={st.startBubbleText}>무엇이든{'\n'}물어보세요!</Text></View>
             </View>
             <Text style={st.startTitle}>무엇을 도와드릴까요?</Text>
-            <Text style={st.startSub}>수업, 장학금, 졸업, 캠퍼스 생활까지{'\n'}PREVI가 학교 문서를 근거로 도와드려요.</Text>
+            <Text style={st.startSub}>수업, 장학금, 졸업, 캠퍼스 생활까지{'\n'}프리비가 학교 문서를 근거로 도와드려요.</Text>
             <View style={{ alignSelf: 'stretch', gap: 8, marginTop: 8 }}>
               {STARTERS.map((s) => (
                 <Pressable key={s.q} style={st.starter} onPress={() => send(s.q)}>
@@ -138,7 +127,7 @@ export function ChatPanel({ q, context = null, conversation, keyboardOffset = 90
             </View>
           </View>
         )}
-        {messages.map((m) =>
+        {messages.map(filled).map((m) =>
           m.role === 'user' ? (
             <View key={m.id} style={{ alignItems: 'flex-end', gap: 2 }}>
               <View style={[st.bubble, st.mine]}><Text style={{ color: color.ink, fontSize: 15 }}>{m.text}</Text></View>

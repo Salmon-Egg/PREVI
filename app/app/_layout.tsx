@@ -6,7 +6,6 @@ import { useEffect } from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 
 import { DialogHost } from '../components/ui';
-import { applyDark, useDisplay } from '../lib/display';
 import { listenPushTaps, registerPush } from '../lib/push';
 import { useSession } from '../lib/session';
 import { color } from '../lib/theme';
@@ -15,7 +14,6 @@ const web = Platform.OS === 'web';
 
 export default function RootLayout() {
   const loggedIn = !!useSession();
-  const { dark } = useDisplay();
 
   useEffect(() => {
     if (loggedIn) registerPush();
@@ -24,10 +22,9 @@ export default function RootLayout() {
 
   return (
     // ▶ FE 6번에 해당하는 부분: 웹 링크를 PC 화면으로 열어도 휴대폰 폭(최대 480px)으로 가운데 보이게
-    // ▶ FE 9번에 해당하는 부분: 다크 모드는 맨 바깥에 색 뒤집기 필터 (lib/display.ts)
-    <View style={[web ? st.webOuter : st.fill, applyDark(dark)]}>
+    <View style={web ? st.webOuter : st.fill}>
       <View style={web ? st.webPhone : st.fill}>
-        <StatusBar style={dark ? 'light' : 'dark'} />
+        <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Protected guard={loggedIn} redirectTo="/login">
             <Stack.Screen name="(main)" />

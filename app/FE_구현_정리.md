@@ -55,6 +55,39 @@
 - ☐ 실제 서버에 붙은 웹이 필요하면: 서버 공개 주소가 생긴 뒤 `npm run export:web` (`.env` 값으로 만들어짐)
 - ☐ 안드로이드 APK: 3번의 1·2를 한 뒤 `npm run build:apk` (preview 프로필, 실제 서버·Supabase 로그인) → 끝나면 나오는 링크로 내려받기
 
+## 점검 목록 반영 (2026-10-29)
+
+| 번호 | 내용 | 고친 것 | 파일 |
+|---|---|---|---|
+| 1 | 홈 이름이 "서경인"으로 고정 | 서버 `/home`에 `nickname`이 없으면 `/me`에서 이름을 가져옴(안 읽은 알림 점도 `/notifications`로). 회원가입 이름은 처음 설정에서 저장(fe/mvp4). 시연 계정 이름은 `seed_personas.py`가 넣음 | `app/(main)/index.tsx` |
+| 4 | 화면마다 글꼴이 다름 | 모든 글자·입력칸을 Noto Sans KR 하나로 (웹). 휴대폰은 기기 기본 글꼴 | `components/Text.tsx` |
+| 5 | 공지 상세 AI 요약 위치 | AI 핵심 요약을 [학사]·[장학] 공지 칸 안(제목 아래)으로 | `notices/[id].tsx` |
+| 7 | 장학금 두 버튼 동작이 다름 | 둘 다 '그 장학금만 보기'(다시 누르면 전체). 신청 완료를 고르면 아래 '신청 내역 자세히 보기' | `scholarships/index.tsx` |
+| 10-가 | 답 기다리다 나가면 답이 사라짐 | 대화를 화면 밖(`lib/chatStore.ts`)에 보관 → 나가도 요청이 끝까지 가고 돌아오면 답이 보임. 홈 대화창·채팅 화면이 같은 대화 | `lib/chatStore.ts`, `components/ChatPanel.tsx` |
+| 10-나 | "마감 알림 받기" 오류 | `POST /todos`에 `source` 빼고 보냄. **휴·복학 안내 '할 일로 등록'도 같은 오류**(source calendar)라 같이 고침 | `ChatPanel.tsx`, `office/leave.tsx` |
+| 11 | 다크 모드가 어색함 | 다크 모드 뺌 (색 뒤집기 방식이라 사진·그림자가 이상함). 다크용 색 묶음을 만들 때 다시 넣기 | `lib/display.ts`, `me/index.tsx` |
+| 12 | "서경 AI" → "프리비" | 홈 인사·도움 문구, 아래 질문 바, 로그인 안내, 대화 시작 문구, 학적 변경 안내, 공지 "프리비에게 묻기". 로고·대화 제목 PREVI와 앱 이름 "서경 AI 비서"는 그대로 | 여러 화면 |
+| 16 | AI 비서 설정의 알림 시간 중복 | "마감 알림 받을 시간" 뺌 (마이페이지 '마감 임박 및 브리핑 알림'만) | `me/assistant.tsx` |
+| 17 | 비밀번호 안내가 영어 | Supabase 영어 오류를 한국어로 바꿔 보여 줌(비밀번호 길이·쉬운 비밀번호·이미 가입·요청 많음·인증번호 만료 등). 비밀번호 최소 길이를 Supabase 기본값 **6자**로 맞춤(4자로 안내하면 서버가 영어로 거절) | `lib/auth.ts`, `signup.tsx`, `me/index.tsx` |
+| 18 | 개인정보 처리방침 정렬 | 가운데 정렬 알림창 → 항목 제목 + 한 줄에 하나씩 보이는 창 | `components/form.tsx`(PrivacySheet), `lib/constants.ts` |
+| 9 | 학과가 2개뿐 | 처음 설정·학적 정보 변경에 **'직접 입력'** 추가 (목록에 없는 학과는 졸업 요건 기준이 없어 '확인 필요'로 보일 수 있음) | `onboarding.tsx`, `me/status.tsx`, `lib/constants.ts` |
+| 6 | 마감 아닌 일에 "마감" | **안 고침(설명만)**: 배지는 할 일 `type`. 서버(`jobs/pipeline.py`)가 공지로 할 일을 만들 때 장학 공지 → `scholarship`(장학), **학사 공지 중 마감일이 있는 것 → 모두 `deadline`(마감)**. 직접·채팅으로 등록한 일도 기본 `deadline`. 바꾸려면 BE가 종류를 나누거나 FE가 이름을 '학사'로 |
+
+추가로 찾아 고친 오류 (통합본 서버와 비교)
+- 장학금 내역: 서버가 `applied_at`(신청일)을 안 줘서 **신청 완료 카드에서 화면이 멈춤** → 날짜 없으면 "신청 완료"만
+- 신청 내역: 서버가 장학금 이름을 안 줌 → 장학금 목록에서 이름을 찾아 붙임
+- 학사 일정·휴복학 안내: 서버가 `d_day`를 안 줌 → "D-undefined" 대신 앱에서 계산
+- 시간표 직접 입력 저장: 서버는 과목명·학점·시간만 받음(다른 칸이 있으면 400) → 그 셋만 보냄
+- 졸업 요건: 서버가 학점을 확정 못 하면 `null` → "null학점" 대신 "확인 필요", 요건 ❔
+- 채팅 답에 카드·출처·버튼 칸이 빠져도 멈추지 않게
+
+BE에 요청할 것 (앱은 대신 처리해 둠)
+- `GET /home`에 `nickname`, `unread_notifications` (API 명세에 있음)
+- `GET /notices/{id}`에 `body`(원문), `eligibility`, `todo_id`, `applied` → 없으면 공지 원문이 비고 '신청 완료 체크' 버튼이 안 나옴
+- `GET /scholarships`에 `applied_at`, `GET /scholarship-applications`에 `title`
+- `GET /calendar`에 `d_day`, `description` / `GET /timetable`·`/courses`에 `category`·`code`·`professor`·`room` (구분 배지·담당교수 표시용)
+- `POST /todos`에 `source.kind = "chat"·"calendar"`를 받을지 결정 (지금은 앱이 빼고 보냄)
+
 ## 항목별 정리
 
 ✅ 이번에 완성 · 🔧 이번에 고침/보강 · ✔ 원래 있던 것 (FE 표시만 붙임) · ❌ 요청으로 뺌

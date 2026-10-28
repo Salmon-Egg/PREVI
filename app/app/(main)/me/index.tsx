@@ -1,18 +1,18 @@
 // ▶ FE 9번에 해당하는 부분: M-3 마이페이지 (새 시안) — 프로필(졸업 진행 막대) · 알림 설정 · 화면 설정 · 계정 관리 · 서비스 정보
 // 알림: 알림 받기 / 마감 임박 및 브리핑 알림 시각 / 방해 금지 시간(notify.quiet) / AI 비서 설정(FE 11번)
-// 화면: 다크 모드·글자 크기 (이 기기에만 저장, lib/display.ts). 계정: 비밀번호 변경 / 로그아웃 / 계정 삭제(경고 두 번)
+// 화면: 글자 크기 (이 기기에만 저장, lib/display.ts). 다크 모드는 색이 어색해서 뺌. 계정: 비밀번호 변경 / 로그아웃 / 계정 삭제(경고 두 번)
 import { Feather } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Pressable, StyleSheet, Switch, View } from 'react-native';
 
-import { Input, Label, OptionSheet, Sheet } from '../../../components/form';
+import { Input, Label, OptionSheet, PrivacySheet, Sheet } from '../../../components/form';
 import { Text } from '../../../components/Text';
 import { Button, confirmAsk, Screen, showAlert, StateView } from '../../../components/ui';
 import { api, attempt, ApiError, useApi, useSubmit } from '../../../lib/api';
-import { changePassword } from '../../../lib/auth';
-import { BRIEF_TIMES, PRIVACY, QUIET_TIMES } from '../../../lib/constants';
+import { changePassword, PASSWORD_MIN } from '../../../lib/auth';
+import { BRIEF_TIMES, QUIET_TIMES } from '../../../lib/constants';
 import { setDisplay, useDisplay } from '../../../lib/display';
 import { logout } from '../../../lib/session';
 import { color, gradient, gradientBg } from '../../../lib/theme';
@@ -28,7 +28,7 @@ export default function MyPage() {
   const { data: me, error, loading, reload, setData } = useApi<Me>('/me');
   const grad = useApi<Graduation>('/graduation');
   const display = useDisplay();
-  const [picker, setPicker] = useState<null | 'time' | 'quiet' | 'password'>(null);
+  const [picker, setPicker] = useState<null | 'time' | 'quiet' | 'password' | 'privacy'>(null);
   const allOn = !!me && me.notify.notice && me.notify.deadline && me.notify.calendar && me.notify.chat;
 
   async function setNotify(notify: Partial<Me['notify']>) {
@@ -66,7 +66,7 @@ export default function MyPage() {
                   <Feather name="edit-2" size={18} color={color.primaryLight} />
                 </Pressable>
               </View>
-              {g && (
+              {g && g.earned_total !== null && (
                 <View style={st.bar}>
                   <View style={[st.barFill, { width: `${Math.min(100, (g.earned_total / g.required_total) * 100)}%` }]} />
                   <Text style={st.barText}>졸업까지 {g.earned_total} / {g.required_total} 학점</Text>
@@ -84,9 +84,6 @@ export default function MyPage() {
             </Section>
 
             <Section title="화면 설정">
-              <Item title="다크 모드" sub="어두운 테마를 적용합니다"
-                right={<Switch value={display.dark} trackColor={{ true: color.primaryLight, false: '#CBD5CF' }} thumbColor="#fff"
-                  onValueChange={(dark) => setDisplay({ dark })} />} />
               <Item title="글자 크기" right={(
                 <View style={st.sizeTrack}>
                   {(['표준', '크게'] as const).map((v) => {
@@ -108,7 +105,7 @@ export default function MyPage() {
             </Section>
 
             <Section title="서비스 정보">
-              <Item title="이용약관 및 개인정보 처리방침" onPress={() => showAlert('개인정보 처리방침', PRIVACY)} />
+              <Item title="이용약관 및 개인정보 처리방침" onPress={() => setPicker('privacy')} />
               <Item title="현재 앱 버전" right={<Text style={st.value}>v{Constants.expoConfig?.version ?? '1.0.0'}</Text>} />
             </Section>
 
@@ -120,6 +117,7 @@ export default function MyPage() {
         )}
       </StateView>
       <PasswordSheet visible={picker === 'password'} onClose={() => setPicker(null)} />
+      <PrivacySheet visible={picker === 'privacy'} onClose={() => setPicker(null)} />
     </Screen>
   );
 }
@@ -139,7 +137,7 @@ function PasswordSheet({ visible, onClose }: { visible: boolean; onClose: () => 
     onClose();
   };
   const save = () => run(async () => {
-    if (form.next.length < 4) return setMsg('새 비밀번호는 4자 이상이어야 해요.');
+    if (form.next.length < PASSWORD_MIN) return setMsg(`새 비밀번호는 ${PASSWORD_MIN}자 이상이어야 해요.`);
     if (form.next !== form.again) return setMsg('새 비밀번호가 서로 달라요.');
     try {
       await changePassword(form.current, form.next);
@@ -154,7 +152,7 @@ function PasswordSheet({ visible, onClose }: { visible: boolean; onClose: () => 
       <Label>지금 비밀번호</Label>
       <Input value={form.current} onChangeText={set('current')} secureTextEntry placeholder="지금 비밀번호" />
       <Label>새 비밀번호</Label>
-      <Input value={form.next} onChangeText={set('next')} secureTextEntry placeholder="4자 이상" />
+      <Input value={form.next} onChangeText={set('next')} secureTextEntry placeholder={`${PASSWORD_MIN}자 이상`} />
       <Input value={form.again} onChangeText={set('again')} secureTextEntry placeholder="새 비밀번호 한 번 더" />
       {!!msg && <Text style={st.error}>{msg}</Text>}
       <View style={{ height: 4 }} />

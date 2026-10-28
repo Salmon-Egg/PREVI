@@ -51,6 +51,12 @@ export function overall(terms: GradeTerm[]) {
   return { gpa: gpa === null ? null : Math.round(gpa * 100) / 100, earned };
 }
 
+/** 오늘부터 그 날짜까지 남은 날 (지났으면 음수). 서버가 d_day를 안 주는 학사일정에 씀 */
+export function ddayOf(date: string) {
+  const today = new Date();
+  return Math.round((new Date(date + 'T00:00:00').getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 864e5);
+}
+
 /** "2026.09.15" */
 export const dotDate = (iso: string) => iso.slice(0, 10).replaceAll('-', '.');
 

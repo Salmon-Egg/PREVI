@@ -1,4 +1,4 @@
-// ▶ FE 7번에 해당하는 부분: 회원가입 (새 시안) — 학번·이름·학교 이메일(인증번호 받기 → 확인)·비밀번호(4자 이상)
+// ▶ FE 7번에 해당하는 부분: 회원가입 (새 시안) — 학번·이름·학교 이메일(인증번호 받기 → 확인)·비밀번호(6자 이상, Supabase 기본 규칙)
 // 가입하면 바로 로그인되고, 내 정보가 없으니 처음 설정(M-2, FE 8번)부터 시작함
 import { router } from 'expo-router';
 import { useState } from 'react';
@@ -7,7 +7,7 @@ import { View } from 'react-native';
 import { AuthField, AuthFrame, AuthLink } from '../components/AuthFrame';
 import { Button, showAlert } from '../components/ui';
 import { useSubmit } from '../lib/api';
-import { checkEmail, sendSignupCode, signUp, verifySignupCode } from '../lib/auth';
+import { checkEmail, PASSWORD_MIN, sendSignupCode, signUp, verifySignupCode } from '../lib/auth';
 import { ApiError } from '../lib/errors';
 
 type Field = 'studentId' | 'name' | 'email' | 'code' | 'password';
@@ -55,7 +55,7 @@ export default function Signup() {
     if (!/^\d{6,10}$/.test(form.studentId.trim())) next.studentId = '학번을 숫자로 입력해 주세요.';
     if (!form.name.trim()) next.name = '이름을 입력해 주세요.';
     if (!verified) next.code = '이메일 인증을 마쳐 주세요.';
-    if (form.password.length < 4) next.password = '비밀번호는 4자 이상이어야 해요.';
+    if (form.password.length < PASSWORD_MIN) next.password = `비밀번호는 ${PASSWORD_MIN}자 이상이어야 해요.`;
     setErrors(next);
     if (Object.keys(next).length) return;
     try {
@@ -77,7 +77,7 @@ export default function Signup() {
       <AuthField label="인증번호" placeholder="6자리 숫자" value={form.code} onChangeText={set('code')} error={errors.code}
         keyboardType="number-pad" maxLength={6} editable={sent && !verified}
         action={{ label: verified ? '확인됨 ✓' : '확인', onPress: verify, disabled: busy || !sent || verified }} />
-      <AuthField label="비밀번호" placeholder="4자 이상 입력하세요" value={form.password} onChangeText={set('password')} error={errors.password}
+      <AuthField label="비밀번호" placeholder={`${PASSWORD_MIN}자 이상 입력하세요`} value={form.password} onChangeText={set('password')} error={errors.password}
         secureTextEntry autoComplete="new-password" />
       <View style={{ height: 4 }} />
       <Button label="가입하기" onPress={submit} disabled={busy} />

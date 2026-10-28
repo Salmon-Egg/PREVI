@@ -5,11 +5,11 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
-import { Confirm, Label, Segmented, Select } from '../../../components/form';
+import { Confirm, Input, Label, Segmented, Select } from '../../../components/form';
 import { Text } from '../../../components/Text';
 import { Button, Character, Screen, showAlert, StateView } from '../../../components/ui';
 import { api, ApiError, useApi, useSubmit } from '../../../lib/api';
-import { DEPTS, MINORS, STATUSES } from '../../../lib/constants';
+import { DEPT_OTHER, DEPTS, MINORS, STATUSES } from '../../../lib/constants';
 import { color } from '../../../lib/theme';
 import { STATUS_KO, type Me, type Status } from '../../../lib/types';
 
@@ -31,7 +31,7 @@ export default function StatusEdit() {
     if (!form) return;
     setAsking(false);
     try {
-      await api.put('/me', { ...form, minor: form.minor === '없음' ? null : form.minor });
+      await api.put('/me', { ...form, department: form.department.trim(), minor: form.minor === '없음' ? null : form.minor });
     } catch (e) {
       return showAlert('저장하지 못했어요', (e as ApiError).message);
     }
@@ -40,14 +40,22 @@ export default function StatusEdit() {
   });
 
   const set = (patch: Partial<Form>) => form && setEdit({ ...form, ...patch });
+  // 학과가 목록에 없으면(직접 입력한 학과) 처음부터 '직접 입력'으로 보여 줌
+  const [customDept, setCustomDept] = useState<boolean | null>(null);
+  const isCustom = customDept ?? (!!form && !DEPTS.includes(form.department));
+  const pickDept = (d: string) => {
+    setCustomDept(d === DEPT_OTHER);
+    set({ department: d === DEPT_OTHER ? '' : d });
+  };
 
   return (
-    <Screen title="학적 정보 변경" footer={form && <Button label="학적 정보 변경하기" disabled={busy} onPress={() => setAsking(true)} />}>
+    <Screen title="학적 정보 변경" footer={form && <Button label="학적 정보 변경하기" disabled={busy || !form.department.trim()} onPress={() => setAsking(true)} />}>
       <StateView loading={loading} error={error} empty={!form} onRetry={reload}>
         {form && (
           <>
             <Label required>주전공</Label>
-            <Select value={form.department} items={DEPTS} onChange={(department) => set({ department })} title="주전공" />
+            <Select value={isCustom ? DEPT_OTHER : form.department} items={[...DEPTS, DEPT_OTHER]} onChange={pickDept} title="주전공" />
+            {isCustom && <Input value={form.department} onChangeText={(department) => set({ department })} placeholder="학과 이름 (예: 경영학부)" />}
             <Label>복수 / 부전공 선택</Label>
             <Select value={form.minor} items={MINORS} onChange={(minor) => set({ minor })} title="복수 / 부전공" />
             <Label required>학적 상태 변경</Label>
@@ -62,8 +70,8 @@ export default function StatusEdit() {
               <Character size={130} />
               <Text style={st.hint}>
                 {form.status === 'leave'
-                  ? '휴학으로 바꾸면 PREVI가 복학 신청 기한을\n할 일로 챙겨 드려요'
-                  : '학적을 바꾸면 졸업 요건과 장학 자격을\nPREVI가 다시 계산해 드려요'}
+                  ? '휴학으로 바꾸면 프리비가 복학 신청 기한을\n할 일로 챙겨 드려요'
+                  : '학적을 바꾸면 졸업 요건과 장학 자격을\n프리비가 다시 계산해 드려요'}
               </Text>
             </View>
           </>
