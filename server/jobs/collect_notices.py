@@ -166,6 +166,13 @@ def main():
         else:
             stats = collect(school, None, args.pages, args.max_posts)
     print(stats)
+    if args.save:
+        import asyncio
+        from server.jobs.daily_check import run
+        result = asyncio.run(run(extract=True))
+        print(result)
+        if result['errors'] or (result['extraction'] or {}).get('failed'):
+            raise SystemExit(1)
     if stats["failed"]: raise SystemExit(1)
 
 
