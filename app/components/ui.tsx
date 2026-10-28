@@ -8,7 +8,6 @@ import { ActivityIndicator, Alert, Animated, Image, Linking, Modal, Platform, Pr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ApiError } from '../lib/api';
-import { useNoInvert } from '../lib/display';
 import { color, gradient, gradientBg, webBlur } from '../lib/theme';
 import type { ChatCard, Verdict } from '../lib/types';
 import { Text } from './Text';
@@ -253,18 +252,17 @@ export function ItemCard({ title, desc, icon, badge, meta, onPress }: {
 /** ▶ FE 12번에 해당하는 부분: 마스코트 PREVI(미어캣, assets/mascot.png 241×400 그대로).
  *  size = 키. face=true면 동그라미 안에 머리 쪽만 (대화창·질문 바) */
 export function Character({ size = 120, face = false }: { size?: number; face?: boolean }) {
-  const keep = useNoInvert(); // 다크 모드에서도 원래 색
   if (face) {
     const w = size * 1.2;
     return (
       <View style={{ width: size, height: size, borderRadius: size / 2, overflow: 'hidden', backgroundColor: '#F4EEE4' }}>
         <Image accessibilityLabel="마스코트 PREVI" source={require('../assets/mascot.png')}
-          style={[{ position: 'absolute', width: w, height: w * (400 / 241), left: (size - w) / 2, top: size * 0.08 }, keep]} />
+          style={[{ position: 'absolute', width: w, height: w * (400 / 241), left: (size - w) / 2, top: size * 0.08 }]} />
       </View>
     );
   }
   return <Image accessibilityLabel="마스코트 PREVI" source={require('../assets/mascot.png')} resizeMode="contain"
-    style={[{ width: size * (241 / 400), height: size }, keep]} />;
+    style={{ width: size * (241 / 400), height: size }} />;
 }
 
 /** ▶ FE 31번에 해당하는 부분: '답변 작성 중' 점 세 개 움직임 */

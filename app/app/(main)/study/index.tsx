@@ -28,8 +28,8 @@ export default function Study() {
           <>
             <Pressable onPress={() => router.push('/study/graduation')} style={[st.summary, gradientBg(gradient.primary, color.primary)]}>
               <Text style={st.sumLabel}>졸업까지 남은 학점</Text>
-              <Text style={st.big}>{g.remaining_total}학점</Text>
-              <Text style={st.sumLabel}>{g.earned_total} / {g.required_total} · 남은 요건 {g.requirements.filter((r) => !r.done).length}가지 ›</Text>
+              <Text style={st.big}>{g.remaining_total === null ? '확인 필요' : `${g.remaining_total}학점`}</Text>
+              <Text style={st.sumLabel}>{g.earned_total ?? '?'} / {g.required_total} · 남은 요건 {g.requirements.filter((r) => !r.done).length}가지 ›</Text>
             </Pressable>
             <View style={{ flexDirection: 'row', gap: 10 }}>
               {LINKS.map((l) => (

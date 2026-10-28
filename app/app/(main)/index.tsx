@@ -12,10 +12,9 @@ import { Text } from '../../components/Text';
 import { StateView } from '../../components/ui';
 import { useApi } from '../../lib/api';
 import { WEEKDAYS } from '../../lib/constants';
-import { useNoInvert } from '../../lib/display';
 import { onPushReceived } from '../../lib/push';
 import { color } from '../../lib/theme';
-import type { Home as HomeData, Todo } from '../../lib/types';
+import type { Home as HomeData, Me, Notification, Todo } from '../../lib/types';
 
 // ▶ FE 14번에 해당하는 부분: 메뉴 칸 3개 (2026-10-27 캠퍼스 생활·분실물 뺌, 세 칸이 같은 폭으로 나눠 씀)
 // status는 GET /home의 menu_status 키 (칸마다 비서 한 줄). 아이콘 색은 피그마 '01_홈화면_1'처럼 칸마다 다른 색 (tint: 아이콘 뒤 동그라미)
@@ -53,10 +52,14 @@ function dueText(t: Todo) {
 
 export default function Home() {
   const { data, error, loading, reload } = useApi<HomeData>('/home');
+  // 서버 /home에 이름·안 읽은 알림 수가 없으면 내 정보·알림 목록에서 채움 (없을 때만 부름)
+  const me = useApi<Me>(data && data.nickname === undefined ? '/me' : null);
+  const notes = useApi<Notification[]>(data && data.unread_notifications === undefined ? '/notifications' : null);
+  const nickname = data?.nickname || me.data?.nickname;
+  const unread = data?.unread_notifications ?? notes.data?.filter((n) => !n.read).length ?? 0;
   const [page, setPage] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
-  const keep = useNoInvert(); // 다크 모드에서도 배경 사진·캐릭터는 원래 색
   // 화면 폭(웹은 휴대폰 폭 최대 480)에 맞춰 피그마 비율로 위치 계산
   const W = Platform.OS === 'web' ? Math.min(screenWidth, 480) : screenWidth;
   const minHeight = W * FIG.cardTop - HERO_TOP + CARD_OVERLAP;
@@ -143,7 +146,7 @@ export default function Home() {
       {/* ▶ FE 12번에 해당하는 부분: 홈 전체 배경 그림(받은 그림 그대로). 스크롤해도 배경은 그 자리, 카드만 위로 지나감
           로고·인사말·미어캣은 그 위에 그림. 눌러도 이동하지 않음(채팅은 아래 바로) */}
       <Image accessibilityLabel="서경대학교 캠퍼스" source={require('../../assets/home-bg.jpg')} pointerEvents="none"
-        style={[st.bg, { width: bgW, height: bgW * BG_RATIO, left: (W - bgW) / 2 }, keep]} />
+        style={[st.bg, { width: bgW, height: bgW * BG_RATIO, left: (W - bgW) / 2 }]} />
       <SafeAreaView style={st.safeInner} edges={['top']}>
         <ScrollView contentContainerStyle={st.scroll}>
           {/* 머리: 로고 · 알림 · 내 정보 */}
@@ -159,7 +162,7 @@ export default function Home() {
             <View style={[st.row, { gap: 20 }]}>
               <Pressable accessibilityLabel="알림" onPress={() => router.push('/notifications')}>
                 <Feather name="bell" size={24} color={HOME_INK.icon} />
-                {!!data?.unread_notifications && <View style={st.dot} />}
+                {unread > 0 && <View style={st.dot} />}
               </Pressable>
               <Pressable accessibilityLabel="내 정보" onPress={() => router.push('/me')}>
                 <Feather name="user" size={24} color={HOME_INK.icon} />
@@ -175,12 +178,12 @@ export default function Home() {
                 <View style={[st.hero, { minHeight: hero.minHeight }]}>
                   {/* 인사말: 줄마다 그 글자 길이만큼만 흐림 판을 깔아 가독성을 높임 (흐림 판은 글자와 따로 둔 뒤판이라 글자는 또렷함) */}
                   <View style={[st.heroText, { paddingTop: hero.padTop }]}>
-                    <BlurBlock text={`안녕하세요,\n${data.nickname || '서경인'}님!`} style={[st.hello, { fontSize: fs.hello, lineHeight: fs.hello * 1.18 }]} />
-                    <BlurBlock text={'오늘도 서경 AI와\n편리한 캠퍼스 생활을 시작해요.'} style={[st.helloSub, { fontSize: fs.sub, lineHeight: fs.sub * 1.45 }]} />
+                    <BlurBlock text={`안녕하세요,\n${nickname || '서경인'}님!`} style={[st.hello, { fontSize: fs.hello, lineHeight: fs.hello * 1.18 }]} />
+                    <BlurBlock text={'오늘도 프리비와\n편리한 캠퍼스 생활을 시작해요.'} style={[st.helloSub, { fontSize: fs.sub, lineHeight: fs.sub * 1.45 }]} />
                   </View>
                   {/* 마스코트 PREVI(미어캣): 받은 그림 그대로 (투명 여백만 잘라 냄) */}
                   <Image accessibilityLabel="마스코트 PREVI" source={require('../../assets/mascot.png')} pointerEvents="none"
-                    resizeMode="contain" style={[st.mascot, hero.mascot, keep]} />
+                    resizeMode="contain" style={[st.mascot, hero.mascot]} />
                 </View>
 
                 {/* 오늘 챙길 일: 3개씩 넘겨 보기 */}
@@ -227,7 +230,7 @@ export default function Home() {
                 {/* 어떤 도움이 필요하신가요? 3칸 */}
                 <View style={st.helpBox}>
                   <Text style={st.helpTitle}>어떤 도움이 필요하신가요?</Text>
-                  <Text style={st.helpSub}>서경 AI가 빠르고 정확하게 도와드릴게요.</Text>
+                  <Text style={st.helpSub}>프리비가 빠르고 정확하게 도와드릴게요.</Text>
                   <View style={st.grid}>
                     {MENUS.map((m) => (
                       <Pressable key={m.label} style={st.tile} onPress={() => router.push(m.href)}>
@@ -246,7 +249,7 @@ export default function Home() {
         </ScrollView>
 
       </SafeAreaView>
-      {/* ▶ FE 15번에 해당하는 부분: 아래 '서경 AI에게 물어보세요!' 바 — 잡고 올리거나 ↑를 누르면 AI 대화창이 홈 위로 올라옴 */}
+      {/* ▶ FE 15번에 해당하는 부분: 아래 '프리비에게 물어보세요!' 바 — 잡고 올리거나 ↑를 누르면 AI 대화창이 홈 위로 올라옴 */}
       <ChatSheet />
     </View>
   );

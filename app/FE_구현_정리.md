@@ -15,6 +15,79 @@
 
 예시 데이터 모드라 서버 없이 모든 화면이 돌아갑니다. 로그인 화면의 '시연용 계정 보기'에서 가상 학생 4명 중 골라 로그인 (비밀번호 1234, 홍길동 20210004 = 4학년, 졸업 관련 할 일이 보임). 회원가입도 해 볼 수 있음 (인증번호는 메일 대신 화면에 알려 줌).
 
+## 실제 서버 연결·제출 준비 (2026-10-28)
+
+서버 기준 브랜치: **`통합본`** (10/28 23:57에 `be/demo-accounts`·`be/account-deletion`·`be/notice-pipeline` 합침, 앱 코드는 `fe/mvp3`와 같음). ☑ 끝 · ◐ 일부 · ☐ 남음
+
+### 1. 진짜 서버로 바꾸기 — ◐ (Supabase 두 칸만 채우면 끝)
+- ☑ `app/.env` 만듦 (깃허브에 안 올라감): `USE_MOCK=0`, `DEV_LOGIN=0`, `EMAIL_DOMAIN=skuniv.ac.kr`. `.env.example`도 같은 기본값으로
+- ☐ `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` 채우기 = 팀 단톡방 공지의 `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` (공개 키. `SUPABASE_SECRET_KEY`는 앱에 넣지 않기)
+- ☐ 휴대폰·APK로 볼 때 `EXPO_PUBLIC_API_URL`을 PC IP 또는 서버 공개 주소(BE B G7 Cloudflare Tunnel)로
+- 로그인 방식은 서버와 맞음: 시연 계정이 `학번@skuniv.ac.kr`(`server/scripts/create_demo_accounts.py`) → 앱에 학번만 쳐도 됨. **시연 계정 비밀번호는 무작위**라 만든 사람(조장)에게 받기 (`1234` 아님, `시연 로그인 정보.txt`는 깃에 안 올라감)
+- ☑ 서버와 안 맞던 것 앱에서 고침
+  - 처음 쓰는 학생: 서버는 `404 PROFILE_NOT_FOUND`, 명세·앱은 `NO_PROFILE` → 앱이 둘 다 받아서 처음 설정으로 보냄 (`app/(main)/_layout.tsx`)
+  - 회원가입 때 적은 이름이 내 정보에 안 들어감 → 처음 설정 저장할 때 `nickname`으로 같이 보냄 (`onboarding.tsx`, `lib/auth.ts`의 `signupName`)
+
+### 2. 화면 전체 점검 — ☐ (BE A 1번이 끝나야 함)
+시연 계정으로 로그인 → 아래 순서로 서버 응답과 화면 비교. 앱이 부르는 주소 26개가 `통합본` 서버에 모두 있음 (계정 삭제 `DELETE /me`도 합쳐짐, 204로 응답 → 앱 처리 OK)
+
+| 화면 | 확인할 것 | 미리 본 서버 차이 |
+|---|---|---|
+| 홈 | 인사말 이름, 종 빨간 점, 오늘 챙길 일 9개·다음 일정, 메뉴 칸 한 줄 3개 | **`GET /home`에 `nickname`·`unread_notifications`가 없음**(명세에는 있음) → 지금은 "서경인님", 빨간 점 안 뜸. BE A에 요청 |
+| 할 일 | 목록·필터·상세·완료 → 완료 기록 | |
+| 내 학업 | 졸업 남은 학점·영역별 과목, 시간표 추가·겹침 막기·저장, 성적 추가·수정·삭제 → 졸업 학점 다시 계산 | 성적 `area` 4가지 값 (아래 조장 확인 표) |
+| 장학 | 판정 배지, 장학금 안내 → 신청 완료 체크 → 신청 내역 | |
+| 채팅 | 추천 질문, 답변 카드·출처·버튼, 할 일 등록, 대화 기록 | |
+| 마이 | 학적 변경(휴학 → 휴·복학 안내), 알림 시각·방해 금지 시간 저장, 비밀번호 변경, 로그아웃, 계정 삭제 | 계정 삭제는 서버 `.env`에 `SUPABASE_SECRET_KEY`가 있어야 됨 (없으면 503) |
+
+### 3. 푸시 받기 — ☐ (Expo 계정·안드로이드 폰 필요)
+1. `cd app` → `npx eas-cli@latest login` → `npx eas-cli@latest init` (projectId가 `app.json`에 들어감. 없으면 앱이 푸시 등록을 건너뜀)
+2. EAS에 값 넣기 (클라우드 빌드는 `app/.env`를 안 읽음 → `eas.json`의 `environment`가 이 값을 씀):
+   `npx eas-cli@latest env:set --name EXPO_PUBLIC_SUPABASE_URL --value <주소> --environment development --visibility plaintext`
+   (같은 식으로 `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL`. APK용은 `--environment preview`로 한 번 더)
+3. `npm run build:dev` → 폰에 설치 → 로그인하면 알림 권한 → 토큰이 `PUT /me {push_token}`으로 저장되는지 (Supabase `profiles` 표)
+4. 서버 `.env`의 `PUSH_ENABLED=true`, `EXPO_ACCESS_TOKEN` (BE) → 알림을 눌러 공지·할 일·학사일정 화면으로 가는지
+- 서버 푸시 모양은 앱과 맞음: `data: { type, title, target_id }`, 종류 notice·deadline·calendar → 공지·할 일·학사일정 화면. 방해 금지 시간(`notify_quiet`)·알림 시각(`notify_time`)도 서버가 지킴 (`server/jobs/pipeline.py`)
+- 참고: 팀 결정(10/27)으로 '답변 도착' 푸시는 안 보냄. 앱의 `chat` 알림 처리·M-5 '답변 도착' 켜기는 조장 확인 후 뺄지 정하기
+
+### 4. 제출용 빌드 — ◐
+- ☑ 웹 시연 링크: https://claude.ai/artifact/KSy1QoVa8q13N759se35Pp (예시 데이터 모드라 서버 없이 항상 열림, 버전 42 = `fe/mvp3`)
+- ☐ 실제 서버에 붙은 웹이 필요하면: 서버 공개 주소가 생긴 뒤 `npm run export:web` (`.env` 값으로 만들어짐)
+- ☐ 안드로이드 APK: 3번의 1·2를 한 뒤 `npm run build:apk` (preview 프로필, 실제 서버·Supabase 로그인) → 끝나면 나오는 링크로 내려받기
+
+## 점검 목록 반영 (2026-10-29)
+
+| 번호 | 내용 | 고친 것 | 파일 |
+|---|---|---|---|
+| 1 | 홈 이름이 "서경인"으로 고정 | 서버 `/home`에 `nickname`이 없으면 `/me`에서 이름을 가져옴(안 읽은 알림 점도 `/notifications`로). 회원가입 이름은 처음 설정에서 저장(fe/mvp4). 시연 계정 이름은 `seed_personas.py`가 넣음 | `app/(main)/index.tsx` |
+| 4 | 화면마다 글꼴이 다름 | 모든 글자·입력칸을 Noto Sans KR 하나로 (웹). 휴대폰은 기기 기본 글꼴 | `components/Text.tsx` |
+| 5 | 공지 상세 AI 요약 위치 | AI 핵심 요약을 [학사]·[장학] 공지 칸 안(제목 아래)으로 | `notices/[id].tsx` |
+| 7 | 장학금 두 버튼 동작이 다름 | 둘 다 '그 장학금만 보기'(다시 누르면 전체). 신청 완료를 고르면 아래 '신청 내역 자세히 보기' | `scholarships/index.tsx` |
+| 10-가 | 답 기다리다 나가면 답이 사라짐 | 대화를 화면 밖(`lib/chatStore.ts`)에 보관 → 나가도 요청이 끝까지 가고 돌아오면 답이 보임. 홈 대화창·채팅 화면이 같은 대화 | `lib/chatStore.ts`, `components/ChatPanel.tsx` |
+| 10-나 | "마감 알림 받기" 오류 | `POST /todos`에 `source` 빼고 보냄. **휴·복학 안내 '할 일로 등록'도 같은 오류**(source calendar)라 같이 고침 | `ChatPanel.tsx`, `office/leave.tsx` |
+| 11 | 다크 모드가 어색함 | 다크 모드 뺌 (색 뒤집기 방식이라 사진·그림자가 이상함). 다크용 색 묶음을 만들 때 다시 넣기 | `lib/display.ts`, `me/index.tsx` |
+| 12 | "서경 AI" → "프리비" | 홈 인사·도움 문구, 아래 질문 바, 로그인 안내, 대화 시작 문구, 학적 변경 안내, 공지 "프리비에게 묻기". 로고·대화 제목 PREVI와 앱 이름 "서경 AI 비서"는 그대로 | 여러 화면 |
+| 16 | AI 비서 설정의 알림 시간 중복 | "마감 알림 받을 시간" 뺌 (마이페이지 '마감 임박 및 브리핑 알림'만) | `me/assistant.tsx` |
+| 17 | 비밀번호 안내가 영어 | Supabase 영어 오류를 한국어로 바꿔 보여 줌(비밀번호 길이·쉬운 비밀번호·이미 가입·요청 많음·인증번호 만료 등). 비밀번호 최소 길이를 Supabase 기본값 **6자**로 맞춤(4자로 안내하면 서버가 영어로 거절) | `lib/auth.ts`, `signup.tsx`, `me/index.tsx` |
+| 18 | 개인정보 처리방침 정렬 | 가운데 정렬 알림창 → 항목 제목 + 한 줄에 하나씩 보이는 창 | `components/form.tsx`(PrivacySheet), `lib/constants.ts` |
+| 9 | 학과가 2개뿐 | 처음 설정·학적 정보 변경에 **'직접 입력'** 추가 (목록에 없는 학과는 졸업 요건 기준이 없어 '확인 필요'로 보일 수 있음) | `onboarding.tsx`, `me/status.tsx`, `lib/constants.ts` |
+| 6 | 마감 아닌 일에 "마감" | **안 고침(설명만)**: 배지는 할 일 `type`. 서버(`jobs/pipeline.py`)가 공지로 할 일을 만들 때 장학 공지 → `scholarship`(장학), **학사 공지 중 마감일이 있는 것 → 모두 `deadline`(마감)**. 직접·채팅으로 등록한 일도 기본 `deadline`. 바꾸려면 BE가 종류를 나누거나 FE가 이름을 '학사'로 |
+
+추가로 찾아 고친 오류 (통합본 서버와 비교)
+- 장학금 내역: 서버가 `applied_at`(신청일)을 안 줘서 **신청 완료 카드에서 화면이 멈춤** → 날짜 없으면 "신청 완료"만
+- 신청 내역: 서버가 장학금 이름을 안 줌 → 장학금 목록에서 이름을 찾아 붙임
+- 학사 일정·휴복학 안내: 서버가 `d_day`를 안 줌 → "D-undefined" 대신 앱에서 계산
+- 시간표 직접 입력 저장: 서버는 과목명·학점·시간만 받음(다른 칸이 있으면 400) → 그 셋만 보냄
+- 졸업 요건: 서버가 학점을 확정 못 하면 `null` → "null학점" 대신 "확인 필요", 요건 ❔
+- 채팅 답에 카드·출처·버튼 칸이 빠져도 멈추지 않게
+
+BE에 요청할 것 (앱은 대신 처리해 둠)
+- `GET /home`에 `nickname`, `unread_notifications` (API 명세에 있음)
+- `GET /notices/{id}`에 `body`(원문), `eligibility`, `todo_id`, `applied` → 없으면 공지 원문이 비고 '신청 완료 체크' 버튼이 안 나옴
+- `GET /scholarships`에 `applied_at`, `GET /scholarship-applications`에 `title`
+- `GET /calendar`에 `d_day`, `description` / `GET /timetable`·`/courses`에 `category`·`code`·`professor`·`room` (구분 배지·담당교수 표시용)
+- `POST /todos`에 `source.kind = "chat"·"calendar"`를 받을지 결정 (지금은 앱이 빼고 보냄)
+
 ## 항목별 정리
 
 ✅ 이번에 완성 · 🔧 이번에 고침/보강 · ✔ 원래 있던 것 (FE 표시만 붙임) · ❌ 요청으로 뺌
@@ -69,7 +142,7 @@
 | 대화 분류·미리보기 | `GET /conversations` 항목에 `category`, `preview` (없으면 앱이 제목으로 분류 추측) | FE 34 |
 | 학적 맥락 | `POST /chat`의 `context.kind`에 `"status"` 추가 | FE 29·32 |
 | 답변 평가 | 👍👎를 서버에 저장하려면 `PATCH /messages/{id} { feedback }` (지금은 앱 안에서만 표시) | FE 31 |
-| 로그인 방식 | 학번 + 비밀번호. 실제 모드는 Supabase `signInWithPassword`에 `학번@EMAIL_DOMAIN`을 넣음 → **학교 이메일이 학번@도메인이 아니면 학번→이메일 찾는 API 필요** | FE 7 |
+| 로그인 방식 | 학번 + 비밀번호. 실제 모드는 Supabase `signInWithPassword`에 `학번@EMAIL_DOMAIN`을 넣음 → 서버 시연 계정도 `학번@skuniv.ac.kr`이라 맞음 (실제 학생 이메일이 다른 꼴이면 학번→이메일 찾는 API 필요) | FE 7 |
 | 회원가입 | Supabase 인증번호 메일(`signInWithOtp` → `verifyOtp`) 후 `updateUser({ password, data: { student_id, name } })`. 서버가 `student_id`·`name`을 내 정보로 옮겨야 함 | FE 7 |
 | 방해 금지 시간 | `PUT /me`의 `notify.quiet = "22:00-07:00"` (빈 값 = 끔). 서버가 이 시간에는 푸시를 보내지 않아야 함 | FE 9 |
 
@@ -79,7 +152,7 @@
 
 - **푸시(FE 5·33)**: 웹·Expo Go에서는 푸시가 오지 않음. `npx eas-cli@latest init`(Expo 계정 필요)으로 projectId를 만든 뒤 `npm run build:dev`로 개발 빌드를 깔아서 확인
 - **APK(FE 6)**: `npm run build:apk` (Expo 계정 로그인 필요)
-- **실제 로그인·회원가입(FE 7)**: Supabase 주소·키·`EMAIL_DOMAIN`을 `.env`에 넣어야 확인 가능 (예시 데이터 모드로만 확인함)
+- **실제 로그인·회원가입(FE 7)**: 위 '실제 서버 연결·제출 준비' 1·2번 (Supabase 두 칸 채운 뒤 확인)
 - **다크 모드(FE 9)**: 웹·안드로이드는 화면 색을 뒤집는 방식으로 적용. **iOS 앱에는 적용 안 됨**(RN filter 미지원) → iOS까지 하려면 다크용 색 묶음을 따로 만들어야 함
 - **실제 서버 연결**: 모든 화면은 예시 데이터로만 확인함. BE API가 나오면 `.env`에서 `EXPO_PUBLIC_USE_MOCK=0`으로 한 번씩 확인
 

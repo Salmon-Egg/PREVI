@@ -21,11 +21,11 @@ export default function GraduationDetail() {
           <>
             <Card style={{ backgroundColor: color.primarySoft, borderWidth: 0 }}>
               <Sub>졸업까지 남은 학점</Sub>
-              <Text style={{ fontSize: 28, fontWeight: '800', color: color.primary }}>{data.remaining_total}학점</Text>
+              <Text style={{ fontSize: 28, fontWeight: '800', color: color.primary }}>{data.remaining_total === null ? '확인 필요' : `${data.remaining_total}학점`}</Text>
               <View style={{ height: 10, borderRadius: 5, backgroundColor: '#CFE3D7', overflow: 'hidden' }}>
-                <View style={{ width: `${Math.min(100, (data.earned_total / data.required_total) * 100)}%`, height: 10, backgroundColor: color.primary }} />
+                <View style={{ width: `${Math.min(100, ((data.earned_total ?? 0) / data.required_total) * 100)}%`, height: 10, backgroundColor: color.primary }} />
               </View>
-              <Sub>{data.earned_total} / {data.required_total}학점 이수</Sub>
+              <Sub>{data.earned_total === null ? '이수 학점은 학교 확인이 필요해요 (같은 과목 중복 등)' : `${data.earned_total} / ${data.required_total}학점 이수`}</Sub>
             </Card>
 
             <Title>영역별 이수 현황</Title>
@@ -36,7 +36,7 @@ export default function GraduationDetail() {
             {data.requirements.map((r) => (
               <Card key={r.name} onPress={r.todo_id ? () => router.push(`/todos/${r.todo_id}`) : undefined}>
                 <Row>
-                  <Text style={{ fontSize: 18 }}>{r.done ? '✅' : '⬜'}</Text>
+                  <Text style={{ fontSize: 18 }}>{r.done ? '✅' : r.done === null ? '❔' : '⬜'}</Text>
                   <Body style={{ flex: 1 }}>{r.name}</Body>
                   {r.todo_id && <Sub>할 일 ›</Sub>}
                 </Row>

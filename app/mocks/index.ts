@@ -354,7 +354,7 @@ function answer(q: string, ctx: { kind: string; id: number } | null): Reply {
     return {
       text: `${me.nickname}님, 졸업 요건을 확인해 드릴게요! 현재 ${g.earned_total}학점을 이수했고, 졸업까지 ${g.remaining_total}학점이 남았어요. 졸업작품 심사 신청이 오늘 마감이에요.`,
       cards: [{ image_url: null, title: '졸업 요건 이수 현황', lines: [`${g.remaining_total}학점 남음`, `${g.earned_total} / ${g.required_total}학점`,
-        ...g.areas.map((a) => `${a.earned >= a.required ? '✓' : '○'} ${a.name} ${a.earned} / ${a.required}`)], link: null }],
+        ...g.areas.map((a) => `${(a.earned ?? 0) >= a.required ? '✓' : '○'} ${a.name} ${a.earned} / ${a.required}`)], link: null }],
       sources: [HAKSA],
       actions: [
         { type: 'open_screen', label: '졸업작품 심사 신청하기', payload: { screen: 'T-2', id: 31 } },
@@ -487,7 +487,7 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
     case 'GET /graduation': return graduation();
     case 'GET /grades': return gradeTerms();
     case 'POST /grades': case 'PUT /grades/:id': case 'DELETE /grades/:id': {
-      const before = graduation().areas.filter((a) => a.earned >= a.required).length;
+      const before = graduation().areas.filter((a) => (a.earned ?? 0) >= a.required).length;
       let item: GradeItem | null = null;
       if (method === 'POST') gradeItems.push((item = { id: gradeSeq++, ...body, area: areaOf(body.area) }));
       else {
@@ -498,7 +498,7 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
       }
       const g = graduation();
       return { item, recalculated: { remaining_total: g.remaining_total, new_eligible_scholarships: 0,
-        completed_areas: g.areas.filter((a) => a.earned >= a.required).length - before } };
+        completed_areas: g.areas.filter((a) => (a.earned ?? 0) >= a.required).length - before } };
     }
     case 'GET /courses': {
       // 과목명 또는 과목코드로 찾기

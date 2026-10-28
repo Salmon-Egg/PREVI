@@ -1,11 +1,10 @@
-// ▶ FE 11번에 해당하는 부분: M-5 AI 비서 설정 — 비서가 볼 정보, 알림 종류별 켜기·끄기, 알림 시간
+// ▶ FE 11번에 해당하는 부분: M-5 AI 비서 설정 — 비서가 볼 정보, 알림 종류별 켜기·끄기
+// (알림 받을 시각은 마이페이지 '마감 임박 및 브리핑 알림'과 겹쳐서 여기서는 뺌)
 
-import { Pressable, Switch, View } from 'react-native';
+import { Switch, View } from 'react-native';
 
-import { Text } from '../../../components/Text';
 import { Body, Card, Row, Screen, StateView, Sub, Title } from '../../../components/ui';
 import { api, attempt, useApi } from '../../../lib/api';
-import { BRIEF_TIMES } from '../../../lib/constants';
 import { color } from '../../../lib/theme';
 import { DEFAULT_SCOPE, type AssistantScope, type Me } from '../../../lib/types';
 
@@ -63,14 +62,6 @@ export default function AssistantSettings() {
                 </Row>
               </Card>
             ))}
-            <Title>마감 알림 받을 시간</Title>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              {BRIEF_TIMES.map((t) => (
-                <Pressable key={t} onPress={() => update({ time: t })} style={{ paddingVertical: 8, paddingHorizontal: 12, borderRadius: 10, backgroundColor: me.notify.time === t ? color.primary : '#fff', borderWidth: 1, borderColor: me.notify.time === t ? color.primary : color.field }}>
-                  <Text style={{ color: me.notify.time === t ? '#fff' : color.ink, fontWeight: '700' }}>{t}</Text>
-                </Pressable>
-              ))}
-            </View>
           </>
         )}
       </StateView>

@@ -4,6 +4,7 @@ import { Feather } from '@expo/vector-icons';
 import { useState, type ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View, type TextInputProps } from 'react-native';
 
+import { PRIVACY } from '../lib/constants';
 import { color, gradient, gradientBg } from '../lib/theme';
 import { Text, TextInput } from './Text';
 import { Button } from './ui';
@@ -125,6 +126,22 @@ export function Confirm({ visible, title, children, okLabel, onOk, onCancel }: {
   );
 }
 
+/** 개인정보 수집·이용 안내: 항목 제목 + 한 줄에 하나씩 (로그인 아래 문구, 마이페이지 이용약관) */
+export function PrivacySheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+  return (
+    <Sheet visible={visible} onClose={onClose} title="개인정보 수집·이용 안내">
+      {PRIVACY.map((sec) => (
+        <View key={sec.title} style={f.privacy}>
+          <Text style={f.privacyTitle}>{sec.title}</Text>
+          {sec.lines.map((l) => <Text key={l} style={f.privacyLine}>· {l}</Text>)}
+        </View>
+      ))}
+      <View style={{ height: 6 }} />
+      <Button label="확인" onPress={onClose} />
+    </Sheet>
+  );
+}
+
 export const f = StyleSheet.create({
   label: { fontSize: 13, fontWeight: '800', color: color.title, marginTop: 6 },
   box: { backgroundColor: '#fff', borderRadius: 12, borderWidth: 1.5, borderColor: color.field },
@@ -145,4 +162,7 @@ export const f = StyleSheet.create({
   sheetSub: { fontSize: 13, color: color.inkSub, marginTop: 4 },
   close: { width: 34, height: 34, borderRadius: 17, backgroundColor: '#E3F2EA', alignItems: 'center', justifyContent: 'center' },
   confirmTitle: { fontSize: 18, fontWeight: '800', color: color.ink, textAlign: 'center' },
+  privacy: { gap: 4, paddingVertical: 8, borderTopWidth: 1, borderColor: color.line },
+  privacyTitle: { fontSize: 14, fontWeight: '800', color: color.title },
+  privacyLine: { fontSize: 14, color: color.ink, lineHeight: 21 },
 });

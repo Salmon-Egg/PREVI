@@ -8,8 +8,9 @@ import { api, ApiError } from '../../lib/api';
 
 export default function MainLayout() {
   useEffect(() => {
+    // 처음 쓰는 학생: API 명세는 NO_PROFILE, 서버(server/routes/me.py)는 PROFILE_NOT_FOUND → 둘 다 받음
     api.get('/me').catch((e: ApiError) => {
-      if (e.code === 'NO_PROFILE') router.replace('/onboarding');
+      if (e.code === 'NO_PROFILE' || e.code === 'PROFILE_NOT_FOUND') router.replace('/onboarding');
     });
   }, []);
 

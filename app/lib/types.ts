@@ -47,9 +47,10 @@ export type TodoDetail = Todo & {
   done_at: string | null;
 };
 
+// nickname·unread_notifications: API 명세에는 있지만 서버(GET /home)가 아직 안 줌 → 홈이 /me·/notifications에서 채움
 export type Home = {
-  nickname: string;
-  unread_notifications: number;
+  nickname?: string;
+  unread_notifications?: number;
   today_todos: Todo[];
   next_event: { id: number; title: string; start_date: string; d_day: number } | null;
   menu_status: { study: string; scholarship: string; admin: string };
@@ -81,10 +82,11 @@ export type Scholarship = {
   verdict: Verdict;
   reasons: string[];
   applied: boolean;
-  applied_at: string | null;
+  applied_at?: string | null; // 서버(GET /scholarships)는 안 줌
 };
 
-export type Application = { notice_id: number; title: string; applied_at: string };
+// 서버(GET /scholarship-applications)는 title을 안 줌 → 앱이 장학금 목록에서 이름을 찾음
+export type Application = { notice_id: number; title?: string; applied_at: string };
 
 export type CalendarEvent = {
   id: number;
@@ -95,13 +97,14 @@ export type CalendarEvent = {
   d_day: number;
 };
 
+// earned_total·remaining_total·areas[].earned가 null = 서버가 확정 못 함(같은 과목 중복 등) → '확인 필요'. requirements[].done이 null도 '확인 필요'
 export type Graduation = {
   required_total: number;
-  earned_total: number;
-  remaining_total: number;
+  earned_total: number | null;
+  remaining_total: number | null;
   // ▶ FE 20번·21번: courses는 그 영역에서 들은 과목과 성적 (영역 카드를 펼치면 보임). API 명세에 없는 새 필드라 조장 확인 필요
-  areas: { name: string; required: number; earned: number; courses?: AreaCourse[] }[];
-  requirements: { name: string; done: boolean; todo_id?: number }[];
+  areas: { name: string; required: number; earned: number | null; courses?: AreaCourse[] }[];
+  requirements: { name: string; done: boolean | null; todo_id?: number }[];
 };
 
 /** 졸업 영역에 들어간 과목 하나 (학기 "4-1", 성적 A+~F·P) */
