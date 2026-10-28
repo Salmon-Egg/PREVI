@@ -3,11 +3,12 @@ import os
 from typing import Literal
 
 import httpx
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from server.auth import AuthenticatedUser, bearer, require_user
 from server.errors import APIError
+from starlette.responses import Response
 
 router = APIRouter(tags=["내 정보"])
 
