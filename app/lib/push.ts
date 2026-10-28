@@ -9,6 +9,7 @@ import { router, type Href } from 'expo-router';
 import { Platform } from 'react-native';
 
 import { api } from './api';
+import { loadChat, openChatSheet } from './chatStore';
 import type { NotifyType } from './types';
 
 // Expo Go·웹에서는 불러오기만 해도 경고창이 떠서 아예 안 불러옴
@@ -21,8 +22,8 @@ if (!off) Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldPlaySound: true, shouldSetBadge: false, shouldShowBanner: true, shouldShowList: true }),
 });
 
-/** 알림 종류 → 열 화면 (API 명세 '알림' 표) */
-export function screenFor(type: NotifyType, targetId: number | null): Href {
+/** 알림 종류 → 열 화면 (API 명세 '알림' 표). chat은 openNotification이 대화창으로 처리 */
+function screenFor(type: Exclude<NotifyType, 'chat'>, targetId: number | null): Href {
   switch (type) {
     case 'notice':
       return targetId == null ? '/office' : `/notices/${targetId}`;
@@ -30,9 +31,15 @@ export function screenFor(type: NotifyType, targetId: number | null): Href {
       return targetId == null ? '/todos' : `/todos/${targetId}`;
     case 'calendar':
       return '/office/calendar';
-    case 'chat':
-      return targetId == null ? '/chat' : { pathname: '/chat', params: { conversation: String(targetId) } };
   }
+}
+
+/** 알림(푸시·알림 센터)을 누르면 그 화면으로. '답변 도착'(chat)은 홈의 대화창에 그 대화를 엶 */
+export function openNotification(type: NotifyType, targetId: number | null) {
+  if (type !== 'chat') return router.push(screenFor(type, targetId));
+  router.navigate('/');
+  if (targetId != null) loadChat(targetId);
+  openChatSheet();
 }
 
 export async function registerPush() {
@@ -70,7 +77,7 @@ type PushData = { type?: NotifyType; target_id?: number | null };
 export function listenPushTaps() {
   if (off) return () => {};
   const open = (d: PushData | undefined) => {
-    if (d?.type) router.push(screenFor(d.type, d.target_id ?? null));
+    if (d?.type) openNotification(d.type, d.target_id ?? null);
   };
   // 앱이 꺼져 있을 때 알림을 눌러서 켠 경우: 마지막으로 누른 알림을 한 번만 처리
   const last = Notifications.getLastNotificationResponse();

@@ -1,12 +1,11 @@
 // ▶ FE 19번에 해당하는 부분: T-4 알림 센터 — 푸시로 받은 알림 목록, 읽음 처리, 누르면 대상 화면
 import { Feather } from '@expo/vector-icons';
-import { router } from 'expo-router';
 import { Pressable, View } from 'react-native';
 
 import { Text } from '../../components/Text';
 import { Card, Row, Screen, StateView, Sub } from '../../components/ui';
 import { api, useApi } from '../../lib/api';
-import { screenFor } from '../../lib/push';
+import { openNotification } from '../../lib/push';
 import { color } from '../../lib/theme';
 import type { Notification, NotifyType } from '../../lib/types';
 
@@ -22,7 +21,7 @@ export default function Notifications() {
       api.patch(`/notifications/${n.id}`, { read: true });
       setData((list) => list?.map((x) => (x.id === n.id ? { ...x, read: true } : x)) ?? null);
     }
-    router.push(screenFor(n.type, n.target_id));
+    openNotification(n.type, n.target_id);
   }
 
   // 모두 읽음: 알림마다 PATCH (일괄 API가 없어서)

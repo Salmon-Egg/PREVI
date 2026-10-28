@@ -7,6 +7,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../../components/Text';
 import { Body, Button, Card, Row, Screen, showAlert, StateView, Sub, Title } from '../../../components/ui';
 import { api, attempt, useApi } from '../../../lib/api';
+import { askChat } from '../../../lib/chatStore';
 import { ddayOf } from '../../../lib/format';
 import { color } from '../../../lib/theme';
 import { STATUS_KO, type CalendarEvent, type Me, type Scholarship } from '../../../lib/types';
@@ -35,7 +36,7 @@ export default function Leave() {
   }
 
   // ▶ FE 32번에 해당하는 부분: A-3에서 넘어온 맥락(학적)으로 대화 시작
-  const ask = (q: string) => router.push({ pathname: '/chat', params: { q, contextKind: 'status', contextId: '0' } });
+  const ask = (q: string) => askChat(q, { kind: 'status', id: 0 });
 
   return (
     <Screen title="휴·복학 안내">

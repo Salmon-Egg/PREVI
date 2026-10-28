@@ -1,17 +1,17 @@
-// AI 대화 본문. 채팅 화면(app/(main)/chat/index.tsx)과 홈의 끌어 올리는 대화창(FE 15번)이 같이 씀
+// AI 대화 본문. 모든 화면 위에 있는 끌어 올리는 대화창(ChatSheet, FE 15번) 안에 들어감
 // ▶ FE 30번에 해당하는 부분: H-1 채팅 시작 (마스코트 PREVI + 추천 질문, 피그마 06_ai_chat ①)
 // ▶ FE 31번에 해당하는 부분: H-2 답변 — 말풍선, 답변 카드(졸업 요건·공지 요약), 출처, 다음 행동 버튼, '답변 작성 중' (시안 ②)
-// ▶ FE 32번에 해당하는 부분: 다른 화면에서 넘어올 때 q(바로 보낼 질문), contextKind·contextId(할 일·공지·학적 맥락)
-// ▶ FE 33번에 해당하는 부분: 답을 기다리다 앱을 나가면 서버가 '답변 도착' 푸시(type=chat) → 누르면 conversation으로 이 화면이 열림
+// ▶ FE 32번에 해당하는 부분: 다른 화면에서 맥락(할 일·공지·학적)과 함께 묻기 → lib/chatStore.ts askChat
+// ▶ FE 33번에 해당하는 부분: '답변 도착' 푸시(type=chat)를 누르면 그 대화를 불러와 대화창이 열림 (lib/push.ts)
 import { Feather } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
-import { useEffect, useRef, useState, type ComponentRef } from 'react';
+import { useRef, useState, type ComponentRef } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { Text, TextInput } from './Text';
 import { Character, InfoCard, openLink, showAlert, Sources, TypingDots } from './ui';
 import { api, ApiError } from '../lib/api';
-import { loadChat, newChat, sendChat, useChat, type ChatContext } from '../lib/chatStore';
+import { closeChatSheet, sendChat, useChat } from '../lib/chatStore';
 import { color } from '../lib/theme';
 import type { ChatAction, Message } from '../lib/types';
 
@@ -39,34 +39,17 @@ const SCREENS: Record<string, (id?: number) => Href> = {
   'A-3': () => '/office/leave',
 };
 
-/** q: 열자마자 보낼 질문(새 대화로), context: 할 일·공지·학적 맥락(첫 질문에만), conversation: 이어서 볼 이전 대화 번호
- *  keyboardOffset: 위에 머리줄이 있으면 그 높이 (iOS 키보드가 입력창을 가리지 않게)
- *  대화 내용은 lib/chatStore.ts에 있어서, 답을 기다리다 화면을 나갔다 와도 그대로 보임 */
 /** 서버가 빈 칸(cards·sources·actions)을 빼고 줘도 그리다 멈추지 않게 */
 const filled = (m: Message): Message => ({ ...m, cards: m.cards ?? [], sources: m.sources ?? [], actions: m.actions ?? [] });
 
-export function ChatPanel({ q, context = null, conversation, keyboardOffset = 90 }: {
-  q?: string; context?: ChatContext; conversation?: string; keyboardOffset?: number;
-}) {
+/** keyboardOffset: 위에 머리줄이 있으면 그 높이 (iOS 키보드가 입력창을 가리지 않게).
+ *  대화 내용은 lib/chatStore.ts에 있어서, 답을 기다리다 창을 내렸다 올려도 그대로 보임 */
+export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) {
   const { messages, waiting } = useChat();
   const [text, setText] = useState('');
   const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({});
   const [added, setAdded] = useState<Set<string>>(() => new Set()); // 이미 할 일로 등록한 버튼 (두 번 눌러 같은 할 일이 두 번 생기지 않게)
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
-  const opened = useRef(false);
-
-  useEffect(() => {
-    if (opened.current) return; // 처음 열릴 때 한 번만 (넘겨받은 질문을 두 번 보내지 않게)
-    opened.current = true;
-    if (conversation) {
-      // 대화 목록(H-3) 또는 '답변 도착' 푸시에서 열림 → 이전 대화 불러오기
-      loadChat(Number(conversation));
-    } else if (q) {
-      // 다른 화면에서 질문을 들고 옴 → 새 대화. 맥락은 첫 질문에만 붙이고, 같은 대화 안에서는 서버가 이어서 기억함
-      newChat();
-      sendChat(q, context);
-    }
-  }, [conversation, q, context]);
 
   function send(question: string) {
     setText('');
@@ -94,7 +77,9 @@ export function ChatPanel({ q, context = null, conversation, keyboardOffset = 90
       openLink(a.payload.url);
     } else {
       const to = SCREENS[a.payload.screen];
-      if (to) router.push(to(a.payload.id));
+      if (!to) return;
+      closeChatSheet(); // 대화창을 내리고 그 화면으로
+      router.push(to(a.payload.id));
     }
   }
 

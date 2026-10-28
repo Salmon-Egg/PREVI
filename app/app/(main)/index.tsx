@@ -7,7 +7,7 @@ import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'rea
 import { Image, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type PointerEvent, type StyleProp, type TextStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { ChatSheet, SHEET_BAR } from '../../components/ChatSheet';
+import { SHEET_BAR } from '../../components/ChatSheet';
 import { Text } from '../../components/Text';
 import { StateView } from '../../components/ui';
 import { useApi } from '../../lib/api';
@@ -249,8 +249,6 @@ export default function Home() {
         </ScrollView>
 
       </SafeAreaView>
-      {/* ▶ FE 15번에 해당하는 부분: 아래 'PREVI에게 물어보세요!' 바 — 잡고 올리거나 ↑를 누르면 AI 대화창이 홈 위로 올라옴 */}
-      <ChatSheet />
     </View>
   );
 }

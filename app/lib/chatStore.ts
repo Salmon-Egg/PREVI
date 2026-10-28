@@ -1,6 +1,6 @@
 // ▶ FE 30번·31번에 해당하는 부분: 지금 보고 있는 대화(대화 번호·메시지·답 기다리는 중)를 화면 밖에 보관
 // 답을 기다리다 채팅 화면을 나가도 요청은 계속되고, 돌아오면 받은 답이 그대로 보임.
-// 홈 대화창(ChatSheet)과 채팅 화면(chat/index)이 같은 대화를 봄. 로그인한 사람이 바뀌면 비움
+// 대화창(ChatSheet)은 모든 화면 위에 하나. 로그인한 사람이 바뀌면 비움
 import { useSyncExternalStore } from 'react';
 
 import { showAlert } from '../components/ui';
@@ -50,6 +50,25 @@ export async function loadChat(id: number) {
   } catch (e) {
     showAlert('이전 대화를 불러오지 못했어요', (e as ApiError).message);
   }
+}
+
+// ---- 대화창 열기·닫기: 어느 화면에서든 부름 (ChatSheet가 듣고 올리거나 내림) ----
+const sheetListeners = new Set<(open: boolean) => void>();
+export function onChatSheet(fn: (open: boolean) => void) {
+  sheetListeners.add(fn);
+  return () => {
+    sheetListeners.delete(fn);
+  };
+}
+export const openChatSheet = () => sheetListeners.forEach((l) => l(true));
+export const closeChatSheet = () => sheetListeners.forEach((l) => l(false));
+
+/** ▶ FE 32번에 해당하는 부분: 다른 화면(할 일·공지·휴복학)에서 질문을 들고 와서 새 대화로 묻기 → 그 화면 위로 대화창이 올라옴.
+ *  맥락은 첫 질문에만 붙이고, 같은 대화 안에서는 서버가 이어서 기억함 */
+export function askChat(question: string, ctx: ChatContext) {
+  newChat();
+  openChatSheet();
+  sendChat(question, ctx);
 }
 
 /** 질문 보내기. 화면이 사라져도 끝까지 받아서 보관함 */
