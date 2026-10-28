@@ -94,40 +94,22 @@ def severity(todo_type: str, title: str) -> int:
     return s if s in (1, 2, 3) else DEFAULT_SEVERITY[todo_type]
 
 
+# shortcut: 프로세스가 켜져 있는 동안 계속 쌓임. 밤 작업은 실행마다 새로 시작하니 괜찮고, 상시 서버에서 부르게 되면 크기 제한 두기
+_REASONS: dict[tuple, str] = {}
+
+
 def explain_reason(title: str, verdict: str, reasons: list[str]) -> str:
-    """⑥ '왜 나에게 해당하는지' 한두 문장."""
-    out = _ask("reason", {"title": title, "verdict": verdict, "reasons": reasons}) or {}
-    return out.get("text") or " · ".join(reasons)
+    """⑥ '왜 나에게 해당하는지' 한두 문장. 공지·판정·근거가 같은 학생끼리는 AI 문장을 나눠 씀."""
+    key = (title, verdict, tuple(reasons))
+    if key not in _REASONS:
+        text = (_ask("reason", {"title": title, "verdict": verdict, "reasons": reasons}) or {}).get("text")
+        if not text:  # AI 실패는 저장하지 않음: 다음 학생 때 다시 시도
+            return " · ".join(reasons)
+        _REASONS[key] = text
+    return _REASONS[key]
 
 
-def write_briefing(facts: dict) -> dict:
-    """⑤ 브리핑 문장 + ⑦ 추천 질문 3개. facts는 코드가 계산한 숫자들."""
-    out = _ask("briefing", facts) or {}
-    text = out.get("briefing")
-    questions = out.get("suggested_questions") or []
-    if not text:
-        parts = []
-        if facts["due_today"]:
-            parts.append(f"오늘 마감인 일 {facts['due_today']}개")
-        if facts["eligible_scholarships"]:
-            parts.append(f"신청 가능한 장학금 {facts['eligible_scholarships']}개")
-        text = ", ".join(parts) + "가 있어요" if parts else "오늘은 급하게 챙길 일이 없어요"
-    if len(questions) < 3:
-        questions = (questions + _default_questions(facts))[:3]
-    return {"briefing": text, "suggested_questions": questions[:3]}
-
-
-def _default_questions(facts: dict) -> list[str]:
-    by_grade = {
-        1: ["수강 정정이 뭐야?", "교양 필수는 뭘 들어야 해?", "장학금 어떤 게 있어?"],
-        2: ["성적우수 장학금 조건이 뭐야?", "부전공 신청은 어떻게 해?", "계절학기는 몇 학점까지 돼?"],
-        3: ["휴학하면 장학금은 어떻게 돼?", "복학 신청은 언제 해?", "계절학기는 몇 학점까지 돼?"],
-        4: ["졸업까지 뭐가 남았어?", "졸업작품 심사 신청은 언제까지야?", "장학금 신청 마감 언제야?"],
-    }
-    return by_grade.get(facts.get("grade") or 4, by_grade[4])
-
-
-MINE = re.compile(r"(?<![가-힣])(나|내|제|저)(가|는|도|의|한테)?(?![가-힣])|남았|남은")
+MINE = re.compile(r"(?<![가-힣])(나|내|저|제(?!\s*\d+\s*조))(가|는|도|의|한테)?(?![가-힣])|남았|남은")  # "제 30조"의 제는 내가 아님
 TOPICS = (("graduation", re.compile("졸업|학점")), ("scholarship", re.compile("장학")), ("todo", re.compile("할 일|마감")))
 RULE_WORDS = re.compile("조건|방법|어떻게|언제|기간|절차|서류|최대|몇 학점까지")
 
@@ -148,17 +130,24 @@ def route_question(text: str) -> dict:
     if hit := _route_by_rule(text.rsplit("질문:", 1)[-1]):  # 할 일·공지에서 넘어온 질문은 "질문:" 뒤만 봄
         return hit
     out = _ask("chat_router", {"question": text}) or {}
-    if out.get("intent") not in ("my_info", "document"):
+    # 내 정보인데 주제가 셋 밖(성적·시간표 등)이면 할 일 목록으로 엉뚱하게 답하게 되니 문서 검색으로
+    if out.get("intent") != "my_info" or out.get("topic") not in ("graduation", "scholarship", "todo"):
         return {"intent": "document", "topic": None}
-    return {"intent": out["intent"], "topic": out.get("topic")}
+    return {"intent": "my_info", "topic": out["topic"]}
 
 
-def answer_from_docs(question: str, chunks: list[dict]) -> str | None:
+def answer_from_docs(question: str, chunks: list[dict], student: dict | None = None) -> str | None:
     """⑪ 문서 근거 답변. 근거로 답할 수 없으면 None → '모른다' 처리."""
     if not chunks:
         return None
-    out = _ask("chat_answer", {"question": question, "documents": [c["content"] for c in chunks]}) or {}
-    return _short(out.get("answer"), 150) or None
+    docs = [c["content"] for c in chunks]
+    out = _ask("chat_answer", {"question": question, "student": student or {}, "documents": docs}) or {}
+    answer = _short(out.get("answer"), 150)
+    # 문서·질문·학생 정보에 없는 숫자가 답에 있으면 지어낸 것으로 보고 '모른다'로
+    if answer and not set(re.findall(r"\d+", answer)) <= set(re.findall(r"\d+", f"{question} {student} {' '.join(docs)}")):
+        log.warning("근거에 없는 숫자라 버림: %s", answer)
+        return None
+    return answer or None
 
 
 def answer_my_info(question: str, facts: dict) -> str:

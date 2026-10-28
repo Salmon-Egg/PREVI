@@ -23,6 +23,10 @@ log = logging.getLogger("chat")
 VERDICT_KO = {"eligible": "신청 가능", "check": "확인 필요", "ineligible": "조건 미충족"}
 UNKNOWN = "학교 문서에서 근거를 찾지 못했어요. 질문을 기록해 두었으니, 문서가 보강되면 답해 드릴게요."
 MSG_COLS = "id,role,text,cards,sources,actions,created_at"
+NOTICE_COLS = "title,summary,body,url,deadline"
+FOLLOW_UP = re.compile("그럼|그러면|그건|그거|그게|그때|거기|이건|이거|그리고|또 ")
+# 학사일정 제목 어디에나 있는 말: 이것만 겹치면 엉뚱한 일정에 '마감 알림 받기'가 붙음
+COMMON = re.compile("신청|기간|학기|마감|안내|언제|일정")
 CONV_COLS = "id,title,pinned,updated_at"
 
 
@@ -55,9 +59,11 @@ async def _calendar_action(request: Request, question: str) -> list[dict]:
     """⑬ 다음 행동 버튼 (규칙): 질문과 비슷한 학사일정이 앞으로 있으면 '마감 알림 받기'."""
     events = await database_rows(request, "GET", "academic_calendar", params={
         "select": "title,end_date", "end_date": f"gte.{date.today().isoformat()}", "limit": 200})
-    q = _bigrams(question)
-    best = max(events, key=lambda e: len(q & _bigrams(e["title"])), default=None)
-    if not best or len(q & _bigrams(best["title"])) < 2:
+    def grams(s):
+        return _bigrams(COMMON.sub(" ", s))
+    q = grams(question.rsplit("질문:", 1)[-1])  # 맥락 제목이 아니라 학생이 실제로 물은 말로
+    best = max(events, key=lambda e: len(q & grams(e["title"])), default=None)
+    if not best or len(q & grams(best["title"])) < 2:
         return []
     return [{"type": "add_todo", "label": "마감 알림 받기", "payload": {"title": best["title"], "due_date": best["end_date"]}}]
 
@@ -68,8 +74,8 @@ async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: st
     if topic == "graduation":
         try:
             g = await graduation_result(request, user)
-        except APIError as e:  # 학과 기준 없음·부전공 등: 이유를 그대로 안내
-            return {"text": e.message, "cards": [], "actions": []}
+        except APIError as e:  # 학과 기준 없음·부전공 등: 이유를 그대로 안내하고, 답 못 한 질문으로 기록
+            return {"text": e.message, "cards": [], "actions": [], "unknown": True}
         pending = [r["name"] for r in g["requirements"] if r["done"] is not True]
         if g["remaining_total"] is None:
             summary = "같은 과목이 여러 학기에 있어 남은 학점을 정확히 계산할 수 없어요."
@@ -98,13 +104,29 @@ async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: st
     return {"text": text, "cards": cards, "actions": actions}
 
 
-async def _from_docs(request: Request, question: str) -> dict:
+def _notice_chunk(n: dict) -> dict:
+    """공지·공지에서 온 할 일에서 넘어온 질문은 그 공지 원문을 첫 근거로 (학교 문서에는 공지 내용이 없음)."""
+    head = f"[공지] {n['title']}" + (f" (마감 {n['deadline'][:16].replace('T', ' ')})" if n["deadline"] else "")
+    return {"content": f"{head}\n{(n['body'] or '')[:1500]}", "title": n["title"], "url": n["url"]}
+
+
+def _used(answer: str, chunks: list[dict]) -> list[dict]:
+    """출처는 답과 글자가 많이 겹치는 문단만 (AI가 쓰지 않은 문단의 문서까지 보여 주지 않게)."""
+    a = _bigrams(answer)
+    hits = [len(a & _bigrams(c["content"])) for c in chunks]
+    return [c for c, h in zip(chunks, hits) if h >= max(hits) / 2]
+
+
+async def _from_docs(request: Request, question: str, p: dict, extra: list[dict]) -> dict:
     """⑪ 문서 근거 답변. 근거가 없으면 지어내지 않고 '모른다'."""
-    chunks = await search_chunks(request, question)
-    answer = await run_in_threadpool(tasks.answer_from_docs, question, chunks)
+    # 지금 질문만으로 먼저 찾고, 못 찾을 때만 앞 대화·맥락을 붙여 다시 (앞 주제 문단이 새 질문을 덮지 않게)
+    asked = question.rsplit("질문:", 1)[-1]
+    chunks = extra + (await search_chunks(request, asked) or (asked != question and await search_chunks(request, question)) or [])
+    student = {"학과": p["department"], "입학년도": p["admission_year"], "학년": p["grade"]}
+    answer = await run_in_threadpool(tasks.answer_from_docs, question, chunks, student)
     if not answer:
         return {"text": UNKNOWN, "cards": [], "sources": [], "actions": [], "unknown": True}
-    sources = list({c["title"]: {"title": c["title"], "url": c["url"]} for c in chunks}.values())
+    sources = list({c["title"]: {"title": c["title"], "url": c["url"]} for c in _used(answer, chunks)}.values())
     return {"text": answer, "cards": [], "sources": sources, "actions": await _calendar_action(request, question)}
 
 
@@ -126,36 +148,49 @@ async def _one(request: Request, table: str, **params) -> dict | None:
 
 @router.post("/chat")
 async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends(require_user)):
-    p = await _one(request, "profiles", user_id=f"eq.{user.id}", select="nickname,grade,semester,status")
+    p = await _one(request, "profiles", user_id=f"eq.{user.id}", select="nickname,grade,semester,status,department,admission_year")
     if not p:
         raise APIError(404, "PROFILE_NOT_FOUND", "처음 설정이 필요해요.")
     ret = {"Prefer": "return=representation"}
+    last = None
     if body.conversation_id:
         conv = await _one(request, "conversations", id=f"eq.{body.conversation_id}", user_id=f"eq.{user.id}", select="id")
         if not conv:
             raise APIError(404, "NOT_FOUND", "대화를 찾을 수 없어요.")
+        # 직전 질문: "그럼 복학은?"처럼 앞 말을 생략한 질문을 이해하게.
+        # 앞 답은 넘기지 않음: 넘기면 주제가 바뀐 질문에도 AI가 앞 답을 그대로 베낌(10/29 실측)
+        last = await _one(request, "messages", conversation_id=f"eq.{conv['id']}", role="eq.user", select="text", order="id.desc")
     else:
         conv = (await database_rows(request, "POST", "conversations", headers=ret,
                                     params={"select": "id"}, json={"user_id": str(user.id), "title": body.text[:30]}))[0]
     await database_rows(request, "POST", "messages", json={"conversation_id": conv["id"], "role": "user", "text": body.text})
 
-    # ⑭ 맥락 이어받기: 할 일·공지에서 넘어오면 그 내용을 질문 앞에 붙여 AI에게 줌
-    question = body.text
+    # ⑭ 맥락 이어받기: 앞 대화, 할 일·공지에서 넘어온 내용을 질문 앞에 붙여 AI에게 줌 ("질문:" 뒤가 실제 질문)
+    lines, notice = [], None
+    # 앞 말을 받는 질문에만 붙임: 주제가 바뀐 질문("학식 메뉴 뭐야?")에 붙이면 앞 주제로 답함(10/29 실측)
+    if last and (FOLLOW_UP.match(body.text.strip()) or len(body.text.strip()) <= 6):
+        lines.append(f"[이전 질문] {last['text']}")
     if body.context:
         if body.context.kind == "status":
             status = {"enrolled": "재학", "leave": "휴학", "returned": "복학"}.get(p["status"], p["status"])
             ctx = {"title": "내 학적", "reason": f"{p['grade']}학년 {p['semester']}학기, {status} 중"}
         elif body.context.kind == "todo":
-            ctx = await _one(request, "todos", id=f"eq.{body.context.id}", user_id=f"eq.{user.id}", select="title,reason")
+            ctx = await _one(request, "todos", id=f"eq.{body.context.id}", user_id=f"eq.{user.id}", select="title,reason,source_kind,source_id")
+            if ctx and ctx["source_kind"] == "notice":
+                notice = await _one(request, "notices", id=f"eq.{ctx['source_id']}", select=NOTICE_COLS)
         else:
-            ctx = await _one(request, "notices", id=f"eq.{body.context.id}", select="title,summary")
+            ctx = notice = await _one(request, "notices", id=f"eq.{body.context.id}", select=NOTICE_COLS)
             if ctx:
-                ctx["reason"] = " ".join(ctx["summary"])
+                ctx = {"title": ctx["title"], "reason": " ".join(ctx["summary"] or [])}
         if ctx:
-            question = f"[{ctx['title']}] {ctx['reason'] or ''}\n질문: {body.text}"
+            lines.append(f"[{ctx['title']}] {ctx['reason'] or ''}")
+    question = "\n".join(lines + [f"질문: {body.text}"]) if lines else body.text
 
     route = await run_in_threadpool(tasks.route_question, question)  # ⑩
-    reply = await (_my_info(request, user, p, route["topic"], question) if route["intent"] == "my_info" else _from_docs(request, question))
+    if route["intent"] == "my_info":
+        reply = await _my_info(request, user, p, route["topic"], question)
+    else:
+        reply = await _from_docs(request, question, p, [_notice_chunk(notice)] if notice else [])
 
     msg = (await database_rows(request, "POST", "messages", headers=ret, params={"select": MSG_COLS}, json={
         "conversation_id": conv["id"], "role": "assistant", "text": reply["text"],

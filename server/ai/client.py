@@ -3,6 +3,7 @@ AI_FAKE=1 이면 Ollama 대신 ai/fake.py가 답합니다. 학교 서버가 준�
 import json
 import logging
 import os
+from functools import cache
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -14,7 +15,8 @@ PROMPTS = Path(__file__).parent / "prompts"
 # AI 설정은 server/config.py(BE A, Supabase 전용) 대신 여기서 .env를 읽음
 load_dotenv(Path(__file__).resolve().parents[2] / ".env")
 AI_FAKE = os.getenv("AI_FAKE", "0").strip().lower() in ("1", "true", "yes")
-AI_BASE_URL = os.getenv("AI_BASE_URL", "http://localhost:11434/v1")
+# localhost가 아니라 127.0.0.1: Windows에서 localhost는 IPv6를 먼저 시도해 호출마다 2초씩 늦어짐(10/29 실측)
+AI_BASE_URL = os.getenv("AI_BASE_URL", "http://127.0.0.1:11434/v1")
 CHAT_MODEL = os.getenv("CHAT_MODEL", "kanana")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "")
 # 문서 검색: 질문과 문단의 거리가 이 값보다 크면 근거로 안 씀. 비우면 거르지 않음
@@ -32,9 +34,14 @@ def _prompt(name: str) -> str:
     return (PROMPTS / f"{name}.txt").read_text(encoding="utf-8")
 
 
+@cache
 def _client():
     from openai import OpenAI  # 가짜 모드에서는 불러오지 않음
-    return OpenAI(base_url=AI_BASE_URL, api_key="ollama", timeout=60)  # Ollama는 키를 검사하지 않음
+    # max_retries=0: SDK가 시간 초과마다 몰래 두 번 더 불러 학생이 몇 분씩 기다리게 됨. 다시 묻기는 ask_json이 한 번만
+    return OpenAI(base_url=AI_BASE_URL, api_key="ollama", timeout=20, max_retries=0)  # Ollama는 키를 검사하지 않음
+
+
+SLOW = {"notice_summary": 60}  # 밤 작업의 긴 공지 본문. 나머지(챗봇 등)는 20초
 
 
 def ask_json(prompt_name: str, user: str) -> dict:
@@ -45,11 +52,14 @@ def ask_json(prompt_name: str, user: str) -> dict:
     for _ in range(2):
         res = _client().chat.completions.create(
             model=CHAT_MODEL, messages=messages, response_format={"type": "json_object"}, temperature=0.1,
+            timeout=SLOW.get(prompt_name, 20),
         )
+        text = res.choices[0].message.content
         try:
-            return json.loads(res.choices[0].message.content)
+            return json.loads(text)
         except (json.JSONDecodeError, TypeError):
-            continue
+            # 같은 요청을 그대로 다시 보내면 같은 답이 나옴: 깨진 답을 보여 주고 고쳐 달라고 함
+            messages += [{"role": "assistant", "content": text or ""}, {"role": "user", "content": "올바른 JSON 하나로만 다시 답해."}]
     raise AiError(f"{prompt_name}: JSON 형식이 두 번 깨짐")
 
 

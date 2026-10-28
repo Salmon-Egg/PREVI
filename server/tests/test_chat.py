@@ -6,6 +6,7 @@ import httpx
 from fastapi.testclient import TestClient
 
 from server.ai import client as ai_client
+from server.ai import tasks
 from server.config import Settings
 from server.main import create_app
 
@@ -15,7 +16,7 @@ CHUNK = {"content": "[학칙] 제 30 조(휴학) 휴학 기간은 통산 6학기
          "document": {"title": "2026 서경대학교 대학요람 · 학칙", "url": None}}
 
 
-def run_chat(monkeypatch, text, chunks, context=None):
+def run_chat(monkeypatch, text, chunks, context=None, notices=(), calendar=(), history=None):
     monkeypatch.setattr(ai_client, "AI_FAKE", True)
     saved = []
 
@@ -25,8 +26,10 @@ def run_chat(monkeypatch, text, chunks, context=None):
             return httpx.Response(200, json={"id": USER_ID, "email": "s@skuniv.ac.kr", "email_confirmed_at": "2026-10-27T00:00:00Z"})
         table = path.removeprefix("/rest/v1/")
         if request.method == "GET":
-            return httpx.Response(200, json={"profiles": [{"nickname": "홍길동", "grade": 4, "semester": 1, "status": "leave"}], "doc_chunks": chunks,
-                                             "academic_calendar": []}.get(table, []))
+            return httpx.Response(200, json={"profiles": [{"nickname": "홍길동", "grade": 4, "semester": 1, "status": "leave",
+                                                           "department": "소프트웨어학과", "admission_year": 2023}],
+                                             "doc_chunks": chunks, "notices": list(notices), "academic_calendar": list(calendar),
+                                             "conversations": [{"id": 5}], "messages": history or []}.get(table, []))
         body = json.loads(request.content or b"null")
         saved.append((request.method, table, body))
         if table == "messages" and body["role"] == "assistant":
@@ -35,7 +38,8 @@ def run_chat(monkeypatch, text, chunks, context=None):
 
     app = create_app(Settings("https://example.supabase.co", "test-key"), httpx.MockTransport(handler))
     with TestClient(app) as client:
-        res = client.post("/chat", headers=HEADERS, json={"text": text, "context": context})
+        res = client.post("/chat", headers=HEADERS, json={"text": text, "context": context,
+                                                          "conversation_id": 5 if history is not None else None})
     return res, saved
 
 
@@ -50,6 +54,42 @@ def test_answer_from_documents(monkeypatch):
     msg = res.json()["message"]
     assert msg["sources"] == [{"title": "2026 서경대학교 대학요람 · 학칙", "url": None}]
     assert not any(t == "unanswered_questions" for _, t, _ in saved)
+
+
+def test_notice_context_answers_from_notice(monkeypatch):
+    notice = {"title": "2학기 성적우수장학금 신청", "summary": ["마감: 11/5"], "body": "신청 마감: 2026-11-05 18:00",
+              "url": "https://example.com/n/1", "deadline": "2026-11-05T18:00:00+09:00"}
+    res, saved = run_chat(monkeypatch, "이거 마감 언제야?", [], {"kind": "notice", "id": 1}, notices=[notice])
+    msg = res.json()["message"]
+    assert "2026-11-05" in msg["text"]
+    assert msg["sources"] == [{"title": "2학기 성적우수장학금 신청", "url": "https://example.com/n/1"}]
+    assert not any(t == "unanswered_questions" for _, t, _ in saved)
+
+
+def test_calendar_button_ignores_common_words(monkeypatch):
+    calendar = [{"title": "2027-1학기 복학 신청 기간", "end_date": "2099-01-01"}]
+    res, _ = run_chat(monkeypatch, "휴학 신청 기간은 최대 몇 학기야?", [CHUNK], calendar=calendar)
+    assert res.json()["message"]["actions"] == []  # '신청'·'기간'만 겹침
+    calendar = [{"title": "2학기 수강신청 정정 기간", "end_date": "2099-01-01"}]
+    res, _ = run_chat(monkeypatch, "수강 정정 휴학 기간 언제야?", [CHUNK], calendar=calendar)
+    assert res.json()["message"]["actions"][0]["payload"]["title"] == "2학기 수강신청 정정 기간"
+
+
+def test_previous_turn_goes_to_ai(monkeypatch):
+    seen = []
+    real = tasks.route_question
+    monkeypatch.setattr(tasks, "route_question", lambda q: seen.append(q) or real(q))
+    res, _ = run_chat(monkeypatch, "그럼 복학은?", [CHUNK], history=[{"text": "휴학 최대 몇 학기야?"}])
+    assert res.status_code == 200
+    assert seen == ["[이전 질문] 휴학 최대 몇 학기야?\n질문: 그럼 복학은?"]
+    run_chat(monkeypatch, "오늘 학식 메뉴 뭐야?", [], history=[{"text": "휴학 최대 몇 학기야?"}])
+    assert seen[-1] == "오늘 학식 메뉴 뭐야?"  # 주제가 바뀐 질문엔 앞 질문을 안 붙임
+
+
+def test_my_info_failure_is_recorded(monkeypatch):
+    res, saved = run_chat(monkeypatch, "나 졸업할 수 있어?", [])  # 졸업 기준 표가 비어 있음
+    assert "졸업 기준" in res.json()["message"]["text"]
+    assert any(t == "unanswered_questions" for _, t, _ in saved)
 
 
 def test_unknown_is_recorded(monkeypatch):

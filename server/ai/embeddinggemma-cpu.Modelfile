@@ -1,0 +1,4 @@
+# 임베딩 모델을 CPU에서 돌림: ollama create embeddinggemma-cpu -f server/ai/embeddinggemma-cpu.Modelfile
+# 8GB 그래픽카드에 kanana와 같이 올리면 다른 앱과 합쳐 메모리가 넘쳐 답이 수십 초 걸림(10/29). 같은 모델 파일이라 문단 임베딩은 다시 넣지 않아도 됨
+FROM embeddinggemma:300m
+PARAMETER num_gpu 0
