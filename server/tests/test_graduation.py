@@ -102,7 +102,6 @@ def test_graduation_endpoint():
 @pytest.mark.parametrize("profile,rule,status,code", [
     (None, RULE, 404, "PROFILE_NOT_FOUND"),
     ({**PROFILE, "department": None}, RULE, 400, "PROFILE_INCOMPLETE"),
-    ({**PROFILE, "minor": "경영학과"}, RULE, 409, "GRADUATION_RULES_NEED_REVIEW"),
     ({**PROFILE, "admission_year": 2025}, None, 404, "GRADUATION_RULES_NOT_FOUND"),
 ])
 def test_unknown_rules_are_not_guessed(profile, rule, status, code):
@@ -110,6 +109,23 @@ def test_unknown_rules_are_not_guessed(profile, rule, status, code):
         result = client.get("/graduation", headers=HEADERS)
         assert result.status_code == status
         assert result.json()["error"]["code"] == code
+
+
+def test_minor_keeps_known_major_progress_with_explicit_review_requirement():
+    with client_for(profile={**PROFILE,'minor':'경영학과'}) as client:
+        response = client.get('/graduation',headers=HEADERS)
+        assert response.status_code == 200
+        result = response.json()
+        assert result['earned_total'] == 3
+        assert result['requirements'][-1]['done'] is None
+        assert '주전공 최소 기준' in result['requirements'][-1]['name']
+
+
+def test_electronic_computer_department_uses_its_own_rule_query():
+    with client_for(profile={**PROFILE,'department':'전자컴퓨터공학과','admission_year':2024}) as client:
+        response = client.get('/graduation',headers=HEADERS)
+        assert response.status_code == 200
+        assert response.json()['required_total'] == RULE['total_credits']
 
 
 def test_grade_mutations_recalculate_each_time():

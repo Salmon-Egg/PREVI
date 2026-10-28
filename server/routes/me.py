@@ -153,5 +153,7 @@ async def put_me(body: ProfileInput, request: Request, background_tasks: Backgro
     if not rows:
         raise APIError(404, "PROFILE_NOT_FOUND", "내 정보를 찾을 수 없어요.")
     from server.jobs.pipeline import refresh_student
-    background_tasks.add_task(refresh_student, str(user.id))
+    # 학적 변경 뒤 바로 홈으로 돌아가도 이전 판정이 보이지 않도록 숫자·규칙 재계산을 먼저 끝낸다.
+    # 이 경로에서는 AI 문장 생성과 외부 푸시를 하지 않아 Ollama를 기다리지 않는다.
+    await refresh_student(str(user.id))
     return profile_output(rows[0])

@@ -15,8 +15,6 @@ async def graduation_result(request: Request, user: AuthenticatedUser):
     profile = profiles[0]
     if not profile.get("department") or not profile.get("admission_year"):
         raise APIError(400, "PROFILE_INCOMPLETE", "졸업 점검을 위해 학과와 입학년도가 필요해요.")
-    if profile.get("minor"):
-        raise APIError(409, "GRADUATION_RULES_NEED_REVIEW", "부전공·복수전공 적용 교육과정을 별도로 확인해야 해요.")
     rules = await database_rows(request, "GET", "grad_requirements", params={
         "department": "eq." + profile["department"], "admission_year": "eq." + str(profile["admission_year"]),
         "select": "total_credits,areas,required_courses,certifications",
@@ -24,7 +22,11 @@ async def graduation_result(request: Request, user: AuthenticatedUser):
     if not rules:
         raise APIError(404, "GRADUATION_RULES_NOT_FOUND", "이 학과·입학년도의 적용 졸업 기준은 확인 중이에요.")
     rows = await all_grade_rows(request, str(user.id))
-    return calculate_graduation(rows, rules[0])
+    result = calculate_graduation(rows, rules[0])
+    if profile.get('minor'):
+        # 주전공의 확인된 최소 요건은 계속 보여주고, 미확인 추가전공을 완료로 판단하지 않는다.
+        result['requirements'].append({'name':'확인 필요: 현재 표시는 주전공 최소 기준이며 부전공·복수전공의 추가 요건과 중복 인정은 별도 확인','done':None})
+    return result
 
 
 @router.get("/graduation")

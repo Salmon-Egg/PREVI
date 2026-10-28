@@ -13,6 +13,7 @@ from server.config import Settings
 from server.logic.eligibility import judge
 from server.logic.grades import semester_gpa
 from server.logic.schedule import d_day, priority
+from server.logic.student_context import calendar_applies, notice_target
 from server.notify import NotificationSender
 
 log = logging.getLogger(__name__)
@@ -38,7 +39,7 @@ def previous_grades(profile, grades):
 
 
 def verdict_for(notice, profile, grades):
-    target, conditions = notice["target"], dict(notice["conditions"])
+    target, conditions = notice_target(notice), dict(notice["conditions"])
     scope = profile.get("assistant_scope") or {}
     hidden = []
     if not scope.get("status", True):
@@ -125,13 +126,13 @@ class Pipeline:
             return
         await self.sender.send(UUID(p['user_id']), kind, title[:200], target_id, event_key)
 
-    async def recalculate(self, user_id=None):
+    async def recalculate(self, user_id=None, *, use_ai=True, notify=True):
         profiles = await self.rows('profiles', **({'user_id':'eq.' + str(user_id)} if user_id else {}))
         notices = await self.rows('notices', extraction_status='eq.ready')
         stats = {'students':0, 'judged':0, 'errors':0}
         for p in profiles:
             try:
-                await self.student(p, notices)
+                await self.student(p, notices, use_ai=use_ai, notify=notify)
                 stats['students'] += 1
                 stats['judged'] += len(notices)
             except Exception as exc:
@@ -139,7 +140,7 @@ class Pipeline:
                 stats['errors'] += 1
         return stats
 
-    async def student(self, p, notices):
+    async def student(self, p, notices, *, use_ai=True, notify=True):
         uid = p['user_id']
         if p.get('consent_agreed_at') is None:
             await self.write('DELETE', 'eligibility', params={'user_id':'eq.' + uid})
@@ -166,7 +167,7 @@ class Pipeline:
                 if old is None or (not old['done'] and old['reason'].startswith(AUTO_REASON)):
                     kind = 'scholarship' if n['category'] == '장학' else 'deadline'
                     if n['id'] not in self.severities:
-                        self.severities[n['id']] = await run_in_threadpool(tasks.severity, kind, n['title'])
+                        self.severities[n['id']] = await run_in_threadpool(tasks.severity, kind, n['title']) if use_ai else (2 if kind == 'scholarship' else 1)
                     severity = self.severities[n['id']]
                     due = deadline.astimezone(KST).date() if deadline else None
                     facts = ' · '.join(reasons) or '공지 대상에 해당해요. 원문 조건을 확인해 주세요.'
@@ -174,7 +175,7 @@ class Pipeline:
                     if old and old['reason'].endswith('\n근거: ' + facts):
                         explanation = old['reason']
                     else:
-                        text = await run_in_threadpool(tasks.explain_reason, n['title'], verdict, reasons)
+                        text = await run_in_threadpool(tasks.explain_reason, n['title'], verdict, reasons) if use_ai else facts
                         explanation = AUTO_REASON + (text if isinstance(text,str) and text.strip() else facts) + '\n근거: ' + facts
                     value = {'user_id':uid,'source_kind':'notice','source_id':n['id'],'type':kind,
                         'title':n['title'][:200], 'due_date':due.isoformat() if due else None,
@@ -183,7 +184,8 @@ class Pipeline:
                     # 완료 여부를 보내지 않아 학생이 동시에 완료한 상태를 유지한다.
                     await self.write('POST','todos',params={'on_conflict':'user_id,source_kind,source_id'},
                         headers={'Prefer':'resolution=merge-duplicates'},json=value)
-            await self.notify(p,'notice',n['title'],n['id'])
+            if notify:
+                await self.notify(p,'notice',n['title'],n['id'])
 
     async def reminders(self, user_id=None):
         profiles = await self.rows('profiles', **({'user_id':'eq.' + str(user_id)} if user_id else {}))
@@ -196,7 +198,7 @@ class Pipeline:
                     await self.notify(p,'deadline',t['title'],t['id'], 'due:' + t['due_date'] + ':' + today.isoformat(), scheduled=True)
             if (p.get('assistant_scope') or {}).get('status', True):
                 for e in await self.rows('academic_calendar', start_date='eq.' + today.isoformat()):
-                    if not e.get('target_grades') or p.get('grade') in e['target_grades']:
+                    if calendar_applies(e,p):
                         await self.notify(p,'calendar',e['title'],e['id'],'start:' + today.isoformat(),scheduled=True)
 
 
@@ -219,6 +221,8 @@ async def refresh_student(user_id):
         return
     try:
         async with pipeline_client() as pipeline:
-            await pipeline.recalculate(user_id)
+            result = await pipeline.recalculate(user_id, use_ai=False, notify=False)
+            if result['errors']:
+                log.warning('student refresh incomplete; daily retry required')
     except Exception as exc:
         log.warning('student refresh deferred type=%s', type(exc).__name__)
