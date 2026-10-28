@@ -227,3 +227,10 @@ server/
 - 응답 모양은 `docs/04_API_명세.md`와 똑같이 맞춥니다. 다르게 해야 하면 문서부터 고칩니다.
 - 비밀 키는 `.env`에서 읽습니다. 코드에 직접 쓰지 않습니다.
 - 서버를 실행하면 `http://localhost:8000/docs`에서 API 문서를 볼 수 있습니다.
+
+## 회원 탈퇴
+
+`DELETE /me`는 검증된 학교 계정 토큰의 본인만 삭제하고 성공 시 204를 반환합니다.
+서버에 `SUPABASE_SECRET_KEY`가 필요하며 앱에는 이 키를 넣지 않습니다.
+Supabase Auth 계정 삭제와 외래 키 cascade로 개인 데이터를 정리합니다. 공용 공지·학교 문서는 유지합니다.
+실제 DB 검사는 `python -m server.check_account_deletion_live`로 실행하며, 검사 전용 가상 계정을 생성하고 삭제합니다.

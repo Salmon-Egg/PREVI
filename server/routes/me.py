@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+import os
 from typing import Literal
 
 import httpx
@@ -7,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from server.auth import AuthenticatedUser, bearer, require_user
 from server.errors import APIError
+from starlette.responses import Response
 
 router = APIRouter(tags=["내 정보"])
 
@@ -108,6 +110,25 @@ async def get_me(request: Request, user: AuthenticatedUser = Depends(require_use
     if not rows:
         raise APIError(404, "PROFILE_NOT_FOUND", "처음 설정을 저장해 주세요.")
     return profile_output(rows[0])
+
+
+@router.delete("/me", status_code=204)
+async def delete_me(request: Request, user: AuthenticatedUser = Depends(require_user)):
+    """검증된 토큰의 본인만 삭제. 연결된 개인 데이터는 DB 외래 키가 함께 삭제한다."""
+    secret = os.getenv("SUPABASE_SECRET_KEY", "").strip()
+    if not secret:
+        raise APIError(503, "ACCOUNT_DELETE_UNAVAILABLE", "계정 삭제 설정을 확인해야 해요.")
+    settings = request.app.state.settings
+    try:
+        response = await request.app.state.http.delete(
+            f"{settings.supabase_url}/auth/v1/admin/users/{user.id}",
+            headers={"apikey": secret, "Authorization": "Bearer " + secret},
+        )
+    except httpx.RequestError:
+        raise APIError(503, "ACCOUNT_DELETE_UNAVAILABLE", "계정 삭제 결과를 확인할 수 없어요. 잠시 후 다시 확인해 주세요.") from None
+    if response.status_code not in (200, 204):
+        raise APIError(503, "ACCOUNT_DELETE_FAILED", "계정을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.")
+    return Response(status_code=204)
 
 
 @router.put("/me")
