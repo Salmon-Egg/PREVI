@@ -60,6 +60,14 @@ export async function signUp(a: { studentId: string; name: string; email: string
   login(data.session.access_token);
 }
 
+/** 회원가입 때 적은 이름 (처음 설정에서 내 정보의 nickname으로 저장). 예시 데이터·시연 서버는 이미 이름을 알고 있어서 null */
+export async function signupName(): Promise<string | null> {
+  if (DEV_LOGIN || !supabase) return null;
+  const { data } = await supabase.auth.getUser();
+  const name = data.user?.user_metadata?.name;
+  return typeof name === 'string' && name.trim() ? name.trim() : null;
+}
+
 export async function changePassword(current: string, next: string) {
   if (USE_MOCK) return mockAuth.changePassword(current, next);
   if (DEV_LOGIN) throw fail('시연용 계정은 비밀번호를 바꿀 수 없어요.');

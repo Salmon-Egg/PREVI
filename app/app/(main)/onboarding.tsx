@@ -8,6 +8,7 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Text } from '../../components/Text';
 import { Body, Button, Card, Character, Row, Screen, Sub, Title } from '../../components/ui';
 import { api, ApiError } from '../../lib/api';
+import { signupName } from '../../lib/auth';
 import { registerPush } from '../../lib/push';
 import { DEPTS, MINORS, STATUSES } from '../../lib/constants';
 import { color, gradient, gradientBg } from '../../lib/theme';
@@ -44,11 +45,13 @@ export default function Onboarding() {
   const [msg, setMsg] = useState('');
 
   // 3단계(동의)까지 마치면 학적·동의를 먼저 저장 → 4단계에서 알림 허용만 따로 물음
+  // 이름은 회원가입 때 적은 것을 같이 저장 (홈 인사말·마이페이지에 보임)
   async function saveProfile() {
     try {
+      const nickname = await signupName();
       await api.put('/me', {
         department: dept, minor: minor === '없음' ? null : minor, grade, semester, status, admission_year: year,
-        consent: { agreed: true },
+        consent: { agreed: true }, ...(nickname ? { nickname } : null),
       });
       setMsg('');
       setStep(3);

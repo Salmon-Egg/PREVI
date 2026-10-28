@@ -1,11 +1,11 @@
 서경 AI 비서 MVP 링크
 
-[MVP 보기 (휴대폰·PC 브라우저) — FE 1~35번 완성본]
+[MVP 보기 (휴대폰·PC 브라우저) — fe/mvp3 시연 사이트]
 https://claude.ai/artifact/KSy1QoVa8q13N759se35Pp
 
 - 예시 데이터 모드라 서버 없이 화면이 다 돌아감 (PC가 꺼져 있어도 열림)
-- 들어가서 가상 학생 4명 중 한 명을 골라 로그인 (홍길동 = 4학년)
-- 공유받은 사람만 열림. 안 열리면 만든 사람에게 공유 요청
+- 로그인 화면 아래 '시연용 계정 보기'에서 가상 학생을 골라 로그인 (비밀번호 1234, 홍길동 20210004 = 4학년)
+- 링크가 있는 사람 모두 열람 가능
 - 링크가 안 될 때: demo/시연_사이트_열기.bat 더블클릭 → http://localhost:8095
   (demo/index.html이 없으면 app 폴더에서 npm run build:demo로 먼저 만들기)
 
@@ -24,5 +24,11 @@ https://github.com/users/Salmon-Egg/projects/2/views/1
 [내 PC에서 직접 켜기]
 cd app
 npm install
-copy .env.example .env   (EXPO_PUBLIC_USE_MOCK=1)
+copy .env.example .env
 npx expo start           → w 누르면 웹, QR은 Expo Go
+
+- 서버 없이 화면만: .env에서 EXPO_PUBLIC_USE_MOCK=1
+- 실제 서버(통합본): USE_MOCK=0, DEV_LOGIN=0, EMAIL_DOMAIN=skuniv.ac.kr
+  + EXPO_PUBLIC_SUPABASE_URL·EXPO_PUBLIC_SUPABASE_ANON_KEY(단톡방 공지 값) + 서버 켜기(server/README.md)
+  시연 계정 비밀번호는 조장에게 (깃에 없음)
+- 남은 순서(푸시·APK)는 app/FE_구현_정리.md '실제 서버 연결·제출 준비'
