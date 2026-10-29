@@ -89,3 +89,11 @@ def test_short_cuts_at_sentence_end():
     assert tasks._short("가" * 200, 100) == "가" * 100 + "…"
     assert tasks._short("짧은 답.", 100) == "짧은 답."
     assert tasks._short(None, 100) is None
+    assert tasks._short("하나요. 둘이에요. 셋이에요.", 150) == "하나요. 둘이에요."  # 3문장째는 버림
+
+
+@pytest.mark.parametrize("raw, want", [("제출하면 됩니다.", "제출하면 돼요."), ("120학점입니다.", "120학점이에요."),
+                                       ("14일까지입니다.", "14일까지예요."), ("신청해야 합니다", "신청해야 해요"),
+                                       ("합니다만 그래요.", "합니다만 그래요.")])
+def test_polite_endings(raw, want):
+    assert tasks._polite(raw) == want

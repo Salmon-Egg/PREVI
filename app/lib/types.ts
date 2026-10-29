@@ -129,7 +129,8 @@ export type ChatCard = { image_url: string | null; title: string; lines: string[
 export type ChatAction =
   | { type: 'add_todo'; label: string; payload: { title: string; due_date: string | null } }
   | { type: 'open_link'; label: string; payload: { url: string } }
-  | { type: 'open_screen'; label: string; payload: { screen: string; id?: number } };
+  | { type: 'open_screen'; label: string; payload: { screen: string; id?: number } }
+  | { type: 'ask'; label: string; payload: { text: string } };
 export type Message = {
   id: number;
   role: 'user' | 'assistant';

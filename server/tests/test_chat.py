@@ -78,6 +78,30 @@ def test_calendar_button_ignores_common_words(monkeypatch):
     assert msg["text"].endswith("아래 버튼으로 마감 알림을 받아 둘 수 있어요.")
 
 
+def test_when_question_answers_from_calendar(monkeypatch):
+    calendar = [{"title": "1학기 수강신청", "start_date": "2099-02-15", "end_date": "2099-02-17"}]
+    res, saved = run_chat(monkeypatch, "수강신청 언제야?", [], calendar=calendar)  # 요람엔 날짜가 없음
+    msg = res.json()["message"]
+    assert "2099년 2월 15일 ~ 2099년 2월 17일" in msg["text"]
+    assert msg["actions"][0]["payload"] == {"title": "1학기 수강신청", "due_date": "2099-02-17"}
+    assert not any(t == "unanswered_questions" for _, t, _ in saved)
+
+
+@pytest.mark.parametrize("q", ["휴학 알려줘", "장학금?", "졸업 관련해서 좀 알려줘"])
+def test_vague_question_asks_back_without_ai(monkeypatch, q):
+    monkeypatch.setattr(tasks, "_ask", lambda *a, **k: pytest.fail("AI를 부르면 안 됨"))
+    res, saved = run_chat(monkeypatch, q, [])
+    msg = res.json()["message"]
+    assert "어떤 게 궁금하세요?" in msg["text"]
+    assert msg["actions"] and all(a["type"] == "ask" and a["payload"]["text"] for a in msg["actions"])
+    assert not any(t == "unanswered_questions" for _, t, _ in saved)
+
+
+def test_specific_question_is_not_asked_back(monkeypatch):
+    res, _ = run_chat(monkeypatch, "휴학 기간은 최대 몇 학기야?", [CHUNK])
+    assert "궁금하세요" not in res.json()["message"]["text"]
+
+
 def test_previous_turn_goes_to_ai(monkeypatch):
     seen = []
     real = tasks.route_question

@@ -198,9 +198,25 @@ def answer_my_info(question: str, facts: dict) -> str:
     return _short(out.get("answer"), 100) or facts.get("summary") or "내 정보를 정리했어요."
 
 
-def _short(text, limit: int):
-    """지시문을 어기고 길게 쓴 답을 limit 글자 안의 마지막 문장 끝에서 자름. 문장 끝이 없으면 '…'."""
-    if not isinstance(text, str) or len(text) <= limit:
+# 지시문으로 "~요"만 쓰라고 해도 Kanana가 "~합니다"를 섞음(10/30 실측): 흔한 끝말만 코드로 바꿈
+FORMAL = {"합니다": "해요", "됩니다": "돼요", "있습니다": "있어요", "없습니다": "없어요", "않습니다": "않아요"}
+
+
+def _polite(text: str) -> str:
+    text = re.sub("(?:" + "|".join(FORMAL) + r")(?=[.!]|$)",lambda m: FORMAL[m.group()], text)
+    # "입니다": 앞 글자에 받침이 있으면 "이에요"(학점이에요), 없으면 "예요"(까지예요)
+    return re.sub(r"(.)입니다(?=[.!]|$)", lambda m: m[1] + ("이에요" if "가" <= m[1] <= "힣" and (ord(m[1]) - 0xAC00) % 28 else "예요"), text)
+
+
+def _short(text, limit: int, sentences: int = 2):
+    """지시문을 어기고 길게 쓴 답을 2문장·limit 글자 안의 마지막 문장 끝에서 자름. 문장 끝이 없으면 '…'."""
+    if not isinstance(text, str):
         return text
-    ends = [m.end() for m in re.finditer(r"[.?!](?!\S)", text) if m.end() <= limit]  # "3.5"의 점은 문장 끝 아님
+    text = _polite(text)
+    ends = [m.end() for m in re.finditer(r"[.?!](?!\S)", text)]  # "3.5"의 점은 문장 끝 아님
+    if len(ends) > sentences:
+        text = text[:ends[sentences - 1]]
+    if len(text) <= limit:
+        return text
+    ends = [e for e in ends if e <= limit]
     return text[:ends[-1]] if ends else text[:limit].rstrip() + "…"

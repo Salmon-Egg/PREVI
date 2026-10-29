@@ -75,6 +75,8 @@ export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) 
       }
     } else if (a.type === 'open_link') {
       openLink(a.payload.url);
+    } else if (a.type === 'ask') {
+      send(a.payload.text); // 비서가 되물은 질문 중 고른 것을 그대로 보냄
     } else {
       const to = SCREENS[a.payload.screen];
       if (!to) return;
