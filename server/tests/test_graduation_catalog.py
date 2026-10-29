@@ -24,6 +24,17 @@ def test_cohort_and_department_specific_minima_are_not_generalized():
     assert all(d['url'].startswith('https://') for d in docs)
 
 
+def test_computer_engineering_2021_is_explicit_and_not_merged_department():
+    rules={(r['department'],r['admission_year']):r for r in rule_rows()}
+    rule=rules['컴퓨터공학과',2021]
+    assert rule['total_credits']==120
+    assert [(a['name'],a['required']) for a in rule['areas']]==[('전공',48),('교양',33)]
+    assert ('컴퓨터공학과',2022) not in rules
+    assert ('전자공학과',2021) not in rules
+    assert all(c['manual'] for c in rule['required_courses'])
+    assert any('ce.skuniv.ac.kr' in s for s in rule['certifications'])
+
+
 def test_manual_evidence_is_not_treated_as_automatic_completion():
     rules=rule_rows()
     assert all(r['certifications'] for r in rules)

@@ -33,6 +33,7 @@ def main():
                     ('경영학부',2024,120,48,33),
                     ('스포츠앤테크놀로지학과',2024,120,60,33),
                     ('글로벌관광경영학과',2026,120,48,33),
+                    ('컴퓨터공학과',2021,120,48,33),
                 ):
                     r=api.put('/me',headers=headers,json={'department':department,'admission_year':year,'grade':2,'semester':2})
                     check(r.status_code==200,'temporary profile saved')

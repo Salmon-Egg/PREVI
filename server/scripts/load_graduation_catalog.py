@@ -79,8 +79,14 @@ def main():
     parser.add_argument('--apply',action='store_true')
     parser.add_argument('--embed',action='store_true',help='GPU PC의 실제 모델로 신규 자료의 빈 임베딩만 채움')
     parser.add_argument('--backup-dir',type=Path)
+    parser.add_argument('--department',help='지정 학과의 기준·문서만 선택. 다른 학과는 변경하지 않음')
     args=parser.parse_args()
     rules,docs=validate()
+    if args.department:
+        rules=[r for r in rules if r['department']==args.department]
+        docs=[d for d in docs if d['title'].endswith(' · ' + args.department)]
+        if not rules or not docs:
+            parser.error('해당 학과의 확인된 기준과 문서가 모두 있어야 합니다.')
     print(json.dumps({'planned_rules':len(rules),'planned_documents':len(docs),'planned_chunks':sum(len(d['contents']) for d in docs)},ensure_ascii=False))
     if not args.apply:return
     if not args.backup_dir:parser.error('--apply requires --backup-dir outside Git')
