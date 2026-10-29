@@ -146,3 +146,24 @@ def test_recalculation_outage_does_not_report_saved_grade_as_failed():
         assert response.status_code == 200
         assert response.json()["recalculated"]["remaining_total"] is None
         assert len(client.get("/grades", headers=HEADERS).json()[0]["items"]) == 1
+
+
+def test_manual_requirements_match_by_course_name():
+    rule = {**RULE, "required_courses": [
+        {"name": "교양필수 확인: College English 1", "manual": True},
+        {"name": "필수교양 · 대인관계 (택1)", "manual": True, "details": "교양필수 대인관계역량: 다음 중 1과목 — 홀리스틱리더십 / MZ세대대인관계"},
+        {"name": "학과 지정 필수과목 확인", "manual": True}]}
+    rows = [{**GRADE, "course_name": "College English 1", "area": "교양 필수"}, {**GRADE, "id": 2, "course_name": "MZ세대 대인관계", "area": "교양 필수"}]
+    assert [r["done"] for r in calculate_graduation(rows, rule)["requirements"][:3]] == [True, True, None]
+    assert [r["done"] for r in calculate_graduation([], rule)["requirements"][:3]] == [None, None, None]
+
+
+def test_area_lists_courses_and_taking_shows_without_counting():
+    taking = [{"course_name": "데이터베이스", "credits": 3, "area": "전공 선택"}, {"course_name": "직접입력", "credits": 2, "area": None},
+              {"course_name": "운영체제", "credits": 3, "area": "전공"}]  # 이미 성적 있는 과목은 수강 중으로 안 봄
+    rule = {**RULE, "required_courses": [{"name": "운영체제"}, {"name": "데이터베이스"}]}
+    g = calculate_graduation([GRADE], rule, taking)
+    major = g["areas"][0]
+    assert major["earned"] == 3 and major["courses"] == [{"term": "3-1", "course_name": "운영체제", "credits": 3.0, "grade": "A0"}]
+    assert major["taking"] == [{"course_name": "데이터베이스", "credits": 3.0}]
+    assert g["requirements"][:2] == [{"name": "운영체제", "done": True}, {"name": "데이터베이스", "done": False, "taking": True}]

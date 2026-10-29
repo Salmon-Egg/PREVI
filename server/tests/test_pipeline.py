@@ -197,3 +197,17 @@ def test_short_reasons_caps_check_items():
     assert out[0] == "재학생 ✓" and len(out) == 5 and out[-1] == "그 밖에 2가지는 공지 원문에서 확인해 주세요"
     assert all(len(r) <= 40 + len(" — 직접 확인이 필요해요") + 1 for r in out[1:4])
     assert short_reasons(["재학생 ✓"]) == ["재학생 ✓"]
+
+
+def test_reason_is_not_written_twice_when_ai_falls_back(monkeypatch):
+    # autouse 픽스처: AI 설명 = 근거 목록 그대로 (AI가 꺼졌거나 실패한 경우와 같음)
+    monkeypatch.setattr(tasks,'severity',lambda *_:2)
+    db = MemoryDB()
+    async def run():
+        async with httpx.AsyncClient(base_url='https://test',transport=httpx.MockTransport(db.handle)) as client:
+            for use_ai in (True, False):
+                db.data['todos'] = []
+                await Pipeline(client, AsyncMock(),now=NOW).recalculate(UID, use_ai=use_ai)
+                reason = db.data['todos'][0]['reason']
+                assert reason.startswith('[자동] 근거: ') and reason.count('근거:') == 1 and '\n' not in reason
+    asyncio.run(run())

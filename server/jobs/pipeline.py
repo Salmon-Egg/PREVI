@@ -182,11 +182,13 @@ class Pipeline:
                     shown = short_reasons(reasons)
                     facts = ' · '.join(shown) or '공지 대상에 해당해요. 원문 조건을 확인해 주세요.'
                     # 근거가 바뀐 경우만 문장을 다시 생성. 원래 판정 근거도 함께 남긴다.
-                    if old and old['reason'].endswith('\n근거: ' + facts):
+                    if old and old['reason'].endswith('근거: ' + facts):
                         explanation = old['reason']
                     else:
                         text = await run_in_threadpool(tasks.explain_reason, n['title'], verdict, shown) if use_ai else facts
-                        explanation = AUTO_REASON + (text if isinstance(text,str) and text.strip() else facts) + '\n근거: ' + facts
+                        # AI가 꺼졌거나 실패하면 text가 근거 목록 그대로라, 설명 줄을 빼야 같은 글이 두 번 안 보임
+                        said = text.strip() if isinstance(text,str) and text.strip() not in ('', facts) else ''
+                        explanation = AUTO_REASON + (said + '\n' if said else '') + '근거: ' + facts
                     value = {'user_id':uid,'source_kind':'notice','source_id':n['id'],'type':kind,
                         'title':n['title'][:200], 'due_date':due.isoformat() if due else None,
                         'reason':explanation,

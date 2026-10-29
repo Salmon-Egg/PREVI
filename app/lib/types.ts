@@ -104,8 +104,9 @@ export type Graduation = {
   earned_total: number | null;
   remaining_total: number | null;
   // ▶ FE 20번·21번: courses는 그 영역에서 들은 과목과 성적 (영역 카드를 펼치면 보임). API 명세에 없는 새 필드라 조장 확인 필요
-  areas: { name: string; required: number; earned: number | null; courses?: AreaCourse[] }[];
-  requirements: { name: string; done: boolean | null; todo_id?: number }[];
+  // taking: 이번 학기 시간표에 넣은 과목 (성적 전이라 학점·완료에는 안 들어감)
+  areas: { name: string; required: number; earned: number | null; courses?: AreaCourse[]; taking?: { course_name: string; credits: number }[] }[];
+  requirements: { name: string; done: boolean | null; todo_id?: number; taking?: boolean }[];
 };
 
 /** 졸업 영역에 들어간 과목 하나 (학기 "4-1", 성적 A+~F·P) */

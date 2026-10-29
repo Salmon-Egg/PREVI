@@ -36,8 +36,9 @@ export default function GraduationDetail() {
             {data.requirements.map((r) => (
               <Card key={r.name} onPress={r.todo_id ? () => router.push(`/todos/${r.todo_id}`) : undefined}>
                 <Row>
-                  <Text style={{ fontSize: 18 }}>{r.done ? '✅' : r.done === null ? '❔' : '⬜'}</Text>
+                  <Text style={{ fontSize: 18 }}>{r.done ? '✅' : r.taking ? '📘' : r.done === null ? '❔' : '⬜'}</Text>
                   <Body style={{ flex: 1 }}>{r.name}</Body>
+                  {!r.done && r.taking && <Sub>수강 중</Sub>}
                   {r.todo_id && <Sub>할 일 ›</Sub>}
                 </Row>
               </Card>
