@@ -2,6 +2,7 @@
 import hashlib
 import os
 import re
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import httpx
@@ -96,7 +97,13 @@ class NotificationSender:
         result = await self.push.post(RECEIPT_URL,headers=headers,json={"ids":[row["push_ticket_id"]]})
         result.raise_for_status()
         receipt = result.json().get("data",{}).get(row["push_ticket_id"])
+        return await self.apply_receipt(row, receipt)
+
+    async def apply_receipt(self, row, receipt):
         if receipt is None: return {"status":"accepted"}
+        notification_id = row['id']
+        if not isinstance(receipt, dict):
+            raise NotificationError("푸시 결과 형식을 확인해야 합니다.")
         if receipt.get("status")=="ok":
             await self.update(notification_id,delivery_status="delivered")
             return {"status":"delivered"}
@@ -107,6 +114,56 @@ class NotificationSender:
         await self.update(notification_id,delivery_status="failed",error_code=safe_code)
         if safe_code=="DeviceNotRegistered": await self.clear_invalid_token(row["user_id"],row["push_token_hash"])
         return {"status":"failed"}
+
+    async def check_pending_receipts(self, *, now=None, limit=1000):
+        """접수 15분 후 결과 확인. 새 푸시나 재전송은 하지 않는다."""
+        if not 1 <= limit <= 1000:
+            raise ValueError('결과 조회 개수는 1~1000이어야 합니다.')
+        now = now or datetime.now(timezone.utc)
+        if now.tzinfo is None:
+            raise ValueError('확인 시각에 시간대가 필요합니다.')
+        response = await self.database.get('/rest/v1/notifications', params={
+            'delivery_status':'eq.accepted', 'sent_at':'lte.' + (now-timedelta(minutes=15)).isoformat(),
+            'select':'id,user_id,delivery_status,push_ticket_id,push_token_hash,sent_at',
+            'order':'sent_at.asc,id.asc', 'limit':limit,
+        })
+        response.raise_for_status()
+        counts = {'checked':0, 'delivered':0, 'failed':0, 'pending':0, 'unknown':0, 'errors':0}
+        pending = []
+        for row in response.json():
+            try:
+                sent = datetime.fromisoformat(row['sent_at'].replace('Z','+00:00'))
+                if sent.tzinfo is None:
+                    raise ValueError('invalid timestamp')
+                if sent <= now-timedelta(hours=24) or not row.get('push_ticket_id'):
+                    code = 'EXPO_RECEIPT_EXPIRED' if row.get('push_ticket_id') else 'MISSING_PUSH_TICKET'
+                    await self.update(row['id'], delivery_status='unknown', error_code=code)
+                    counts['unknown'] += 1
+                else:
+                    pending.append(row)
+            except (KeyError, ValueError, TypeError, httpx.HTTPError, NotificationError):
+                counts['errors'] += 1
+        if not pending:
+            return counts
+        headers = {'Authorization':'Bearer '+self.access_token} if self.access_token else {}
+        try:
+            result = await self.push.post(RECEIPT_URL, headers=headers,
+                json={'ids':list(dict.fromkeys(r['push_ticket_id'] for r in pending))})
+            result.raise_for_status()
+            receipts = result.json().get('data')
+            if not isinstance(receipts, dict):
+                raise NotificationError('푸시 결과 형식을 확인해야 합니다.')
+        except (httpx.HTTPError, ValueError, TypeError, AttributeError, NotificationError):
+            counts['errors'] += len(pending)
+            return counts
+        for row in pending:
+            try:
+                status = (await self.apply_receipt(row, receipts.get(row['push_ticket_id'])))['status']
+                counts['checked'] += 1
+                counts['pending' if status == 'accepted' else status] += 1
+            except (httpx.HTTPError, KeyError, TypeError, ValueError, NotificationError):
+                counts['errors'] += 1
+        return counts
 
 
 async def send_notification(user_id: UUID, kind: str, title: str, target_id: int, event_key="once"):

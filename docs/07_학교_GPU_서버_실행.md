@@ -1,5 +1,7 @@
 # 학교 GPU 서버에서 PREVI 실행하기
 
+자동 실행 파일 생성·등록·중지 절차는 [배포 자동 실행 설정](배포_자동실행_설정.md)을 참고합니다. Linux 사용자 systemd와 Windows 작업 스케줄러를 구분합니다.
+
 작성일: 2026-10-29 · 기준 환경: BE B GPU PC (Windows 10, RTX 4060 Ti 8GB) · 관련 문서: [AI 운영 가이드](06_AI_운영_가이드.md), [백엔드-허 할 일](백엔드-허_할일.md)
 
 이 문서의 숫자·버전은 2026-10-29에 GPU PC에서 직접 확인한 값입니다.
@@ -23,7 +25,8 @@
 git clone https://github.com/Salmon-Egg/front-back-kick.git
 cd front-back-kick
 git switch 통합본
-git checkout c3fe1ca   # 이 문서 기준과 똑같이 맞출 때. 최신으로 갈 때는 git pull
+git checkout c3fe1ca   # 이 문서 기준으로 고정할 때만 사용(detached HEAD)
+# 최신으로 갱신할 때: git switch 통합본 후 git pull --ff-only
 ```
 
 ### 1-2. 받아야 하는 PR

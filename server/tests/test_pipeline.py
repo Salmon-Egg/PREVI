@@ -135,6 +135,15 @@ def test_quiet_window_and_reminder_time():
     asyncio.run(run())
 
 
+def test_original_notice_exception_is_used_by_student_verdict():
+    notice = {**NOTICE, 'conditions': {'min_credits': 15},
+              'body': '직전 학기 15학점 이상, 8학기는 12학점 이상'}
+    grades = [{**GRADE, 'credits': 12}]
+    assert verdict_for(notice, PROFILE, grades)[0] == 'check'
+    notice = {**notice, 'body': '직전 학기 15학점 이상'}
+    assert verdict_for(notice, PROFILE, grades)[0] == 'ineligible'
+
+
 def test_scope_disabled_does_not_read_grades(monkeypatch):
     db = MemoryDB()
     db.data['profiles'][0]['assistant_scope'] = {'grades':False}

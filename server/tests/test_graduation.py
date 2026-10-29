@@ -128,6 +128,35 @@ def test_electronic_computer_department_uses_its_own_rule_query():
         assert response.json()['required_total'] == RULE['total_credits']
 
 
+@pytest.mark.parametrize('year,expected', [(2021, 200), (2024, 200), (2020, 404), (2025, 404)])
+def test_renamed_software_major_uses_only_verified_legacy_cohorts(year, expected):
+    queries = []
+
+    def handler(request):
+        path = request.url.path
+        if path == '/auth/v1/user':
+            return httpx.Response(200, json={'id': USER_ID, 'email': 'student@skuniv.ac.kr', 'email_confirmed_at': '2026-10-27T00:00:00Z'})
+        if path == '/rest/v1/profiles':
+            return httpx.Response(200, json=[{**PROFILE, 'department': '컴퓨터소프트웨어전공', 'admission_year': year}])
+        if path == '/rest/v1/grad_requirements':
+            queries.append(dict(request.url.params))
+            return httpx.Response(200, json=[RULE] if request.url.params['department'] == 'eq.소프트웨어학과' else [])
+        assert path == '/rest/v1/grades'
+        return httpx.Response(200, json=[])
+
+    with TestClient(create_app(Settings('https://example.supabase.co', 'test-key'), httpx.MockTransport(handler))) as client:
+        response = client.get('/graduation', headers=HEADERS)
+    assert response.status_code == expected
+    assert all(q['admission_year'] == f'eq.{year}' for q in queries)
+    if expected == 200:
+        assert response.json()['required_total'] == 120
+        assert '소프트웨어학과 기준을 참고' in response.json()['requirements'][-1]['name']
+        assert response.json()['remaining_total'] is None
+        assert response.json()['requirements'][-1]['done'] is None
+    else:
+        assert len(queries) == 1
+
+
 def test_grade_mutations_recalculate_each_time():
     with client_for(initial=[]) as client:
         payload = {key: value for key, value in GRADE.items() if key != "id"}
@@ -137,6 +166,17 @@ def test_grade_mutations_recalculate_each_time():
         assert response.json()["recalculated"]["remaining_total"] == 120
         response = client.delete("/grades/1", headers=HEADERS)
         assert response.json()["recalculated"]["remaining_total"] == 120
+
+
+@pytest.mark.parametrize('year,total', [(2021, 125), (2025, 130)])
+def test_exact_department_cohort_rule_always_takes_precedence(year, total):
+    with client_for(profile={**PROFILE, 'department': '컴퓨터소프트웨어전공', 'admission_year': year},
+                    rule={**RULE, 'total_credits': total}) as client:
+        response = client.get('/graduation', headers=HEADERS)
+        assert response.status_code == 200
+        assert response.json()['required_total'] == total
+        assert response.json()['remaining_total'] == total - 3
+        assert not any('기준을 참고' in r['name'] for r in response.json()['requirements'])
 
 
 def test_recalculation_outage_does_not_report_saved_grade_as_failed():
