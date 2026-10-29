@@ -40,7 +40,19 @@ NOTICE_COLS = "title,summary,body,url,deadline"
 FOLLOW_UP = re.compile("그럼|그러면|그건|그거|그게|그때|거기|이건|이거|그리고|또 ")
 # 학사일정 제목 어디에나 있는 말: 이것만 겹치면 엉뚱한 일정에 '마감 알림 받기'가 붙음
 COMMON = re.compile("신청|기간|학기|마감|안내|언제|일정")
+WHEN = re.compile("언제|며칠|날짜|일정|기간")
 CONV_COLS = "id,title,pinned,updated_at"
+# 주제 낱말만 있는 질문("휴학 알려줘")은 걸리는 문단이 많아 답이 길고 흐려짐 → AI 없이 무엇이 궁금한지 버튼으로 되물음
+CLARIFY = {
+    "휴학": [("최대 기간", "휴학은 최대 몇 학기까지 할 수 있어?"), ("신청 방법", "휴학 신청 방법 알려줘"), ("신청 기간", "휴학 신청은 언제 해?")],
+    "복학": [("신청 시기", "복학 신청은 언제 해?"), ("신청 방법", "복학 신청 방법 알려줘")],
+    "장학금": [("내가 받을 수 있는 장학금", "나 장학금 받을 수 있어?"), ("성적우수 장학금 조건", "성적우수 장학금 조건이 뭐야?")],
+    "졸업": [("내 남은 학점", "나 졸업까지 몇 학점 남았어?"), ("졸업 총 학점", "졸업 총 학점은 몇 학점이야?"), ("졸업 요건", "졸업 요건이 뭐야?")],
+    "수강신청": [("신청 기간", "수강신청 언제야?"), ("최대 학점", "한 학기 최대 몇 학점까지 들을 수 있어?")],
+    "계절학기": [("최대 학점", "계절학기는 몇 학점까지 들을 수 있어?"), ("일정", "계절학기 언제야?")],
+}
+CLARIFY["장학"] = CLARIFY["장학금"]
+VAGUE_TAIL = re.compile(r"\s*(에\s*대해서?|관련해서?)?\s*(좀\s*)?(알려\s*줘|알려\s*주세요|설명해\s*줘|궁금해|뭐야)?\s*[?？.!~]*\s*$")
 
 
 def _bigrams(s: str) -> set[str]:
@@ -82,17 +94,37 @@ async def search_chunks(request: Request, question: str, k: int = 3) -> list[dic
     return [r for _, r in sorted(scored, key=lambda x: -x[0])[:k]]
 
 
-async def _calendar_action(request: Request, question: str) -> list[dict]:
-    """⑬ 다음 행동 버튼 (규칙): 질문과 비슷한 학사일정이 앞으로 있으면 '마감 알림 받기'."""
+async def _calendar_event(request: Request, asked: str) -> dict | None:
+    """질문과 비슷한 앞으로의 학사일정. "언제" 질문은 낱말 하나("수강신청 언제야?" → 수강)만 겹쳐도 찾음."""
     events = await database_rows(request, "GET", "academic_calendar", params={
-        "select": "title,end_date", "end_date": f"gte.{date.today().isoformat()}", "limit": 200})
+        "select": "title,start_date,end_date", "end_date": f"gte.{date.today().isoformat()}", "limit": 200})
     def grams(s):
         return _bigrams(COMMON.sub(" ", s))
-    q = grams(question.rsplit("질문:", 1)[-1])  # 맥락 제목이 아니라 학생이 실제로 물은 말로
+    q = grams(asked)  # 맥락 제목이 아니라 학생이 실제로 물은 말로
     best = max(events, key=lambda e: len(q & grams(e["title"])), default=None)
-    if not best or len(q & grams(best["title"])) < 2:
-        return []
-    return [{"type": "add_todo", "label": "마감 알림 받기", "payload": {"title": best["title"], "due_date": best["end_date"]}}]
+    hit = len(q & grams(best["title"])) if best else 0
+    return best if hit >= 2 or (hit and WHEN.search(asked)) else None
+
+
+def _ko_date(iso: str) -> str:
+    y, m, d = iso[:10].split("-")
+    return f"{int(y)}년 {int(m)}월 {int(d)}일"
+
+
+def _event_chunk(e: dict) -> dict:
+    """학사일정을 AI 근거 문단으로. 날짜는 "2027년 2월 15일"로: "02"로 쓰면 AI가 쓴 "2월"이 근거에 없는 숫자로 걸림."""
+    start, end = e.get("start_date") or e["end_date"], e["end_date"]
+    when = _ko_date(start) + ("" if start == end else f" ~ {_ko_date(end)}")
+    return {"content": f"[학사일정] {e['title']}: {when}", "title": "학사일정", "url": None}
+
+
+def _clarify(text: str) -> dict | None:
+    """⑩ 주제 낱말만 물으면 무엇이 궁금한지 되묻고 고를 질문을 버튼(ask)으로. 버튼을 누르면 앱이 그 질문을 보냄."""
+    topic = VAGUE_TAIL.sub("", text.strip())
+    if topic not in CLARIFY:
+        return None
+    return {"text": f"{topic}에 대해 어떤 게 궁금하세요? 아래에서 골라 주시거나 조금 더 자세히 물어봐 주세요.",
+            "cards": [], "actions": [{"type": "ask", "label": label, "payload": {"text": q}} for label, q in CLARIFY[topic]]}
 
 
 async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: str | None, question: str) -> dict:
@@ -148,6 +180,9 @@ async def _from_docs(request: Request, question: str, p: dict, extra: list[dict]
     """⑪ 문서 근거 답변. 근거가 없으면 지어내지 않고 '모른다'."""
     # 지금 질문만으로 먼저 찾고, 못 찾을 때만 앞 대화·맥락을 붙여 다시 (앞 주제 문단이 새 질문을 덮지 않게)
     asked = question.rsplit("질문:", 1)[-1]
+    event = await _calendar_event(request, asked)
+    if event and WHEN.search(asked):  # "수강신청 언제야?": 요람엔 날짜가 없어서 학사일정 표의 실제 날짜를 근거로
+        extra = extra + [_event_chunk(event)]
     chunks = extra + (await search_chunks(request, asked) or (asked != question and await search_chunks(request, question)) or [])
     student = {"학적": STATUS_KO.get(p["status"], p["status"])} if PERSONAL.search(asked) else {}
     if BY_DEPT.search(asked):
@@ -157,7 +192,9 @@ async def _from_docs(request: Request, question: str, p: dict, extra: list[dict]
         school = SCHOOL.search(asked)
         return {"text": UNKNOWN if school else OFF_TOPIC, "cards": [], "sources": [], "actions": [], "unknown": bool(school)}
     sources = list({c["title"]: {"title": c["title"], "url": c["url"]} for c in _used(answer, chunks)}.values())
-    actions = await _calendar_action(request, question)
+    # ⑬ 다음 행동 버튼 (규칙): 질문과 비슷한 학사일정이 앞으로 있으면 '마감 알림 받기'
+    actions = [{"type": "add_todo", "label": "마감 알림 받기",
+                "payload": {"title": event["title"], "due_date": event["end_date"]}}] if event else []
     if actions:  # 버튼 안내는 코드가 씀 (AI에게 맡기면 없는 버튼을 말할 수 있음)
         answer += " 아래 버튼으로 마감 알림을 받아 둘 수 있어요."
     return {"text": answer, "cards": [], "sources": sources, "actions": actions}
@@ -241,8 +278,8 @@ async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends
 
     # 여러 가지를 한 번에 물으면 하나씩 따로 찾고 답함: 통째로 찾으면 첫 주제 문단만 걸렸음(10/29)
     parts = await run_in_threadpool(tasks.split_questions, body.text)
-    if len(parts) == 1:
-        reply = await _answer(request, user, p, ask(body.text), extra)
+    if len(parts) == 1:  # 할 일·공지·앞 질문 맥락이 있으면 주제가 정해져 있어 되묻지 않음
+        reply = (not lines and _clarify(body.text)) or await _answer(request, user, p, ask(body.text), extra)
     else:
         replies = [await _answer(request, user, p, ask(q), extra) for q in parts[:MAX_PARTS]]
         text = "\n\n".join(f"{NUM[i]} {q}\n{r['text']}" for i, (q, r) in enumerate(zip(parts, replies)))
