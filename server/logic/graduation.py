@@ -2,6 +2,7 @@
 import re
 import unicodedata
 from decimal import Decimal
+from server.logic.graduation_display import clean_label
 
 
 def normalized_name(value: str) -> str:
@@ -46,13 +47,13 @@ def calculate_graduation(rows: list[dict], rules: dict, taking: list[dict] = ())
         options = [normalized_name(o) for o in manual_options(course)] if course.get("manual") else [normalized_name(course["name"])]
         # 과목명으로 못 찾는 '확인 필요' 요건은 그대로 None (완료로도 미완료로도 보지 않음)
         done = True if any(o in names for o in options) else None if course.get("manual") else False
-        item = {"name": course["name"], "done": done}
+        item = {"name": '\n'.join(clean_label(line) for line in course["name"].splitlines()), "done": done}
         if not done and any(o in taking_names for o in options):
             item["taking"] = True
         requirements.append(item)
-    requirements.extend({"name": f"확인 필요: {name}", "done": None} for name in rules["certifications"])
+    requirements.extend({"name": clean_label(name) or "세부 졸업요건 확인", "done": None} for name in rules["certifications"])
     if ambiguous:
-        requirements.append({"name": "확인 필요: 같은 이름의 이수 과목이 여러 학기에 있어 중복 학점 인정 여부 확인", "done": None})
+        requirements.append({"name": "재수강·중복 과목의 인정 학점 확인", "done": None})
     required = Decimal(str(rules["total_credits"]))
     return {"required_total": float(required), "earned_total": None if ambiguous else float(total),
             "remaining_total": None if ambiguous else float(max(required - total, Decimal(0))),

@@ -1,0 +1,65 @@
+# PREVI — 새 채팅·다른 PC 인수인계
+
+기록일: 2026-10-29 (한국 시간). 이 문서는 당시 확인 상태이며 새 작업 전 원격 브랜치·PR·서버 상태를 다시 확인한다.
+
+## 사용자와 작업 방식
+
+- 사용자는 서경대학교 PREVI 공모전 프로젝트의 BE A 담당이다. 설명만 하고 멈추지 말고 허가된 구현·검증·푸시까지 진행하길 원한다.
+- BE A: server/, supabase/, 판정·수집·알림·배포. BE B: server/ai/ 모델·지시문·챗봇 생성. server/jobs/는 협업 영역이다.
+- 실제 키·비밀번호는 출력하거나 깃에 넣지 않는다. `.env`와 시연 계정 비밀번호는 다른 PC로 자동 이동하지 않는다.
+- PR 검토와 운영 반영을 구분한다. 이 기록 시점에 새 수정 PR들은 운영 배포 전이다.
+
+## 저장소와 현재 검증 브랜치
+
+- 저장소: https://github.com/Salmon-Egg/front-back-kick
+- 팀 통합 브랜치: `통합본`. main은 운영 기준이 아니다.
+- 검증 기준 통합본: `2acf13a`.
+- 이어받을 브랜치: `verify/be-a-integration`.
+- 이 브랜치는 최신 통합본에 학과 목록 정정 및 PR #7~#10을 함께 적용한 검증용이다. 팀 통합본을 직접 병합하거나 운영 서버를 재시작하지 않았다.
+- 전체 서버 테스트 **258개 통과**. 실제 Supabase 임시 계정으로 기존 5개 학과·학번과 2021학번 개편 명칭 졸업 조회, 문서 RLS 확인 완료. 임시 계정 삭제 완료. 실제 휴대폰 푸시는 보내지 않았다.
+
+다른 PC에 저장소가 준비돼 있다면 작업 중 변경사항을 먼저 확인하고 이 브랜치를 가져온다. 저장소 접근권한·로그인이 없으면 임의로 가능하다고 가정하지 않는다. 이 브랜치 적용은 운영 배포·PR 승인과 다르다.
+
+## 최근 변경
+
+| 범위 | PR/변경 | 핵심 |
+|---|---|---|
+| 학과 선택 문서 | 원래 PR #6은 닫힘. 정정 커밋 9716917을 검증 브랜치에 포함 | 2025 개편 직전 학과 + 컴퓨터공학과·전자공학과. 컴퓨터과학과 등 너무 오래된 명칭 15개 제외. 학부·세부전공 포함 50개 선택값 |
+| 졸업 조회 | https://github.com/Salmon-Egg/front-back-kick/pull/7 | 정확한 학과·학번 기준 우선. 2021~2024학번 컴퓨터소프트웨어전공의 정확한 기준이 없으면 같은 학번 소프트웨어학과 기준을 참고로 표시. 개인 교육과정 미확정이므로 remaining_total=null 및 확인 안내. 홈·챗봇도 수정 |
+| 장학 예외 | https://github.com/Salmon-Egg/front-back-kick/pull/8 | 8학기 학점 예외·토익·학사경고 미확인 시 잘못된 통과·탈락 대신 확인 필요. 별도 확정 미충족 조건은 유지. 실제 등록학기·심사학기를 추정하지 않음 |
+| 푸시 결과 | https://github.com/Salmon-Egg/front-back-kick/pull/9 | daily_check 및 5분 reminders-only에 Expo receipt 확인 연결. 15분 후 조회·24시간 만료·기기 변경 토큰 보호. delivered는 Apple/Google 인계 성공이지 화면 표시·읽음 보장 아님 |
+| 배포 준비 | https://github.com/Salmon-Egg/front-back-kick/pull/10 | Linux 사용자 systemd 파일 생성 도구(기본 미리보기), 한국 시간 일정·flock 중복 방지, Windows PowerShell 경로 수정. 실제 호스트 등록은 안 함 |
+
+## 중요한 DB·인증 상태
+
+- Supabase 프로젝트: `rzyclipevcqmezihcbdb`.
+- 001~011 적용 기록. 특히 011 알림 예약 수정은 이미 적용·실제 검사한 상태이므로 무작정 재실행하지 않는다.
+- 최근 확인: documents 74, doc_chunks 508, 임베딩 누락 0, grad_requirements 153. 새 호스트로 옮긴다는 이유로 자료·임베딩을 다시 넣지 않는다.
+- `load_yoram`은 기존 요람·장학 문단을 삭제 후 재적재하므로 단순 서버 이전에는 실행하지 않는다.
+- 학교 이메일은 정확히 `@skuniv.ac.kr`만 허용한다.
+- SMTP에서 실제 메일 수신은 확인했다. 가입 화면은 signInWithOtp(shouldCreateUser=true) → verifyOtp → updateUser로 비밀번호 설정을 한다. 신규/기존 계정 상태에 따라 Confirm signup/Magic Link 템플릿이 다를 수 있으므로 **두 템플릿 모두 `{{ .Token }}`로 통일 후 새 가입·재전송 검증 필요**. 템플릿 설정 완료를 임의로 단정하지 않는다.
+- 앱은 6자리 입력이므로 Supabase Email OTP Length도 확인한다. 일반 로그인은 signInWithPassword이며 매번 메일이 필요한 구조가 아니다.
+
+## 다음으로 할 일
+
+1. 이 검증 브랜치 변경과 개별 PR들의 최신 병합 상태를 확인하고 팀 검토를 받는다. 중복 병합·중복 기능 적용을 피한다.
+2. FE가 정정 학과 목록을 처음 설정·학적정보 수정 양쪽에 반영해야 한다. DB 목록만 넣어도 앱의 하드코딩 선택지가 자동 갱신되는 것은 아니다.
+3. 졸업 참고 수치와 확인 안내가 화면에서 함께 표시되는지 검증한다. 전과·자동 학적 변경 이력은 별도 확인하며 통합 전 컴공·전자공에 통합 후 기준을 일괄 복사하지 않는다.
+4. 운영 장소(학교 Linux 서버 또는 Windows GPU PC)와 고정 API/웹 주소를 정한다.
+5. 학교 서버 SSH 주소·계정·GPU 여유 메모리·설치 권한이 필요하다. 이전 노트북 기본 SSH config에는 접속 정보가 없었다. 비밀번호는 채팅에 요청하지 않는다.
+6. 실제 운영 컴퓨터에 API·자동 작업을 등록한다. Linux는 생성 도구와 systemd, Windows는 Register-AssistantTasks.ps1 -Register. 두 컴퓨터에서 동시에 돌리지 않는다.
+7. FE 개발 빌드·projectId·폰 토큰과 함께 PUSH_ENABLED=true 실제 수신 및 클릭 이동을 검증한다. 현재는 실제 폰 검증 미완료.
+8. FE 홍길동 계정 홈→할 일→장학→채팅 시연, 졸업 영역별 과목 표시·오류 시 성적/시간표 링크 분리, 제출 웹/APK 확인.
+
+## 주요 문서
+
+- `supabase/research/학과개편_이전학과_선택목록_20261029.md`
+- `supabase/research/department_catalog_history.json`
+- `docs/장학판정_예외조건_처리.md`
+- `docs/푸시_결과확인_자동작업.md`
+- `docs/배포_자동실행_설정.md`
+- `docs/07_학교_GPU_서버_실행.md`
+
+## 이전 컴퓨터 환경 참고
+
+실제 저장소는 `C:\Users\hongc\Documents\GitHub\front-back-kick-new`, 별도 자료 폴더는 `C:\Users\hongc\Documents\ChatGPT\공모전`이었다. 다른 PC에서는 경로가 달라도 된다. 같은 이름의 공모전 프로젝트를 만든다고 이 대화·파일·비밀 설정이 모두 자동 동기화되는 것은 아니다. 이 파일과 실제 코드를 읽고 작업 상태를 이어받는다.

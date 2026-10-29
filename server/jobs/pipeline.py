@@ -67,7 +67,7 @@ def verdict_for(notice, profile, grades):
     conditions["unknown"] = list(conditions.get("unknown") or []) + hidden
     gpa = semester_gpa(items) if items else None
     credits = sum(float(g["credits"]) for g in items if g["grade"] != "F")
-    return judge(target, conditions, profile, gpa, credits)
+    return judge(target, conditions, profile, gpa, credits, source_text=notice.get("body") or "")
 
 
 def extraction_values(result):

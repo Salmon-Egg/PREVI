@@ -1,0 +1,24 @@
+{
+  "checked_at": "2026-10-29",
+  "source_url": "https://www.skuniv.ac.kr/notice/60616",
+  "effective": "2026년 8월 졸업대상자부터. 개인 이수면제·대체 인정은 포탈 확인",
+  "legacy_years": [2021, 2022, 2023, 2024],
+  "legacy_groups": [
+    {"name":"교양필수 창의·문제해결역량: 다음 중 1과목", "options":["상상력에의초대","문제해결의힘","MZ세대창의력","MZ세대문제해결","창의문제해결프로젝트"]},
+    {"name":"교양필수 대인관계역량: 다음 중 1과목", "options":["홀리스틱리더십","MZ세대대인관계","미래리더를위한대인관계"]},
+    {"name":"교양필수 영어1: 다음 중 1과목 또는 공식 이수면제", "options":["World Wide English 1","Global English 1","College English 1"]},
+    {"name":"교양필수 영어2: 다음 중 1과목 또는 공식 이수면제", "options":["World Wide English 2","Global English 2","College English 2"]},
+    {"name":"교양필수 자기계발역량: 다음 중 1과목", "options":["내인생의성공학·실패학","MZ세대자기계발","Life Care Design"]},
+    {"name":"교양필수 실무역량: 다음 중 1과목", "options":["직무리허설","MZ세대법이야기","MZ세대글쓰기와토론","Communication"]}
+  ],
+  "legacy_general_minimum": 33,
+  "elective_areas": ["인문과예술","사회와세계","과학과기술","미래와융합","인성과체육"],
+  "elective_rule": "2021~2024학번은 각 영역 1과목 이상, 교양선택 총 15학점 이상. 교양 전체 33학점과 별도로 확인",
+  "removed_required": ["World English 1","World English 2","커뮤니케이션영어 1","커뮤니케이션영어 2"],
+  "notes": [
+    "World English와 World Wide English는 다른 교과명이다. 폐지된 World English를 World Wide English와 혼동하지 않는다.",
+    "영어 이수면제는 학점이 부여되지 않으므로 다른 교양으로 최소 학점을 충족해야 한다.",
+    "대체재수강은 학교에 신청·인정된 결과를 확인한다. 과목명 유사성만으로 인정하지 않는다.",
+    "이 목록을 미이수 확정 목록으로 사용하지 않는다. 학생의 실제 성적·면제·대체 인정 정보가 필요하다."
+  ]
+}

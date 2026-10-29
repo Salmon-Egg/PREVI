@@ -35,7 +35,7 @@ async def home(request: Request, user: AuthenticatedUser = Depends(require_user)
     try:
         graduation = await graduation_result(request, user)
         remaining = graduation["remaining_total"]
-        study = f"입력 성적 기준 {remaining:g}학점 남음 · 세부요건 확인" if remaining is not None else "학점 중복 인정 확인 필요"
+        study = f"입력 성적 기준 {remaining:g}학점 남음 · 세부요건 확인" if remaining is not None else "적용 졸업 기준·학점 인정 확인 필요"
     except APIError as exc:
         if exc.status not in (400, 404, 409):
             raise

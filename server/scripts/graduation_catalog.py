@@ -4,7 +4,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 RESEARCH = ROOT / 'supabase' / 'research'
-FILES = ('graduation_catalog_2026.json','graduation_catalog_legacy_2024.json')
+FILES = ('graduation_catalog_2026.json','graduation_catalog_legacy_2024.json','graduation_catalog_ce_2021.json')
 
 
 def catalogs():
