@@ -59,6 +59,7 @@ def main():
         changed=0
         for row in rows:
             old=row['required_courses'];names={x['name'] for x in old}
+            names.update(x['details'] for x in old if isinstance(x.get('details'),str))
             extra=[x for x in items_for(row) if x['name'] not in names]
             if not extra:continue
             # 다른 수정이 들어간 행은 덮어쓰지 않고 멈춘다.

@@ -36,12 +36,12 @@ async def graduation_result(request: Request, user: AuthenticatedUser):
     if legacy_department:
         result["remaining_total"] = None
         result["requirements"].append({
-            "name": f"확인 필요: 현재 학과명은 2025 개편 후 명칭입니다. {profile['admission_year']}학번 {legacy_department} 기준을 참고로 표시하며, 적용 교육과정·전과 이력 확인 전에는 남은 학점을 확정하지 않습니다.",
+            "name": f"{legacy_department} 기준을 참고 · 전과·적용 교육과정 확인 필요",
             "done": None,
         })
     if profile.get('minor'):
         # 주전공의 확인된 최소 요건은 계속 보여주고, 미확인 추가전공을 완료로 판단하지 않는다.
-        result['requirements'].append({'name':'확인 필요: 현재 표시는 주전공 최소 기준이며 부전공·복수전공의 추가 요건과 중복 인정은 별도 확인','done':None})
+        result['requirements'].append({'name':'주전공 최소 기준 · 복수·부전공 추가 요건 확인','done':None})
     return result
 
 

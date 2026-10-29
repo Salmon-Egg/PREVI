@@ -2,6 +2,7 @@
 import re
 import unicodedata
 from decimal import Decimal
+from server.logic.graduation_display import clean_label
 
 
 def normalized_name(value: str) -> str:
@@ -26,10 +27,10 @@ def calculate_graduation(rows: list[dict], rules: dict) -> dict:
 
     requirements = []
     for course in rules["required_courses"]:
-        requirements.append({"name": course["name"], "done": None if course.get("manual") else normalized_name(course["name"]) in names})
-    requirements.extend({"name": f"확인 필요: {name}", "done": None} for name in rules["certifications"])
+        requirements.append({"name": clean_label(course["name"]) if '\n' not in course['name'] else '\n'.join(clean_label(line) for line in course['name'].splitlines()), "done": None if course.get("manual") else normalized_name(course["name"]) in names})
+    requirements.extend({"name": clean_label(name) or "세부 졸업요건 확인", "done": None} for name in rules["certifications"])
     if ambiguous:
-        requirements.append({"name": "확인 필요: 같은 이름의 이수 과목이 여러 학기에 있어 중복 학점 인정 여부 확인", "done": None})
+        requirements.append({"name": "재수강·중복 과목의 인정 학점 확인", "done": None})
     required = Decimal(str(rules["total_credits"]))
     return {"required_total": float(required), "earned_total": None if ambiguous else float(total),
             "remaining_total": None if ambiguous else float(max(required - total, Decimal(0))),
