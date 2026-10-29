@@ -8,10 +8,11 @@ from server.jobs.pipeline import pipeline_client
 
 async def run(extract=False, reminders_only=False):
     async with pipeline_client() as pipeline:
+        receipts = await pipeline.sender.check_pending_receipts()
         extracted = await pipeline.extract() if extract else None
         students = {'students':0,'judged':0,'errors':0} if reminders_only else await pipeline.recalculate()
         await pipeline.reminders()
-        return {'extraction':extracted, **students}
+        return {'extraction':extracted, **students, 'receipts':receipts}
 
 
 def main():
@@ -22,7 +23,7 @@ def main():
     logging.basicConfig(level=logging.INFO)
     result = asyncio.run(run(args.extract, args.reminders_only))
     print(result)
-    if result['errors'] or (result['extraction'] or {}).get('failed'):
+    if result['errors'] or (result['extraction'] or {}).get('failed') or result['receipts']['errors']:
         raise SystemExit(1)
 
 
