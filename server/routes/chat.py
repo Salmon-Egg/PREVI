@@ -174,6 +174,24 @@ class ChatIn(BaseModel):
     context: Context | None = None
 
 
+MAX_PARTS = 3  # 질문마다 AI를 따로 불러서(GPU에서 개당 약 10초) 한 번에 3개까지
+NUM = "①②③"
+
+
+async def _answer(request: Request, user: AuthenticatedUser, p: dict, question: str, extra: list[dict]) -> dict:
+    """질문 하나에 대한 답: ⑩ 의도 파악 → 위기·인사 / ⑫ 내 정보 / ⑪ 문서."""
+    route = await run_in_threadpool(tasks.route_question, question)
+    if route["intent"] == "crisis":
+        return {"text": CRISIS, "cards": [], "actions": []}
+    if route["intent"] == "smalltalk":
+        text = ("도움이 됐다니 다행이에요. 또 궁금한 게 있으면 언제든 물어봐 주세요." if route["topic"] == "thanks"
+                else f"안녕하세요, {p['nickname']}님! 저는 PREVI예요. {CAN_DO}")  # 이름은 첫인사에서만 부름
+        return {"text": text, "cards": [], "actions": []}
+    if route["intent"] == "my_info":
+        return await _my_info(request, user, p, route["topic"], question)
+    return await _from_docs(request, question, p, extra)
+
+
 async def _one(request: Request, table: str, **params) -> dict | None:
     rows = await database_rows(request, "GET", table, params={**params, "limit": 1})
     return rows[0] if rows else None
@@ -217,19 +235,22 @@ async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends
                 ctx = {"title": ctx["title"], "reason": " ".join(ctx["summary"] or [])}
         if ctx:
             lines.append(f"[{ctx['title']}] {ctx['reason'] or ''}")
-    question = "\n".join(lines + [f"질문: {body.text}"]) if lines else body.text
+    def ask(text):
+        return "\n".join(lines + [f"질문: {text}"]) if lines else text
+    extra = [_notice_chunk(notice)] if notice else []
 
-    route = await run_in_threadpool(tasks.route_question, question)  # ⑩
-    if route["intent"] == "crisis":
-        reply = {"text": CRISIS, "cards": [], "actions": []}
-    elif route["intent"] == "smalltalk":
-        text = ("도움이 됐다니 다행이에요. 또 궁금한 게 있으면 언제든 물어봐 주세요." if route["topic"] == "thanks"
-                else f"안녕하세요, {p['nickname']}님! 저는 PREVI예요. {CAN_DO}")  # 이름은 첫인사에서만 부름
-        reply = {"text": text, "cards": [], "actions": []}
-    elif route["intent"] == "my_info":
-        reply = await _my_info(request, user, p, route["topic"], question)
+    # 여러 가지를 한 번에 물으면 하나씩 따로 찾고 답함: 통째로 찾으면 첫 주제 문단만 걸렸음(10/29)
+    parts = await run_in_threadpool(tasks.split_questions, body.text)
+    if len(parts) == 1:
+        reply = await _answer(request, user, p, ask(body.text), extra)
     else:
-        reply = await _from_docs(request, question, p, [_notice_chunk(notice)] if notice else [])
+        replies = [await _answer(request, user, p, ask(q), extra) for q in parts[:MAX_PARTS]]
+        text = "\n\n".join(f"{NUM[i]} {q}\n{r['text']}" for i, (q, r) in enumerate(zip(parts, replies)))
+        if len(parts) > MAX_PARTS:
+            text += f"\n\n나머지 {len(parts) - MAX_PARTS}개 질문은 하나씩 다시 물어봐 주세요."
+        reply = {"text": text, "cards": [c for r in replies for c in r["cards"]],
+                 "sources": list({s["title"]: s for r in replies for s in r.get("sources", [])}.values()),
+                 "actions": [a for r in replies for a in r["actions"]], "unknown": any(r.get("unknown") for r in replies)}
 
     msg = (await database_rows(request, "POST", "messages", headers=ret, params={"select": MSG_COLS}, json={
         "conversation_id": conv["id"], "role": "assistant", "text": reply["text"],

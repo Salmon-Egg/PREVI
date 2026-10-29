@@ -122,3 +122,17 @@ def test_unknown_is_recorded(monkeypatch):
     assert res.status_code == 200
     assert res.json()["message"]["sources"] == []
     assert ("POST", "unanswered_questions", {"user_id": USER_ID, "message_id": 9, "question": "오늘 학식 메뉴 뭐야?"}) in saved
+
+
+def test_split_questions_single_and_fallback(monkeypatch):
+    monkeypatch.setattr(ai_client, "AI_FAKE", True)  # 가짜 AI는 나누기를 못 함 → 기호로 나눔
+    assert tasks.split_questions("휴학 기간은 최대 몇 학기야?") == ["휴학 기간은 최대 몇 학기야?"]
+    assert tasks.split_questions("휴학, 복학, 장학금 조건 알려줘") == ["휴학", "복학", "장학금 조건 알려줘"]
+    assert tasks.split_questions("휴학은 언제 해? 그리고 복학은?") == ["휴학은 언제 해", "복학은"]
+
+
+def test_many_questions_answered_one_by_one(monkeypatch):
+    res, _ = run_chat(monkeypatch, "휴학 기간은 최대 몇 학기야? 복학 신청은 언제 해? 학식 메뉴는? 졸업 학점은?", [CHUNK])
+    text = res.json()["message"]["text"]
+    assert text.startswith("① 휴학 기간은 최대 몇 학기야") and "② 복학 신청은 언제 해" in text and "③ 학식 메뉴는" in text
+    assert "나머지 1개 질문" in text

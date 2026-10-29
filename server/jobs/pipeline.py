@@ -19,6 +19,15 @@ from server.notify import NotificationSender
 log = logging.getLogger(__name__)
 KST = timezone(timedelta(hours=9))
 AUTO_REASON = "[자동] "
+CHECK = " — 직접 확인이 필요해요"
+
+
+def short_reasons(reasons):
+    """할 일에 보일 근거: '확인 필요'는 3개까지, 한 항목 40자까지 (학점포기 공지가 1,000자 넘게 나옴, 10/29)."""
+    check = [r for r in reasons if r.endswith(CHECK)]
+    cut = [r if len(r) <= 40 + len(CHECK) else r[:40].rstrip() + "…" + CHECK for r in check[:3]]
+    more = [f"그 밖에 {len(check) - 3}가지는 공지 원문에서 확인해 주세요"] if len(check) > 3 else []
+    return [r for r in reasons if not r.endswith(CHECK)] + cut + more
 
 
 def quiet_now(value, now):
@@ -170,12 +179,13 @@ class Pipeline:
                         self.severities[n['id']] = await run_in_threadpool(tasks.severity, kind, n['title']) if use_ai else (2 if kind == 'scholarship' else 1)
                     severity = self.severities[n['id']]
                     due = deadline.astimezone(KST).date() if deadline else None
-                    facts = ' · '.join(reasons) or '공지 대상에 해당해요. 원문 조건을 확인해 주세요.'
+                    shown = short_reasons(reasons)
+                    facts = ' · '.join(shown) or '공지 대상에 해당해요. 원문 조건을 확인해 주세요.'
                     # 근거가 바뀐 경우만 문장을 다시 생성. 원래 판정 근거도 함께 남긴다.
                     if old and old['reason'].endswith('\n근거: ' + facts):
                         explanation = old['reason']
                     else:
-                        text = await run_in_threadpool(tasks.explain_reason, n['title'], verdict, reasons) if use_ai else facts
+                        text = await run_in_threadpool(tasks.explain_reason, n['title'], verdict, shown) if use_ai else facts
                         explanation = AUTO_REASON + (text if isinstance(text,str) and text.strip() else facts) + '\n근거: ' + facts
                     value = {'user_id':uid,'source_kind':'notice','source_id':n['id'],'type':kind,
                         'title':n['title'][:200], 'due_date':due.isoformat() if due else None,

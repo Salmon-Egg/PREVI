@@ -188,3 +188,12 @@ def test_profile_refresh_does_not_wait_for_ai_or_send_push(monkeypatch):
         assert len(db.data['todos']) == 1
         sender.send.assert_not_called()
     asyncio.run(run())
+
+
+def test_short_reasons_caps_check_items():
+    from server.jobs.pipeline import short_reasons
+    check = [f"조건 {i} " + "가" * 60 + " — 직접 확인이 필요해요" for i in range(5)]
+    out = short_reasons(["재학생 ✓"] + check)
+    assert out[0] == "재학생 ✓" and len(out) == 5 and out[-1] == "그 밖에 2가지는 공지 원문에서 확인해 주세요"
+    assert all(len(r) <= 40 + len(" — 직접 확인이 필요해요") + 1 for r in out[1:4])
+    assert short_reasons(["재학생 ✓"]) == ["재학생 ✓"]

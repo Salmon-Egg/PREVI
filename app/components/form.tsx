@@ -90,7 +90,10 @@ export function Sheet({ visible, onClose, title, sub, children }: {
               <CloseButton onPress={onClose} />
             </View>
           )}
-          {children}
+          {/* 내용이 창 높이를 넘으면 스크롤: 작은 휴대폰에서 맨 아래 '저장하기'가 잘려 안 보였음 */}
+          <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 10 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+            {children}
+          </ScrollView>
         </View>
       </View>
     </Modal>

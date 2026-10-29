@@ -22,7 +22,8 @@ def _ask(prompt: str, payload: dict, *, strict=False) -> dict | None:
 
 DEPARTMENTS = ["소프트웨어학과", "전자컴퓨터공학과"]  # routes/me.py에서 고를 수 있는 학과와 같게
 PROCEDURE_WORDS = ("이중수혜", "문의", "접수", "제출", "면접", "방문", "첨부파일 참고",  # 자격이 아니라 신청 절차
-                   "포털", "홈페이지", "에서 신청", "로 신청", "신청 방법", "신청기간", "신청 기간", "우편", "메일", "마감")
+                   "포털", "홈페이지", "에서 신청", "로 신청", "신청 방법", "신청기간", "신청 기간", "우편", "메일", "마감",
+                   "재수강", "철회", "정정할 수 없", "본인이 반드시")  # 유의사항: 자격이 아님 (학점포기 공지, 10/29)
 # 학생이 신청할 게 아닌 공지. "교원자격"·"교직이수"는 학생 공지라 '교원'·'교직' 낱말 하나로는 거르지 않음
 NOT_FOR_STUDENTS = re.compile(r"폐강|교직원|(교수|교원|강사|직원)\s*(초빙|채용|모집|대상|공모)")
 STATUS = {"enrolled": "enrolled", "leave": "leave", "returned": "returned", "재학생": "enrolled", "휴학생": "leave", "복학생": "returned"}
@@ -154,6 +155,22 @@ def route_question(text: str) -> dict:
     if out.get("intent") != "my_info" or out.get("topic") not in ("graduation", "scholarship", "todo"):
         return {"intent": "document", "topic": None}
     return {"intent": "my_info", "topic": out["topic"]}
+
+
+SPLIT = re.compile(r"[?？\n]+|\s*[,，]\s*|\s+(?:그리고|또한|또)\s+")
+LISTED = re.compile(r"\S(?:이)?랑\s")  # "휴학이랑 복학 알려줘": 기호 없이 묶은 질문
+
+
+def split_questions(text: str) -> list[str]:
+    """⑩ 한 메시지에 여러 가지를 물으면 하나씩 나눔. 하나뿐이면 [text].
+    여럿으로 보일 때만 AI에게 나누게 하고(생략된 말 채움), AI가 실패하면 기호로 나눈 결과."""
+    parts = [p.strip() for p in SPLIT.split(text) if len(p.strip()) >= 2]
+    if len(parts) < 2 and not LISTED.search(text):
+        return [text]
+    out = (_ask("split_questions", {"question": text}) or {}).get("questions")
+    if isinstance(out, list) and out and all(isinstance(q, str) and q.strip() for q in out):
+        return [q.strip() for q in out]
+    return parts if len(parts) >= 2 else [text]
 
 
 NO_ANSWER = re.compile(r"명시되어\s*있지\s*않|나와\s*있지\s*않|적혀\s*있지\s*않|문서에\s*(없|는\s*없)|확인할\s*수\s*없|알\s*수\s*없")
