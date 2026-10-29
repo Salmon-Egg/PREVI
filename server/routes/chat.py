@@ -91,7 +91,7 @@ async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: st
             return {"text": e.message, "cards": [], "actions": [], "unknown": True}
         pending = [r["name"] for r in g["requirements"] if r["done"] is not True]
         if g["remaining_total"] is None:
-            summary = "같은 과목이 여러 학기에 있어 남은 학점을 정확히 계산할 수 없어요."
+            summary = "적용 졸업 기준이나 학점 인정에 확인할 사항이 있어 남은 학점을 확정할 수 없어요."
         else:
             # AI가 "120학점에서 뺀 값"처럼 계산하려 들지 않게, 남은 학점을 완성된 숫자로 줌
             summary = (f"앞으로 {g['remaining_total']:g}학점 더 들으면 돼요 "
