@@ -1,5 +1,5 @@
 """관리자 웹 (AD-1~AD-5). ADMIN_EMAILS에 있는 학교 메일만, 데이터는 서버 전용 키로.
-학생 개인정보는 넘기지 않음: 질문·답 문장과 숫자만 (누가 물었는지는 안 보여 줌)."""
+질문·답은 문장과 숫자만 (누가 물었는지는 안 보여 줌). 계정 관리만 메일·학과·학년·학적을 보여 줌."""
 import base64
 import binascii
 import io
@@ -7,7 +7,7 @@ import logging
 import re
 from datetime import date, datetime, timedelta, timezone
 from typing import Literal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request
@@ -27,8 +27,8 @@ log = logging.getLogger("admin")
 Cause = Literal["no_document", "outdated", "ambiguous", "notice_missing"]
 
 
-async def admin_rows(request: Request, method: str, table: str, *, count=False, **kwargs):
-    """서버 전용 키로 Supabase REST. count=True면 행 대신 개수."""
+async def admin_rows(request: Request, method: str, table: str, *, count=False, api="rest/v1", **kwargs):
+    """서버 전용 키로 Supabase REST (api="auth/v1/admin"이면 로그인 계정). count=True면 행 대신 개수."""
     s = request.app.state.settings
     if not s.secret_key:
         raise APIError(500, "ADMIN_NOT_CONFIGURED", "서버 .env에 SUPABASE_SECRET_KEY가 필요해요.")
@@ -37,9 +37,11 @@ async def admin_rows(request: Request, method: str, table: str, *, count=False, 
         headers["Prefer"] = "count=exact"
         kwargs["params"] = {**kwargs.get("params", {}), "limit": 1, "select": "id"}
     try:
-        res = await request.app.state.http.request(method, f"{s.supabase_url}/rest/v1/{table}", headers=headers, **kwargs)
+        res = await request.app.state.http.request(method, f"{s.supabase_url}/{api}/{table}", headers=headers, **kwargs)
     except httpx.RequestError:
         raise APIError(500, "DATABASE_UNAVAILABLE", "데이터 서버에 연결할 수 없어요.") from None
+    if res.status_code == 404:
+        raise APIError(404, "NOT_FOUND", "항목을 찾을 수 없어요.")
     if res.status_code == 409:
         raise APIError(409, "DATA_CONFLICT", "이미 있는 항목과 겹쳐요.")
     if res.status_code == 400:  # 표의 check 조건 위반 (날짜 순서, 학점 0 등)
@@ -232,12 +234,12 @@ class BroadcastIn(BaseModel):
     target: Target = Target()
 
 
-async def _students(request: Request) -> list[dict]:
+async def _students(request: Request, select="grade,department,status", consented=True) -> list[dict]:
     rows, page = [], None
     while page is None or len(page) == 1000:
         page = await admin_rows(request, "GET", "profiles", params={
-            "consent_agreed_at": "not.is.null", "select": "grade,department,status",
-            "order": "id.asc", "offset": len(rows), "limit": 1000})
+            **({"consent_agreed_at": "not.is.null"} if consented else {}),
+            "select": select, "order": "id.asc", "offset": len(rows), "limit": 1000})
         rows += page
     return rows
 
@@ -273,7 +275,35 @@ async def broadcast(body: BroadcastIn, request: Request, tasks: BackgroundTasks)
     return {"notice_id": notice["id"]}
 
 
+# ── 계정 관리: 가입자 목록·삭제. 삭제는 학생 앱 탈퇴(/me DELETE)와 같은 길, 개인 데이터는 외래 키 cascade ──
+@router.get("/users")
+async def users(request: Request):
+    accounts, page = [], 1
+    while True:
+        batch = (await admin_rows(request, "GET", "users", api="auth/v1/admin", params={"page": page, "per_page": 1000}))["users"]
+        accounts += batch
+        if len(batch) < 1000:
+            break
+        page += 1
+    profiles = {p["user_id"]: p for p in await _students(request, "user_id,department,grade,status", consented=False)}
+    admins = request.app.state.settings.admin_emails
+    return sorted(({
+        "id": a["id"], "email": a.get("email"), "created_at": a["created_at"], "last_sign_in_at": a.get("last_sign_in_at"),
+        "admin": (a.get("email") or "").lower() in admins,
+        **{k: profiles.get(a["id"], {}).get(k) for k in ("department", "grade", "status")},
+    } for a in accounts), key=lambda u: u["created_at"], reverse=True)
+
+
+@router.delete("/users/{user_id}", status_code=204)
+async def delete_user(user_id: UUID, request: Request):
+    account = await admin_rows(request, "GET", f"users/{user_id}", api="auth/v1/admin")
+    if (account.get("email") or "").lower() in request.app.state.settings.admin_emails:
+        raise APIError(400, "ADMIN_ACCOUNT", "관리자 계정은 여기서 지울 수 없어요. .env의 ADMIN_EMAILS에서 먼저 빼 주세요.")
+    await admin_rows(request, "DELETE", f"users/{user_id}", api="auth/v1/admin")
+
+
 # ── AD-5 학교 자료: 학사일정·과목은 고치기, 졸업 기준은 보기만 ──
+
 class CalendarIn(BaseModel):
     title: str = Field(min_length=1, max_length=200)
     start_date: date

@@ -21,6 +21,16 @@ def make(email=ADMIN, rows=None, counts=None):
         if path == "/auth/v1/user":
             return httpx.Response(200, json={"id": "00000000-0000-0000-0000-000000000009", "email": email,
                                              "email_confirmed_at": "2026-10-29T00:00:00Z"})
+        if path.startswith("/auth/v1/admin/users"):
+            uid = path.removeprefix("/auth/v1/admin/users").strip("/")
+            accounts = (rows or {}).get("users", [])
+            if request.method == "DELETE":
+                saved.append(("DELETE", "users", uid, None))
+                return httpx.Response(200, json={})
+            if uid:
+                found = [a for a in accounts if a["id"] == uid]
+                return httpx.Response(200, json=found[0]) if found else httpx.Response(404, json={})
+            return httpx.Response(200, json={"users": accounts})
         table = path.removeprefix("/rest/v1/")
         if request.headers.get("prefer") == "count=exact":
             return httpx.Response(206, json=[], headers={"content-range": f"0-0/{(counts or {}).get(table, 0)}"})
@@ -92,6 +102,32 @@ def test_broadcast_preview_counts_target():
     with client:
         res = client.post("/admin/broadcast/preview", headers=HEADERS, json={"grades": [4], "statuses": ["enrolled"]})
     assert res.json() == {"count": 2}  # 복학생은 재학생 공지도 받음
+
+
+STUDENT_ID = "00000000-0000-0000-0000-000000000001"
+BOSS_ID = "00000000-0000-0000-0000-000000000002"
+ACCOUNTS = {"users": [
+    {"id": STUDENT_ID, "email": "kim@skuniv.ac.kr", "created_at": "2026-10-01T00:00:00Z", "last_sign_in_at": None},
+    {"id": BOSS_ID, "email": ADMIN, "created_at": "2026-09-01T00:00:00Z", "last_sign_in_at": "2026-10-29T00:00:00Z"}],
+    "profiles": [{"user_id": STUDENT_ID, "department": "소프트웨어학과", "grade": 3, "status": "enrolled"}]}
+
+
+def test_users_joins_profile_and_marks_admin():
+    client, _ = make(rows=ACCOUNTS)
+    with client:
+        body = client.get("/admin/users", headers=HEADERS).json()
+    assert [u["email"] for u in body] == ["kim@skuniv.ac.kr", ADMIN]  # 최근 가입 먼저
+    assert body[0]["department"] == "소프트웨어학과" and not body[0]["admin"]
+    assert body[1]["admin"] and body[1]["grade"] is None  # 처음 설정 안 한 계정
+
+
+def test_delete_user_but_not_admin():
+    client, saved = make(rows=ACCOUNTS)
+    with client:
+        assert client.delete(f"/admin/users/{BOSS_ID}", headers=HEADERS).status_code == 400
+        assert client.delete("/admin/users/00000000-0000-0000-0000-00000000000f", headers=HEADERS).status_code == 404
+        assert client.delete(f"/admin/users/{STUDENT_ID}", headers=HEADERS).status_code == 204
+    assert saved == [("DELETE", "users", STUDENT_ID, None)]
 
 
 def test_calendar_rejects_bad_input():

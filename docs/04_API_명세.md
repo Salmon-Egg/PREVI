@@ -76,6 +76,7 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 | `POST /admin/broadcast/preview` · `POST /admin/broadcast` | 대상 `{grades, departments, statuses}` 인원 · 발송 (notices에 '학생지원팀' 공지로 넣고 아침 파이프라인 함수로 판정·할 일·푸시) |
 | `GET` · `POST /admin/data/{calendar\|courses}` · `PUT` · `DELETE /admin/data/{kind}/{id}` | 학사일정·과목 고치기 |
 | `GET /admin/graduation` | 졸업 기준 보기 (수정 없음) |
+| `GET /admin/users` · `DELETE /admin/users/{user_id}` | 가입 계정 목록 (메일·학과·학년·학적·가입·마지막 로그인, 최근 가입 먼저) · 계정 삭제 (탈퇴와 같이 개인 데이터 cascade, ADMIN_EMAILS 계정은 400) |
 
 > MVP 뼈대(10/23)에서 더한 것: `DELETE /me`, `PATCH /conversations/{id}`, `GET /conversations?q=` 검색,
 > `GET /me`의 `completed_requirements`, `GET /notices/{id}`의 `eligibility`·`todo_id`·`applied`(S-2 판정·신청 완료 체크용),
