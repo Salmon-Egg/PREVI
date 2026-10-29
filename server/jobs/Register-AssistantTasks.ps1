@@ -22,7 +22,7 @@ if (-not $Register) {
     return
 }
 if ($ProjectRoot.Contains('"') -or $PythonPath.Contains('"')) { throw 'Unsupported quote in path.' }
-$shellPath = Join-Path $PSHOME 'powershell.exe'
+$shellPath = (Get-Command powershell.exe -ErrorAction Stop).Source
 $principal = New-ScheduledTaskPrincipal -UserId ([System.Security.Principal.WindowsIdentity]::GetCurrent().Name) -LogonType Interactive -RunLevel Limited
 $settings = New-ScheduledTaskSettingsSet -MultipleInstances IgnoreNew -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Hours 2) -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
 foreach ($plan in $plans) {
