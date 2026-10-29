@@ -1,13 +1,14 @@
 {
   "checked_at": "2026-10-29",
   "purpose": "가입 후 처음 설정 및 학적정보 수정에서 쓰는 개편 전 학과 선택 자료",
-  "scope": "2024 요람의 학과·학부·세부전공과 2018~2024 개편 계보. 현 재적자·완전 폐과 전체 명부를 뜻하지 않는다.",
+  "scope": "2025 개편 직전(2024 요람) 학과·학부·세부전공과 2023 통합 전 컴퓨터공학과·전자공학과. 오래전에 변경된 이름은 선택 목록에서 제외.",
   "policy": [
     "selectable은 기존 재학생의 소속 선택을 뜻하며 해당 연도 신입학 가능 여부가 아니다.",
     "admission_year_hint는 추천 정렬용 상한이다. 시작 연도 null은 미확인이며 모든 과거 연도 허용을 뜻하지 않는다.",
     "편입·재입학·전과·자동 소속 변경이 있으므로 학번만으로 선택을 차단하지 않는다.",
     "related_names는 학과 계보·관련 명칭이다. 졸업 기준 자동 치환표가 아니다.",
-    "현재 2025 이후 목록과 합칠 때 name으로 중복 제거하고 기존 profiles.department 값은 자동 변경하지 않는다."
+    "현재 2025 이후 목록과 합칠 때 name으로 중복 제거하고 기존 profiles.department 값은 자동 변경하지 않는다.",
+    "컴퓨터과학과 등 오래전에 변경된 이름은 기본 선택 목록에 추가하지 않는다. 2024 목록과 컴퓨터공학과·전자공학과 예외만 포함한다."
   ],
   "sources": {
     "catalog2024": {
@@ -144,7 +145,6 @@
       },
       "year_hint_is_validation": false,
       "related_names": [
-        "컴퓨터과학과",
         "컴퓨터소프트웨어전공"
       ],
       "automatic_graduation_mapping": false,
@@ -537,314 +537,6 @@
       "source_ids": [
         "catalog2024",
         "reform2025"
-      ]
-    },
-    {
-      "id": "sku-history-025",
-      "name": "컴퓨터과학과",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2018
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "소프트웨어학과"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2019학년도 소프트웨어학과로 명칭 변경.",
-      "source_ids": [
-        "cs_history",
-        "cs_rename"
-      ]
-    },
-    {
-      "id": "sku-history-026",
-      "name": "산업경영시스템공학과",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2019
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "물류시스템공학과"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2020학년도 물류시스템공학과로 명칭 변경. 2024 요람 PDF 27쪽.",
-      "source_ids": [
-        "catalog2024"
-      ]
-    },
-    {
-      "id": "sku-history-027",
-      "name": "국제비즈니스어학부",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2020
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "글로벌비즈니스어학부"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2021학년도 명칭 변경. 세부전공을 함께 확인한다. PDF 28쪽.",
-      "source_ids": [
-        "catalog2024"
-      ]
-    },
-    {
-      "id": "sku-history-028",
-      "name": "공공인적자원학과",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2020
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "공공인재학부"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2021학년도 학부 전환. PDF 28쪽.",
-      "source_ids": [
-        "catalog2024"
-      ]
-    },
-    {
-      "id": "sku-history-029",
-      "name": "공공인적자원학부",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2017
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "공공인적자원학과",
-        "공공인재학부"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2018학년도 학과 전환 후 2021학년도 학부 재편. PDF 27~28쪽.",
-      "source_ids": [
-        "catalog2024"
-      ]
-    },
-    {
-      "id": "sku-history-030",
-      "name": "아동학과",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2023
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "아동청소년학과"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2024 모집 안내와 현 학과 공지에서 변경 확인. 요람 연혁의 아동가족학과 표기와 충돌하므로 최종 모집 안내·현 학과명을 우선한다.",
-      "source_ids": [
-        "admission2024",
-        "child_notice",
-        "catalog2024"
-      ]
-    },
-    {
-      "id": "sku-history-031",
-      "name": "화학생명공학과",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2020
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "나노화학생명공학과"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2021학년도 나노융합공학과와 통합. PDF 28쪽.",
-      "source_ids": [
-        "catalog2024"
-      ]
-    },
-    {
-      "id": "sku-history-032",
-      "name": "나노융합공학과",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2020
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "나노화학생명공학과"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2021학년도 화학생명공학과와 통합. PDF 28쪽.",
-      "source_ids": [
-        "catalog2024"
-      ]
-    },
-    {
-      "id": "sku-history-033",
-      "name": "헤어·메이크업디자인학과",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2020
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "헤어디자인학과",
-        "메이크업디자인학과"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2021학년도 두 학과로 분리. 한 이름으로 임의 정규화하지 않는다.",
-      "source_ids": [
-        "catalog2024",
-        "beauty_history"
-      ]
-    },
-    {
-      "id": "sku-history-034",
-      "name": "뷰티테라피&메이크업학과",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2023
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "코스메틱&뷰티테라피학과",
-        "코스메틱뷰티매니지먼트학과"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2024 명칭 변경 및 2025 후속 개편. 계약학과와 일반학과 교육과정은 별도 구분.",
-      "source_ids": [
-        "admission2024",
-        "beauty_history"
-      ]
-    },
-    {
-      "id": "sku-history-035",
-      "name": "뮤지컬학과",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2021
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "뮤지컬전공"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2022학년도 학과 폐지와 공연예술학부 뮤지컬전공 신설이 함께 명시됨. 승계 전공이 있으므로 완전 폐과로 일괄 제외하지 않는다. PDF 29쪽.",
-      "source_ids": [
-        "catalog2024"
-      ]
-    },
-    {
-      "id": "sku-history-036",
-      "name": "실용음악학과",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2021
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "실용음악학부"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2022학년도 학부 전환. PDF 29쪽.",
-      "source_ids": [
-        "catalog2024"
-      ]
-    },
-    {
-      "id": "sku-history-037",
-      "name": "무용예술학과",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2021
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "무용예술학부"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2022학년도 학부 전환. PDF 29쪽.",
-      "source_ids": [
-        "catalog2024"
-      ]
-    },
-    {
-      "id": "sku-history-038",
-      "name": "시각정보디자인전공",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2022
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "VD_비주얼디자인전공"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2023학년도 디자인학부 전공 명칭 변경. PDF 30쪽.",
-      "source_ids": [
-        "catalog2024"
-      ]
-    },
-    {
-      "id": "sku-history-039",
-      "name": "생활문화디자인전공",
-      "category": "older_renamed_or_reorganized",
-      "selectable": true,
-      "parent": null,
-      "admission_year_hint": {
-        "from": null,
-        "to": 2022
-      },
-      "year_hint_is_validation": false,
-      "related_names": [
-        "LF_라이프스타일디자인전공"
-      ],
-      "automatic_graduation_mapping": false,
-      "note": "2023학년도 디자인학부 전공 명칭 변경. PDF 30쪽.",
-      "source_ids": [
-        "catalog2024"
       ]
     },
     {
@@ -1335,5 +1027,22 @@
         "admission2024"
       ]
     }
+  ],
+  "out_of_scope_names": [
+    "컴퓨터과학과",
+    "산업경영시스템공학과",
+    "국제비즈니스어학부",
+    "공공인적자원학과",
+    "공공인적자원학부",
+    "아동학과",
+    "화학생명공학과",
+    "나노융합공학과",
+    "헤어·메이크업디자인학과",
+    "뷰티테라피&메이크업학과",
+    "뮤지컬학과",
+    "실용음악학과",
+    "무용예술학과",
+    "시각정보디자인전공",
+    "생활문화디자인전공"
   ]
 }
