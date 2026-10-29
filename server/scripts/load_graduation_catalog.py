@@ -65,7 +65,7 @@ def embed_managed(db,ids):
         doc=all_rows(db,'documents',id=f'eq.{identifier}')[0]
         for start in range(0,len(rows),32):
             part=rows[start:start+32]
-            vectors=client.embed([client.DOC_FMT.format(doc['title'],r['content']) for r in part])
+            vectors=client.embed([client.doc_text(doc['title'],r['content']) for r in part])
             if not vectors or len(vectors)!=len(part) or any(len(v)!=768 or any(not math.isfinite(x) for x in v) for v in vectors):
                 raise RuntimeError('768차원 임베딩 결과의 개수·값을 확인해 주세요.')
             for row,vector in zip(part,vectors):

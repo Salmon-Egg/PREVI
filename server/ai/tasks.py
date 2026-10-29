@@ -21,7 +21,10 @@ def _ask(prompt: str, payload: dict, *, strict=False) -> dict | None:
 
 
 DEPARTMENTS = ["소프트웨어학과", "전자컴퓨터공학과"]  # routes/me.py에서 고를 수 있는 학과와 같게
-PROCEDURE_WORDS = ("이중수혜", "문의", "접수", "제출", "면접", "방문", "첨부파일 참고")  # 자격이 아니라 신청 절차
+PROCEDURE_WORDS = ("이중수혜", "문의", "접수", "제출", "면접", "방문", "첨부파일 참고",  # 자격이 아니라 신청 절차
+                   "포털", "홈페이지", "에서 신청", "로 신청", "신청 방법", "신청기간", "신청 기간", "우편", "메일", "마감")
+# 학생이 신청할 게 아닌 공지. "교원자격"·"교직이수"는 학생 공지라 '교원'·'교직' 낱말 하나로는 거르지 않음
+NOT_FOR_STUDENTS = re.compile(r"폐강|교직원|(교수|교원|강사|직원)\s*(초빙|채용|모집|대상|공모)")
 STATUS = {"enrolled": "enrolled", "leave": "leave", "returned": "returned", "재학생": "enrolled", "휴학생": "leave", "복학생": "returned"}
 
 
@@ -47,6 +50,9 @@ def summarize_notice(title: str, body: str, *, strict=False) -> dict:
     # 장학인데 대상·조건이 하나도 없으면 대개 자격이 첨부에만 있는 공지 → '신청 가능'으로 띄우지 않음
     if (category == "장학" or "장학" in title) and not target["grades"] and not target["departments"] and not conditions:
         conditions["unknown"] = ["자격 조건은 첨부 공고문 확인"]
+    # 교수 대상·폐강 안내는 학생 판정에서 뺌: 어떤 학생 학적과도 안 맞는 'staff'로 두면 '조건 미충족'이 되어 맞춤 공지·할 일·알림에 안 뜸
+    if NOT_FOR_STUDENTS.search(title) or any(NOT_FOR_STUDENTS.search(s) for s in conditions.get("unknown", [])):
+        target, conditions = {"grades": [], "departments": [], "statuses": ["staff"]}, {}
     return {
         "category": category,
         "summary": (out.get("summary") or [title])[:3],

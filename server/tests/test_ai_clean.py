@@ -29,6 +29,24 @@ def test_conditions_drop_zero_and_procedure_text():
     assert c == {"unknown": ["장애학생"]}
 
 
+def test_conditions_drop_portal_and_mail_procedure():
+    c = clean_conditions({"unknown": ["포털에서 신청", "이메일로 신청서 송부", "11월 5일 마감", "국가장학금 1차 신청자", "교원자격 취득 예정자"]})
+    assert c == {"unknown": ["국가장학금 1차 신청자", "교원자격 취득 예정자"]}
+
+
+def test_staff_and_closed_course_notices_match_no_student(monkeypatch):
+    from server.logic.eligibility import judge
+    student = {"grade": 3, "department": "소프트웨어학과", "status": "enrolled"}
+    monkeypatch.setattr(tasks, "_ask", lambda *_: {"category": "장학", "target": {}, "conditions": {}})
+    for title in ("2026-2학기 폐강 교과목 안내", "전임교원 초빙 공고", "교직원 건강검진 안내"):
+        s = tasks.summarize_notice(title, "")
+        assert s["conditions"] == {} and judge(s["target"], s["conditions"], student, None, 0)[0] == "ineligible"
+    monkeypatch.setattr(tasks, "_ask", lambda *_: {"conditions": {"unknown": ["교직원 대상 공지"]}})
+    assert tasks.summarize_notice("연구윤리 교육", "")["target"]["statuses"] == ["staff"]
+    monkeypatch.setattr(tasks, "_ask", lambda *_: {"conditions": {}})
+    assert tasks.summarize_notice("교원자격 무시험검정 신청 안내", "")["target"]["statuses"] == []
+
+
 def test_conditions_text_numbers_become_numbers():
     assert clean_conditions({"min_gpa": "3.0", "min_credits": "15", "income_max": 8}) == {
         "min_gpa": 3.0, "min_credits": 15, "income_max": 8}

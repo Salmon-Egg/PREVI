@@ -3,6 +3,7 @@ AI_FAKE=1 이면 Ollama 대신 ai/fake.py가 답합니다. 학교 서버가 준�
 import json
 import logging
 import os
+import re
 from functools import cache
 from pathlib import Path
 
@@ -24,6 +25,19 @@ DOC_MAX_DISTANCE = float(os.getenv("DOC_MAX_DISTANCE") or "inf")
 # embeddinggemma 권장 머리말. 붙이면 1위 정답이 6→8/15로 늘어남(10/28). 바꾸면 load_yoram으로 문단 임베딩을 다시 넣어야 함
 QUERY_FMT = "task: search result | query: {}"
 DOC_FMT = "title: {} | text: {}"
+# 학칙 문단 맨 앞 "[학칙] 제 22 조(전과)"의 조 제목. 검색이 비슷한 조(부전공)를 1위로 올리는 일이 있어 제목을 따로 씀(G8)
+ARTICLE_TITLE = re.compile(r"^\[[^\]]*\]\s*제\s*\d+\s*조(?:의\s*\d+)?\s*\(([^)]+)\)")
+
+
+def article_title(content: str) -> str:
+    m = ARTICLE_TITLE.match(content)
+    return m.group(1).strip() if m else ""
+
+
+def doc_text(title: str, content: str) -> str:
+    """문단 임베딩 입력. 조 제목을 title 칸에 붙임. 바꾸면 문단 임베딩을 모두 다시 넣어야 함(07 문서 5-3)."""
+    head = article_title(content)
+    return DOC_FMT.format(f"{title} · {head}" if head else title, content)
 
 
 class AiError(Exception):

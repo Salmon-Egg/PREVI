@@ -29,6 +29,7 @@ ARTICLE = re.compile(r"\n(?=제\s*\d+\s*조(?:의\s*\d+)?\s*\()")  # 줄 맨 앞
 SUB_RULE = re.compile(r"\n∙\s*(.+?)\s*∙\s*\n")                  # 세칙 안의 작은 규정 이름: "∙ 편입학에 관한 시행세칙 ∙"
 APPENDIX = re.compile(r"\n\s*(?:부\s*칙|\[별지|\[별표|<별표)")    # 부칙(개정 이력)·서식부터는 버림
 HISTORY = re.compile(r"\((?:조\s*)?(?:개정|신설|삭제|전문개정)[^()]*\)")  # "(개정 2014. 4. 1)" 같은 개정 표시
+SPACED = re.compile(r"(?<![A-Za-z])[A-Za-z](?: [A-Za-z]){2,}(?![A-Za-z])")  # PDF에서 "W o r l d"처럼 한 글자씩 띄어 뽑힌 영어
 HEADING = re.compile(r"\n\s*제\s*\d+\s*(?:장|절)\s[^\n]*|\n\s*제\s*\d+\s*조(?:의\s*\d+)?\s*(?=\n)")  # "제 8 장 …" 줄, 삭제돼 번호만 남은 조
 
 
@@ -53,6 +54,11 @@ def _rules(text: str, label: str) -> list[str]:
         for art in ARTICLE.split(body):
             chunks += [f"[{name}] {c}" for c in _pack(art)]
     return chunks
+
+
+def _unspace(text: str) -> str:
+    """"W o r l d" → "World". 한글은 "제 5 조"처럼 원래 띄어 쓴 곳이 많아 영어만 붙임."""
+    return SPACED.sub(lambda m: m.group().replace(" ", ""), text)
 
 
 def chunks_of(pdf: Path = PDF) -> list[tuple[str, str]]:
@@ -111,7 +117,7 @@ def embed_missing(db: httpx.Client) -> None:
     done = 0
     for i in range(0, len(chunks), 32):  # 한 번에 다 보내면 문단이 많을 때 Ollama가 실패함
         part = chunks[i:i + 32]
-        vectors = ai_client.embed([ai_client.DOC_FMT.format(c["documents"]["title"], c["content"]) for c in part])
+        vectors = ai_client.embed([ai_client.doc_text(c["documents"]["title"], c["content"]) for c in part])
         if not vectors:
             break
         for c, v in zip(part, vectors):

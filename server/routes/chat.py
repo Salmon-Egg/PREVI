@@ -48,14 +48,28 @@ def _bigrams(s: str) -> set[str]:
     return {s[i:i + 2] for i in range(len(s) - 1)}
 
 
+TITLE_TAIL = {"허가", "기준", "관리", "방법", "절차", "신청"}  # 조 제목에 붙는 흔한 말: 학생은 "전과 허가"라고 묻지 않음
+
+
+def _title_asked(title: str, question: str) -> bool:
+    """조 제목 낱말이 질문에 모두 있는지. "졸업의 취소"는 '취소'가 없으면 졸업 질문에 안 걸림."""
+    words = [w for w in re.split(r"의\s|\s|및", title) if w and w not in TITLE_TAIL]
+    asked = re.sub(r"\s", "", question)
+    return bool(words) and all(w in asked for w in words)
+
+
 async def search_chunks(request: Request, question: str, k: int = 3) -> list[dict]:
     """문서 검색. 임베딩이 있으면 벡터 검색(match_doc_chunks), 없으면(가짜 AI 모드) 두 글자 묶음이 많이 겹치는 문단."""
     vec = await run_in_threadpool(ai_client.embed, [ai_client.QUERY_FMT.format(question)])
     if vec:
+        # 후보를 넉넉히 받아, 조 제목 낱말("전과의 허가" → 전과)이 질문에 모두 있는 가장 가까운 문단 1개를 1위로
+        # ("전과" 질문에 부전공 조가 1위로 오던 문제, G8). 1개만: 원래 1위는 2위로 밀릴 뿐 AI에 같이 감
         rows = await database_rows(request, "POST", "rpc/match_doc_chunks",
-                                   json={"query_embedding": str(vec[0]), "match_count": k})
+                                   json={"query_embedding": str(vec[0]), "match_count": 10})
         log.info("문서 거리 %s: %s", question[:30], [round(r["distance"], 3) for r in rows])  # 기준 숫자 정할 때 봄
-        return [r for r in rows if r["distance"] <= ai_client.DOC_MAX_DISTANCE]
+        rows = [r for r in rows if r["distance"] <= ai_client.DOC_MAX_DISTANCE]
+        hit = next((r for r in rows if _title_asked(ai_client.article_title(r["content"]), question)), None)
+        return ([hit] + [r for r in rows if r is not hit] if hit else rows)[:k]
     # shortcut: 문단을 전부 받아 비교함. 문단이 수천 개가 되면 느려지니 그때는 임베딩(벡터 검색)을 켜기
     rows = await database_rows(request, "GET", "doc_chunks", params={"select": "content,document:documents(title,url)", "limit": 2000})
     q = _bigrams(question)
