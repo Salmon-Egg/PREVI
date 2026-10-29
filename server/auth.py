@@ -50,3 +50,10 @@ async def require_user(
         raise APIError(500, "AUTH_SERVICE_INVALID_RESPONSE", "로그인 확인 응답을 처리할 수 없어요.") from None
     validate_school_user(user)
     return user
+
+
+async def require_admin(request: Request, user: AuthenticatedUser = Depends(require_user)) -> AuthenticatedUser:
+    """학교 메일 확인(require_user) 뒤 .env의 ADMIN_EMAILS에 있는 메일만."""
+    if (user.email or "").lower() not in request.app.state.settings.admin_emails:
+        raise APIError(403, "ADMIN_ONLY", "관리자만 쓸 수 있어요.")
+    return user

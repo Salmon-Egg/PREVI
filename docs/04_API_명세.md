@@ -59,6 +59,23 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 | `GET /notifications` · `PATCH /notifications/{id}` | 받은 알림·읽음 처리 | T-4 |
 | `DELETE /me` | 계정 삭제 (성적 포함 모든 데이터) | M-3 |
 | `PATCH /conversations/{id}` | 대화 고정 `{ "pinned": true }` | H-3 |
+| `PATCH /messages/{id}/feedback` | 챗봇 답 평가 `{ "feedback": "up" \| "down" \| null }` (관리자 '아쉬워요') | H-2 |
+
+### 관리자 `/admin/*` (관리자 웹 `admin/`, 10/29)
+
+`.env`의 `ADMIN_EMAILS`에 있는 학교 메일만 (아니면 `403 ADMIN_ONLY`). 서버가 `SUPABASE_SECRET_KEY`로 읽고 씀. 질문한 학생이 누구인지는 돌려주지 않음.
+
+| 요청 | 하는 일 |
+|---|---|
+| `GET /admin/summary` | 처리할 일 숫자: 못한 질문, 7일 질문 수·답변 성공률, 아쉬워요, 공지 정리 실패, 푸시 실패, 학생·문서 수 |
+| `GET /admin/unanswered?status=open\|done` · `PATCH /admin/unanswered` | 못한 질문 (같은 문장끼리 묶음·횟수) · `{ids, status?, cause?}` 처리 완료·원인 |
+| `GET /admin/feedback` | 30일 안에 👎 받은 답과 그 앞 질문 |
+| `GET` · `POST /admin/documents` · `DELETE /admin/documents/{id}` | 챗봇 참고 문서. 올리기는 `{title, kind, url?, filename, content_base64}` (PDF·TXT·MD, 20MB) |
+| `POST /admin/answers` | 관리자 답변 `{question, answer, ids}` → 문서 한 문단으로 저장, ids는 처리 완료 |
+| `GET /admin/notices?status=` · `POST /admin/notices/{id}/retry` | 공지 수집·AI 정리 상태, 실패 다시 정리 |
+| `POST /admin/broadcast/preview` · `POST /admin/broadcast` | 대상 `{grades, departments, statuses}` 인원 · 발송 (notices에 '학생지원팀' 공지로 넣고 아침 파이프라인 함수로 판정·할 일·푸시) |
+| `GET` · `POST /admin/data/{calendar\|courses}` · `PUT` · `DELETE /admin/data/{kind}/{id}` | 학사일정·과목 고치기 |
+| `GET /admin/graduation` | 졸업 기준 보기 (수정 없음) |
 
 > MVP 뼈대(10/23)에서 더한 것: `DELETE /me`, `PATCH /conversations/{id}`, `GET /conversations?q=` 검색,
 > `GET /me`의 `completed_requirements`, `GET /notices/{id}`의 `eligibility`·`todo_id`·`applied`(S-2 판정·신청 완료 체크용),

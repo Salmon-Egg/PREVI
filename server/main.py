@@ -19,6 +19,7 @@ from server.routes.scholarships import router as scholarships_router
 from server.routes.home import router as home_router
 from server.routes.notifications import router as notifications_router
 from server.routes.chat import router as chat_router
+from server.routes.admin import router as admin_router
 
 
 def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTransport | None = None):
@@ -46,6 +47,7 @@ def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTrans
     app.include_router(home_router)
     app.include_router(notifications_router)
     app.include_router(chat_router)
+    app.include_router(admin_router)
 
     @app.get("/health", tags=["운영"])
     async def health():
