@@ -7,6 +7,7 @@ import Chatbot from './Chatbot.jsx';
 import Notices from './Notices.jsx';
 import SchoolData from './SchoolData.jsx';
 import { Icon, Loaded } from './ui.jsx';
+import Users from './Users.jsx';
 
 const MENU = [
   ['home', '처리할 일', 'home'],
@@ -14,8 +15,9 @@ const MENU = [
   ['broadcast', '공지 발송', 'send'],
   ['data', '학교 자료', 'data'],
   ['notices', '공지 수집', 'inbox'],
+  ['users', '계정 관리', 'users'],
 ];
-const PAGES = { chatbot: Chatbot, broadcast: Broadcast, data: SchoolData, notices: Notices };
+const PAGES = { chatbot: Chatbot, broadcast: Broadcast, data: SchoolData, notices: Notices, users: Users };
 
 function useHash() {
   const read = () => location.hash.replace(/^#\/?/, '').split('?')[0] || 'home';
