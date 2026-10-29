@@ -144,7 +144,7 @@ BE에 요청할 것 (앱은 대신 처리해 둠)
 | 14 | 메뉴 칸 + 비서 한 줄 | 🔧 | 칸마다 **`menu_status` 한 줄**. (2026-10-27) **캠퍼스 생활을 빼고 3칸**(내 학업·장학금·학사 행정)이 같은 폭으로 나눠 씀 | `app/(main)/index.tsx` |
 | 15 | 질문창 + 추천 질문 | 🔧 | 아래 바를 **잡고 끌어 올리면 대화 화면이 따라 올라와서 그 자리에서 바로 대화**(앱은 손가락, 웹은 마우스), ↑ 화살표를 누르면 끝까지 올린 것과 같음, 머리줄을 내리거나 ⌄로 닫기. 홈의 추천 질문 칩은 뺌(대화 시작 화면에 추천 질문 있음) | `components/ChatSheet.tsx`, `app/(main)/index.tsx` |
 | 16 | T-1 할 일 목록 | 🔧 | 종류 배지, 칩 필터 | `app/(main)/todos/index.tsx` |
-| 17 | T-2 할 일 상세 | 🔧 | '완료했어요'를 누르면 **바로 들어오기 전 화면(할 일 목록·홈)으로 돌아가고 그 일이 목록에서 빠짐** | `app/(main)/todos/[id].tsx` |
+| 17 | T-2 할 일 상세 | 🔧 | '완료했어요'를 누르면 **바로 들어오기 전 화면(할 일 목록·홈)으로 돌아가고 그 일이 목록에서 빠짐**. (10/30) 공지 안내(S-2)와 같은 **흰 창**(📋 할 일 ✕): 제목·D-day → ✨ 왜 나에게 해당하나요? → 유의사항, 신청 페이지·프리비에게 묻기는 칸 안의 작은 버튼, 아래 [공지 자세히 보기 \| 완료했어요]. 마감 외 종류는 제목 앞에 [종류] | `app/(main)/todos/[id].tsx`, `components/sheet.ts`(S-2와 같이 씀) |
 | 18 | T-3 완료 기록 | ✔ | (변경 없음) | `app/(main)/todos/done.tsx` |
 | 19 | T-4 알림 센터 | 🔧 | 종류 아이콘, **모두 읽음**, 누르면 바로 읽음 표시 | `app/(main)/notifications.tsx` |
 | 20 | L-1 내 학업 | 🔧 | 졸업 요약(초록 카드) + **시간표·성적 조회로 가는 칸**(새 시안은 각각 한 화면이라 탭 대신) + 영역별 이수(⌄로 들은 과목·성적·영역 평점) | `app/(main)/study/index.tsx`, `components/AreaCard.tsx` |
@@ -158,7 +158,7 @@ BE에 요청할 것 (앱은 대신 처리해 둠)
 | 28 | A-2 학사 일정 | 🔧 | 목록 → **월 달력 + 날짜 누르면 그날 일정** | `app/(main)/office/calendar.tsx` |
 | 29 | A-3 휴·복학 안내 | 🔧 | **장학금 영향** 카드, 규정 근거·장학 영향·복학 기간 질문 | `app/(main)/office/leave.tsx` |
 | 30 | H-1 채팅 시작 | 🔧 | 피그마 ① 시작 화면(아이콘 추천 질문). (2026-10-27) 이름 **"서경 AI" → "PREVI"**, 위의 큰 캐릭터·입력창 옆 작은 캐릭터를 **미어캣**으로. (10/29) 채팅은 **올리고 내리는 대화창 하나**(모든 화면 위, `(main)/_layout.tsx`)로 통일하고 따로 있던 채팅·대화 기록 화면은 지움. ✎ 새 대화 | `components/ChatPanel.tsx`, `components/ChatSheet.tsx`, `lib/chatStore.ts` |
-| 31 | H-2 답변 | 🔧 | 피그마 ② 졸업 요건 카드(진행 막대·체크 목록), 아바타 말풍선, 첫 버튼 강조, 👍👎, 움직이는 '답변 작성 중' | `components/ChatPanel.tsx`, `components/ui.tsx`(InfoCard·TypingDots) |
+| 31 | H-2 답변 | 🔧 | 피그마 ② 졸업 요건 카드(진행 막대·체크 목록), 아바타 말풍선, 첫 버튼 강조, 👍👎(10/29~ 서버에 저장, 실패하면 표시 되돌림), 움직이는 '답변 작성 중'. (10/30) 되묻기 버튼 `ask`: "휴학 알려줘"처럼 주제만 물으면 비서가 고를 질문을 버튼으로 주고, 누르면 그 질문을 보냄 | `components/ChatPanel.tsx`, `components/ui.tsx`(InfoCard·TypingDots), `lib/types.ts`(ChatAction) |
 | 32 | 맥락 이어받기 | 🔧 | 할 일 '채팅으로 묻기'·공지 '프리비에게 묻기'·휴복학 질문 → 그 화면 위로 대화창이 올라옴(`askChat`), A-3은 `context.kind = 'status'` | `lib/chatStore.ts`, `todos/[id].tsx`, `notices/[id].tsx`, `office/leave.tsx` |
 | 33 | 답변 도착 푸시 | ✔ | 알림을 누르면 홈 대화창에 그 대화를 엶(`openNotification`). 팀 결정(10/27)으로 서버는 안 보냄 | `lib/push.ts` |
 | 34 | H-3 대화 목록 | 🔧 | 피그마 ⑤ **분류 칩**·아이콘·날짜·미리보기, 고정한 대화 위로, 검색 0.3초 지연. 대화창 안에서 ⏱로 열고, 고른 대화도 창 안에서 | `components/ChatHistory.tsx`, `components/ChatSheet.tsx` |
@@ -175,7 +175,8 @@ BE에 요청할 것 (앱은 대신 처리해 둠)
 | 영역별 들은 과목 | `GET /graduation`의 `areas[]`에 `courses: [{ term, course_name, credits, grade }]` (없으면 펼쳤을 때 '아직 없어요') | FE 20·21 |
 | 대화 분류·미리보기 | `GET /conversations` 항목에 `category`, `preview` (없으면 앱이 제목으로 분류 추측) | FE 34 |
 | 학적 맥락 | `POST /chat`의 `context.kind`에 `"status"` 추가 | FE 29·32 |
-| 답변 평가 | 👍👎를 서버에 저장하려면 `PATCH /messages/{id} { feedback }` (지금은 앱 안에서만 표시) | FE 31 |
+| ~~답변 평가~~ | **명세 반영(10/29)**: `PATCH /messages/{id}/feedback { feedback: up\|down\|null }`, 앱이 서버에 저장 (Supabase `012_admin.sql` 적용 필요) | FE 31 |
+| ~~되묻기 버튼~~ | **명세 반영(10/30)**: `actions`의 `{ type: "ask", label, payload: { text } }` → 누르면 `payload.text`를 새 질문으로 | FE 31 |
 | 로그인 방식 | 학번 + 비밀번호. 실제 모드는 Supabase `signInWithPassword`에 `학번@EMAIL_DOMAIN`을 넣음 → 서버 시연 계정도 `학번@skuniv.ac.kr`이라 맞음 (실제 학생 이메일이 다른 꼴이면 학번→이메일 찾는 API 필요) | FE 7 |
 | 회원가입 | Supabase 인증번호 메일(`signInWithOtp` → `verifyOtp`) 후 `updateUser({ password, data: { student_id, name } })`. 서버가 `student_id`·`name`을 내 정보로 옮겨야 함 | FE 7 |
 | 방해 금지 시간 | `PUT /me`의 `notify.quiet = "22:00-07:00"` (빈 값 = 끔). 서버가 이 시간에는 푸시를 보내지 않아야 함 | FE 9 |
