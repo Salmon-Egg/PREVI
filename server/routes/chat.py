@@ -317,6 +317,21 @@ async def conversation(conv_id: int, request: Request, user: AuthenticatedUser =
     return {**conv, "messages": messages}
 
 
+class FeedbackIn(BaseModel):
+    feedback: Literal["up", "down"] | None
+
+
+@router.patch("/messages/{message_id}/feedback")
+async def message_feedback(message_id: int, body: FeedbackIn, request: Request, user: AuthenticatedUser = Depends(require_user)):
+    """👍👎 (관리자 '아쉬워요'). 자기 대화인지는 RLS(messages_own)가 확인."""
+    rows = await database_rows(request, "PATCH", "messages", headers={"Prefer": "return=representation"},
+                               params={"id": f"eq.{message_id}", "role": "eq.assistant", "select": "id,feedback"},
+                               json={"feedback": body.feedback})
+    if not rows:
+        raise APIError(404, "NOT_FOUND", "메시지를 찾을 수 없어요.")
+    return rows[0]
+
+
 class PinIn(BaseModel):
     pinned: bool
 

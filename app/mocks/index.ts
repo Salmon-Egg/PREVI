@@ -536,6 +536,7 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
     }
     case 'GET /conversations/:id': return conversations.find((c) => c.id === id) ?? { id, title: '대화', pinned: false, updated_at: '', messages: [] };
     case 'PATCH /conversations/:id': return Object.assign(conversations.find((c) => c.id === id) ?? {}, body);
+    case 'PATCH /messages/:id/feedback': return { id, feedback: body.feedback };
     case 'GET /notifications': return notifications;
     case 'PATCH /notifications/:id': return Object.assign(notifications.find((n) => n.id === id)!, body);
     default: throw new Error(`예시 데이터 없음: ${key}`);

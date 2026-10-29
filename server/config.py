@@ -10,6 +10,8 @@ from dotenv import load_dotenv
 class Settings:
     supabase_url: str
     publishable_key: str
+    secret_key: str = ""  # 관리자 API만 씀
+    admin_emails: frozenset[str] = frozenset()
 
     @classmethod
     def from_env(cls):
@@ -19,4 +21,5 @@ class Settings:
         parsed = urlparse(url)
         if parsed.scheme != "https" or not parsed.hostname or not key:
             raise RuntimeError(".env의 SUPABASE_URL과 SUPABASE_PUBLISHABLE_KEY를 확인하세요.")
-        return cls(url, key)
+        admins = frozenset(e.strip().lower() for e in os.getenv("ADMIN_EMAILS", "").split(",") if e.strip())
+        return cls(url, key, os.getenv("SUPABASE_SECRET_KEY", "").strip(), admins)

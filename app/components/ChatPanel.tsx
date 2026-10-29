@@ -85,9 +85,11 @@ export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) 
     }
   }
 
-  // 👍👎: 지금은 앱 안에서만 기록. 서버에 보내려면 API 명세에 PATCH /messages/{id} {feedback} 추가 필요(조장 확인)
+  // 👍👎: 서버에 저장 → 관리자 웹 '아쉬워요'. 저장 실패면 표시를 되돌림
   function rate(id: number, v: 'up' | 'down') {
+    const before = feedback[id];
     setFeedback((f) => ({ ...f, [id]: v }));
+    api.patch(`/messages/${id}/feedback`, { feedback: v }).catch(() => setFeedback((f) => ({ ...f, [id]: before! })));
   }
 
   const time = (iso: string) => (iso ? new Date(iso).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) : '');
