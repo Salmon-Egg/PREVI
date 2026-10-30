@@ -152,8 +152,37 @@ export function Card({ children, onPress, style }: { children: ReactNode; onPres
 }
 
 /** 주 버튼 = 초록 그라데이션, ghost = 흰 바탕 + 초록 테두리. compact = 두 개 나란히 놓을 때 (글자 조금 작게) */
-export function Button({ label, onPress, kind = 'primary', disabled, compact }: {
-  label: string; onPress: () => void; kind?: 'primary' | 'ghost'; disabled?: boolean; compact?: boolean;
+// 공지·할 일 상세와 같은 종류의 이모지를 대신하는 그림 아이콘 (2026-10-30 받은 그림, 96×96으로 줄임).
+// 맞는 그림이 없는 ✨·⏰·🎓·📌 등은 이모지 그대로
+const PICS = {
+  checklist: require('../assets/icons/checklist.png'), // 📋 할 일
+  close: require('../assets/icons/close.png'), // ⛔ 조건 미충족
+  idea: require('../assets/icons/idea.png'), // 💡 팁
+  link: require('../assets/icons/link.png'), // 🔗 링크
+  chat: require('../assets/icons/chat.png'), // 💬 프리비에게 묻기
+  warn: require('../assets/icons/warn.png'), // ⚠️ 유의사항·확인 필요
+  notice: require('../assets/icons/notice.png'), // 📢 공지
+  check: require('../assets/icons/check.png'), // ✅☑️ 완료·신청 가능
+};
+export type PicName = keyof typeof PICS;
+
+/** 꾸밈용 그림 아이콘 (화면 읽기 프로그램은 옆 글자만 읽음) */
+export function Pic({ name, size = 20 }: { name: PicName; size?: number }) {
+  return <Image source={PICS[name]} style={{ width: size, height: size }} accessible={false} />;
+}
+
+/** 그림 아이콘 + 글자 한 줄 (제목·안내 머리글용) */
+export function PicText({ name, size = 20, children, style }: { name: PicName; size?: number; children: ReactNode; style?: object }) {
+  return (
+    <View style={s.picRow}>
+      <Pic name={name} size={size} />
+      <Text style={[style, { flexShrink: 1 }]}>{children}</Text>
+    </View>
+  );
+}
+
+export function Button({ label, onPress, kind = 'primary', disabled, compact, icon }: {
+  label: string; onPress: () => void; kind?: 'primary' | 'ghost'; disabled?: boolean; compact?: boolean; icon?: PicName;
 }) {
   const primary = kind === 'primary';
   return (
@@ -163,7 +192,10 @@ export function Button({ label, onPress, kind = 'primary', disabled, compact }: 
       onPress={onPress}
       style={({ pressed }) => [s.btn, compact && { paddingHorizontal: 6 }, primary ? [gradientBg(gradient.primary, color.primary), s.btnShadow] : s.btnGhost, (pressed || disabled) && { opacity: 0.55 }]}
     >
-      <Text style={[s.btnText, compact && { fontSize: 14 }, { color: primary ? '#fff' : color.title }]} numberOfLines={1}>{label}</Text>
+      <View style={s.picRow}>
+        {icon && <Pic name={icon} size={compact ? 20 : 22} />}
+        <Text style={[s.btnText, compact && { fontSize: 14 }, { color: primary ? '#fff' : color.title, flexShrink: 1 }]} numberOfLines={1}>{label}</Text>
+      </View>
     </Pressable>
   );
 }
@@ -350,6 +382,7 @@ export const s = StyleSheet.create({
   btnShadow: { shadowColor: '#0B6B3F', shadowOpacity: 0.22, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
   btnGhost: { backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#B9D9C6' },
   btnText: { fontSize: 16, fontWeight: '800' },
+  picRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   badge: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: 'flex-start' },
   badgeText: { fontSize: 12, fontWeight: '800' },
   source: { fontSize: 12, color: color.inkSub },

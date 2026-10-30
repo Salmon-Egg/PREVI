@@ -7,7 +7,7 @@ import { ScrollView, View } from 'react-native';
 import { CloseButton } from '../../../components/form';
 import { sheet as st } from '../../../components/sheet';
 import { Text } from '../../../components/Text';
-import { Button, DdayBadge, goBack, openLink, Row, Screen, showAlert, StateView } from '../../../components/ui';
+import { Button, DdayBadge, goBack, openLink, Pic, PicText, Row, Screen, showAlert, StateView } from '../../../components/ui';
 import { api, ApiError, useApi } from '../../../lib/api';
 import { askChat } from '../../../lib/chatStore';
 import { TODO_TYPE_KO, type TodoDetail } from '../../../lib/types';
@@ -37,7 +37,7 @@ export default function TodoDetailScreen() {
         {t && (
           <View style={st.sheet}>
             <View style={st.head}>
-              <Text style={st.headIcon}>📋</Text>
+              <Pic name="checklist" size={28} />
               <Text style={st.headTitle}>할 일</Text>
               <CloseButton onPress={goBack} />
             </View>
@@ -50,11 +50,11 @@ export default function TodoDetailScreen() {
                   <Text style={st.aiHead}>✨ 왜 나에게 해당하나요?</Text>
                   <Text style={st.aiLine}>{t.reason ?? '비서가 정리한 근거가 아직 없어요.'}</Text>
                 </View>
-                {t.link && <Button compact kind="ghost" label="🔗 신청 페이지 열기" onPress={() => openLink(t.link)} />}
-                <Button compact kind="ghost" label="💬 프리비에게 묻기"
+                {t.link && <Button compact kind="ghost" icon="link" label="신청 페이지 열기" onPress={() => openLink(t.link)} />}
+                <Button compact kind="ghost" icon="chat" label="프리비에게 묻기"
                   onPress={() => askChat(`${t.title} 어떻게 해?`, { kind: 'todo', id: t.id })} />
                 <View style={st.caution}>
-                  <Text style={st.cautionHead}>⚠️ AI 근거 유의사항</Text>
+                  <PicText name="warn" style={st.cautionHead}>AI 근거 유의사항</PicText>
                   <Text style={st.cautionText}>근거는 내 학적·성적과 공지를 바탕으로 비서가 정리했어요.{'\n'}실제 신청 전 학교 공지를 반드시 확인해 주세요.</Text>
                 </View>
               </View>
@@ -62,11 +62,11 @@ export default function TodoDetailScreen() {
             <View style={st.bottom}>
               {noticeId && (
                 <View style={{ flex: 1 }}>
-                  <Button compact kind="ghost" label="📢 공지 자세히 보기" onPress={() => router.push(`/notices/${noticeId}`)} />
+                  <Button compact kind="ghost" icon="notice" label="공지 자세히 보기" onPress={() => router.push(`/notices/${noticeId}`)} />
                 </View>
               )}
               <View style={{ flex: 1 }}>
-                <Button compact kind={t.done ? 'ghost' : undefined} label={t.done ? '↩️ 완료 취소' : '☑️ 완료했어요'} onPress={toggle} />
+                <Button compact kind={t.done ? 'ghost' : undefined} icon={t.done ? undefined : 'check'} label={t.done ? '↩️ 완료 취소' : '완료했어요'} onPress={toggle} />
               </View>
             </View>
           </View>

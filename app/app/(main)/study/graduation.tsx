@@ -4,7 +4,7 @@ import { View } from 'react-native';
 
 import { Text } from '../../../components/Text';
 import { AreaCard } from '../../../components/AreaCard';
-import { Body, Card, DdayBadge, Row, Screen, StateView, Sub, Title } from '../../../components/ui';
+import { Body, Card, DdayBadge, Pic, Row, Screen, StateView, Sub, Title } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
 import type { Graduation, Todo } from '../../../lib/types';
@@ -36,7 +36,7 @@ export default function GraduationDetail() {
             {data.requirements.map((r) => (
               <Card key={r.name} onPress={r.todo_id ? () => router.push(`/todos/${r.todo_id}`) : undefined}>
                 <Row>
-                  <Text style={{ fontSize: 18 }}>{r.done ? '✅' : r.taking ? '📘' : r.done === null ? '❔' : '⬜'}</Text>
+                  {r.done ? <Pic name="check" size={22} /> : <Text style={{ fontSize: 18 }}>{r.taking ? '📘' : r.done === null ? '❔' : '⬜'}</Text>}
                   <Body style={{ flex: 1 }}>{r.name}</Body>
                   {!r.done && r.taking && <Sub>수강 중</Sub>}
                   {r.todo_id && <Sub>할 일 ›</Sub>}
