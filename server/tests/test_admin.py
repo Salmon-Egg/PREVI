@@ -104,6 +104,45 @@ def test_broadcast_preview_counts_target():
     assert res.json() == {"count": 2}  # 복학생은 재학생 공지도 받음
 
 
+def test_broadcasts_count_listed_and_notified():
+    rows = {"notices": [{"id": 5, "title": "안내"}, {"id": 4, "title": "옛 안내"}],
+            "eligibility": [{"notice_id": 5}, {"notice_id": 5}],
+            "notifications": [{"target_id": 5}]}
+    client, _ = make(rows=rows)
+    with client:
+        body = client.get("/admin/broadcasts", headers=HEADERS).json()
+    assert [(b["id"], b["listed"], b["notified"]) for b in body] == [(5, 2, 1), (4, 0, 0)]
+
+
+def test_retract_only_sent_notice_and_clears_notifications():
+    client, saved = make(rows={"todos": [{"id": 11}, {"id": 12}]})
+    with client:
+        assert client.delete("/admin/broadcasts/5", headers=HEADERS).status_code == 204
+    deletes = [(table, params) for method, table, params, _ in saved if method == "DELETE"]
+    assert deletes[0][0] == "notices" and deletes[0][1]["board_post_id"] == "like.admin-*"
+    assert deletes[1] == ("notifications", {"type": "eq.notice", "target_id": "eq.5"})
+    assert deletes[2] == ("notifications", {"type": "eq.deadline", "target_id": "in.(11,12)"})
+
+
+def test_retract_missing_notice_keeps_notifications(monkeypatch):
+    calls = []
+    async def nothing(request, method, table, **kwargs):
+        calls.append((method, table))
+        return []
+    monkeypatch.setattr(admin, "admin_rows", nothing)
+    client, _ = make()
+    with client:
+        assert client.delete("/admin/broadcasts/5", headers=HEADERS).status_code == 404
+    assert ("DELETE", "notifications") not in calls
+
+
+def test_collected_notices_leave_out_sent_ones():
+    client, _ = make(rows={"notices": [{"created_at": "2026-10-30T04:00:00Z"}]}, counts={"notices": 3})
+    with client:
+        stats = client.get("/admin/notices/stats", headers=HEADERS).json()
+    assert stats == {"today": 3, "today_ready": 3, "pending": 3, "failed": 3, "last_collected_at": "2026-10-30T04:00:00Z"}
+
+
 STUDENT_ID = "00000000-0000-0000-0000-000000000001"
 BOSS_ID = "00000000-0000-0000-0000-000000000002"
 ACCOUNTS = {"users": [

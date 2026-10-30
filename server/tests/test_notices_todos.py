@@ -127,6 +127,17 @@ def test_notice_detail_and_application_history():
         assert client.get("/scholarship-applications", headers=HEADERS).json() == []
 
 
+def test_notice_body_only_for_admin_written_notice():
+    def client_with(url):
+        def db(request):
+            return httpx.Response(200, json=[{**NOTICE, "url": url, "body": "본문"}] if request.url.path == "/rest/v1/notices" else [])
+        return client_for(db)
+    with client_with("admin:admin-abc") as client:
+        assert client.get("/notices/2", headers=HEADERS).json()["body"] == "본문"
+    with client_with(NOTICE["url"]) as client:
+        assert "body" not in client.get("/notices/2", headers=HEADERS).json()
+
+
 def test_notice_detail_tells_my_application_state():
     def db(request):
         table = request.url.path.removeprefix("/rest/v1/")

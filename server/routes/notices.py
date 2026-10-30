@@ -9,7 +9,7 @@ router = APIRouter(tags=["공지"])
 
 async def notice_by_id(request: Request, notice_id: int):
     rows = await database_rows(request, "GET", "notices", params={"id": f"eq.{notice_id}",
-        "select": "id,title,category,summary,deadline,documents,url,posted_at"})
+        "select": "id,title,category,summary,deadline,documents,url,posted_at,body"})
     if not rows:
         raise APIError(404, "NOTICE_NOT_FOUND", "공지를 찾을 수 없어요.")
     return rows[0]
@@ -27,7 +27,9 @@ async def notices(request: Request, user: AuthenticatedUser = Depends(require_us
 @router.get("/notices/{notice_id}")
 async def notice_detail(request: Request, notice_id: int = Path(gt=0), user: AuthenticatedUser = Depends(require_user)):
     notice = await notice_by_id(request, notice_id)
-    mine = {"user_id": f"eq.{user.id}"}
+    if not notice.get("url", "").startswith("admin:"):  # 학교 공지는 요약과 원문 링크, 관리자가 쓴 공지는 원문 링크가 없어 본문을 줌
+        notice.pop("body", None)
+    mine ={"user_id": f"eq.{user.id}"}
     verdicts = await database_rows(request, "GET", "eligibility", params={**mine, "notice_id": f"eq.{notice_id}", "select": "verdict,reasons"})
     todos = await database_rows(request, "GET", "todos", params={**mine, "source_kind": "eq.notice", "source_id": f"eq.{notice_id}", "select": "id"})
     applied = await database_rows(request, "GET", "scholarship_applications", params={**mine, "notice_id": f"eq.{notice_id}", "select": "id"})

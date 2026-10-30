@@ -5,6 +5,7 @@ import binascii
 import io
 import logging
 import re
+from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from typing import Literal
 from uuid import UUID, uuid4
@@ -204,10 +205,31 @@ async def write_answer(body: AnswerIn, request: Request):
     return {"ok": True}
 
 
-# ── 공지 수집 상태 (AI 정리 실패 다시 하기) ──
+# ── 공지 수집 상태 (AI 정리 실패 다시 하기). 관리자가 보낸 공지는 '보낸 공지'에서 따로 봄 ──
+SENT = "like.admin-*"
+COLLECTED = "not.like.admin-*"
+KST = timezone(timedelta(hours=9))
+
+
+@router.get("/notices/stats")
+async def notice_stats(request: Request):
+    today = "gte." + datetime.now(KST).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    async def n(**params):
+        return await admin_rows(request, "GET", "notices", count=True, params={"board_post_id": COLLECTED, **params})
+    last = await admin_rows(request, "GET", "notices", params={
+        "board_post_id": COLLECTED, "select": "created_at", "order": "id.desc", "limit": 1})
+    return {
+        "today": await n(created_at=today),
+        "today_ready": await n(created_at=today, extraction_status="eq.ready"),
+        "pending": await n(extraction_status="eq.pending"),
+        "failed": await n(extraction_status="eq.failed"),
+        "last_collected_at": last[0]["created_at"] if last else None,
+    }
+
+
 @router.get("/notices")
 async def notices(request: Request, status: Literal["pending", "ready", "failed"] | None = None):
-    params = {"select": "id,title,category,extraction_status,posted_at,board_post_id", "order": "id.desc", "limit": 100}
+    params = {"board_post_id": COLLECTED, "select": "id,title,category,extraction_status,posted_at,url", "order": "id.desc", "limit": 100}
     if status:
         params["extraction_status"] = f"eq.{status}"
     return await admin_rows(request, "GET", "notices", params=params)
@@ -234,14 +256,16 @@ class BroadcastIn(BaseModel):
     target: Target = Target()
 
 
-async def _students(request: Request, select="grade,department,status", consented=True) -> list[dict]:
+async def _all_rows(request: Request, table: str, **params) -> list[dict]:
     rows, page = [], None
     while page is None or len(page) == 1000:
-        page = await admin_rows(request, "GET", "profiles", params={
-            **({"consent_agreed_at": "not.is.null"} if consented else {}),
-            "select": select, "order": "id.asc", "offset": len(rows), "limit": 1000})
+        page = await admin_rows(request, "GET", table, params={**params, "order": "id.asc", "offset": len(rows), "limit": 1000})
         rows += page
     return rows
+
+
+async def _students(request: Request, select="grade,department,status", consented=True) -> list[dict]:
+    return await _all_rows(request, "profiles", select=select, **({"consent_agreed_at": "not.is.null"} if consented else {}))
 
 
 @router.post("/broadcast/preview")
@@ -273,6 +297,37 @@ async def broadcast(body: BroadcastIn, request: Request, tasks: BackgroundTasks)
         "target": {k: v for k, v in body.target.model_dump().items() if v}, "extraction_status": "ready"}))[0]
     tasks.add_task(_send_broadcast, notice)
     return {"notice_id": notice["id"]}
+
+
+@router.get("/broadcasts")
+async def broadcasts(request: Request):
+    # shortcut: 최근 100건만. 더 오래된 공지를 찾을 일이 생기면 페이지 넘김 추가
+    rows = await admin_rows(request, "GET", "notices", params={
+        "board_post_id": SENT, "select": "id,title,body,category,deadline,target,posted_at", "order": "id.desc", "limit": 100})
+    if not rows:
+        return []
+    ids = f"in.({','.join(str(r['id']) for r in rows)})"
+    listed = Counter(e["notice_id"] for e in await _all_rows(
+        request, "eligibility", notice_id=ids, verdict="in.(eligible,check)", select="notice_id"))
+    notified = Counter(n["target_id"] for n in await _all_rows(
+        request, "notifications", type="eq.notice", target_id=ids, delivery_status="not.in.(failed,unknown)", select="target_id"))
+    return [{**r, "listed": listed[r["id"]], "notified": notified[r["id"]]} for r in rows]
+
+
+@router.delete("/broadcasts/{notice_id}", status_code=204)
+async def retract_broadcast(notice_id: int, request: Request):
+    todos = await _all_rows(request, "todos", source_kind="eq.notice", source_id=f"eq.{notice_id}", select="id")
+    # 판정·할 일·신청 기록은 외래 키 cascade. 학교 게시판 공지는 여기서 못 지움
+    found = await admin_rows(request, "DELETE", "notices", headers={"Prefer": "return=representation"}, params={
+        "id": f"eq.{notice_id}", "board_post_id": SENT, "select": "id"})
+    if not found:
+        raise APIError(404, "NOT_FOUND", "보낸 공지를 찾을 수 없어요.")
+    # 알림은 외래 키가 없어 따로 지움. 안 지우면 학생 알림함에 열리지 않는 항목이 남음
+    await admin_rows(request, "DELETE", "notifications", params={"type": "eq.notice", "target_id": f"eq.{notice_id}"})
+    ids = [t["id"] for t in todos]
+    for i in range(0, len(ids), 200):  # 주소 길이 제한
+        await admin_rows(request, "DELETE", "notifications", params={
+            "type": "eq.deadline", "target_id": f"in.({','.join(map(str, ids[i:i + 200]))})"})
 
 
 # ── 계정 관리: 가입자 목록·삭제. 삭제는 학생 앱 탈퇴(/me DELETE)와 같은 길, 개인 데이터는 외래 키 cascade ──
