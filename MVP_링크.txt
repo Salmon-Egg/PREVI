@@ -1,34 +1,34 @@
-서경 AI 비서 MVP 링크
+PREVI 실제 서비스 · 제출용 링크
 
-[MVP 보기 (휴대폰·PC 브라우저) — fe/mvp3 시연 사이트]
-https://claude.ai/artifact/KSy1QoVa8q13N759se35Pp
+[학생 웹 — 휴대폰·PC 브라우저]
+https://previ-skuniv.pages.dev/
+시연 아이디: test_student
 
-- 예시 데이터 모드라 서버 없이 화면이 다 돌아감 (PC가 꺼져 있어도 열림)
-- 로그인 화면 아래 '시연용 계정 보기'에서 가상 학생을 골라 로그인 (비밀번호 1234, 홍길동 20210004 = 4학년)
-- 링크가 있는 사람 모두 열람 가능
-- 링크가 안 될 때: demo/시연_사이트_열기.bat 더블클릭 → http://localhost:8095
-  (demo/index.html이 없으면 app 폴더에서 npm run build:demo로 먼저 만들기)
+[관리자 웹]
+https://previ-admin.pages.dev/
+시연 아이디: test_admin
+관리자는 실제 데이터를 수정·삭제할 수 있으므로 시험용 데이터로 시연합니다.
 
-[이전 MVP 뼈대 보기 (예전 버전)]
-http://0djqt5g-anonymous-8090.exp.direct
-- 만든 사람 PC에서 Expo 서버(npx expo start --tunnel ngrok --port 8090)가
-  켜져 있는 동안만 열림. 안 열리면 서버가 꺼진 것
-- Expo Go 앱으로 열려면 같은 서버에서 뜨는 QR을 찍기
+비밀번호는 제출 담당자가 별도로 전달합니다. 공개 저장소에는 기록하지 않습니다.
+두 웹 주소는 고정입니다. 실제 로그인·AI 기능은 학교 API 서버가 실행 중이어야 동작합니다.
+이전 예시 데이터 사이트와 임시 터널 주소는 제출 링크로 사용하지 않습니다.
 
-[레포]
-https://github.com/Salmon-Egg/front-back-kick
+[API — 앱이 접속하는 서버]
+https://amused-swirl-reprocess.ngrok-free.dev
+상태 확인: https://amused-swirl-reprocess.ngrok-free.dev/health
+API 기본 주소는 학생 화면이 아닙니다. 기본 경로의 NOT_FOUND 응답으로 서버 장애를 판단하지 않습니다.
+
+[저장소 · 현재 서비스 코드]
+https://github.com/Salmon-Egg/PREVI
+https://github.com/Salmon-Egg/PREVI/tree/%ED%86%B5%ED%95%A9%EB%B3%B8
+현재 서비스 코드는 통합본 브랜치입니다. 기본 브랜치 변경·최종 제출 브랜치 결정은 조장 확인이 필요합니다.
 
 [작업 보드]
 https://github.com/users/Salmon-Egg/projects/2/views/1
 
-[내 PC에서 직접 켜기]
-cd app
-npm install
-copy .env.example .env
-npx expo start           → w 누르면 웹, QR은 Expo Go
-
-- 서버 없이 화면만: .env에서 EXPO_PUBLIC_USE_MOCK=1
-- 실제 서버(통합본): USE_MOCK=0, DEV_LOGIN=0, EMAIL_DOMAIN=skuniv.ac.kr
-  + EXPO_PUBLIC_SUPABASE_URL·EXPO_PUBLIC_SUPABASE_ANON_KEY(단톡방 공지 값) + 서버 켜기(server/README.md)
-  시연 계정 비밀번호는 조장에게 (깃에 없음)
-- 남은 순서(푸시·APK)는 app/FE_구현_정리.md '실제 서버 연결·제출 준비'
+[로컬 개발]
+실행 방법: app/README.md, server/README.md
+앱 설정은 app/.env.example을 참고합니다. 실제 서비스는 EXPO_PUBLIC_USE_MOCK=0,
+EXPO_PUBLIC_DEV_LOGIN=0으로 설정하고 실제 API·Supabase 설정을 사용합니다.
+비밀 키와 실제 .env 파일은 Git에 올리지 않습니다.
+APK·배포 절차: app/FE_구현_정리.md

@@ -3,8 +3,14 @@
 학생이 행정 정보를 찾아다니는 대신, **AI 비서가 내 상황에 맞는 일을 먼저 찾아 알려 주는 앱**입니다.
 소전 공모전 출품작 · 제출 마감 11/1 · 기능 추가 마감 10/28
 
+- 학생 웹: https://previ-skuniv.pages.dev/
+- 관리자 웹: https://previ-admin.pages.dev/
+- API 상태 확인: https://amused-swirl-reprocess.ngrok-free.dev/health
+- 레포: https://github.com/Salmon-Egg/PREVI
+- 현재 서비스 코드(통합본): https://github.com/Salmon-Egg/PREVI/tree/%ED%86%B5%ED%95%A9%EB%B3%B8
 - 작업 보드: https://github.com/users/Salmon-Egg/projects/2/views/1
-- 레포: https://github.com/Salmon-Egg/seokyeong-ai-secretary
+
+학생 시연 아이디는 `test_student`, 관리자 시연 아이디는 `test_admin`입니다. 비밀번호는 제출 담당자가 별도로 전달합니다. 접속·실행 안내는 [MVP_링크.txt](MVP_링크.txt)를 참고하세요. 웹 주소는 고정이며, 실제 로그인·AI 기능은 학교 API 서버가 실행 중이어야 동작합니다.
 
 ---
 
@@ -40,7 +46,7 @@
 폴더마다 **맡은 사람**이 정해져 있습니다. 내 폴더가 아닌 곳을 고쳐야 하면, 그 폴더 담당자에게 먼저 말해 주세요.
 
 ```
-seokyeong-ai-secretary/
+PREVI/
 ├─ README.md        ← 지금 보고 있는 파일
 ├─ docs/            문서 (기획, 규칙, API 명세, 시안)       담당: 조장
 ├─ app/             모바일 앱 (Expo)                       담당: FE A · FE B
