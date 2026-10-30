@@ -48,12 +48,15 @@ async def require_user(
         user = AuthenticatedUser.model_validate(response.json())
     except (ValueError, ValidationError):
         raise APIError(500, "AUTH_SERVICE_INVALID_RESPONSE", "로그인 확인 응답을 처리할 수 없어요.") from None
+    # 관리 기능으로 만든 제출용 계정만 UUID로 허용한다. 일반 가입의 학교 메일 제한은 유지한다.
+    if str(user.id) in settings.demo_user_ids and user.email_confirmed_at is not None:
+        return user
     validate_school_user(user)
     return user
 
 
 async def require_admin(request: Request, user: AuthenticatedUser = Depends(require_user)) -> AuthenticatedUser:
-    """학교 메일 확인(require_user) 뒤 .env의 ADMIN_EMAILS에 있는 메일만."""
+    """인증된 학교·제출용 계정 중 .env의 ADMIN_EMAILS에 있는 메일만."""
     if (user.email or "").lower() not in request.app.state.settings.admin_emails:
         raise APIError(403, "ADMIN_ONLY", "관리자만 쓸 수 있어요.")
     return user
