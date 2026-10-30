@@ -11,7 +11,15 @@ import { ApiError } from './errors';
 import { getToken, logout } from './session';
 
 
-const JSON_HEADER = { 'Content-Type': 'application/json' };
+const JSON_HEADER: Record<string, string> = { 'Content-Type': 'application/json' };
+try {
+  // 무료 ngrok의 HTML 안내 대신 JSON API 응답을 요청합니다.
+  if (/(^|\.)(ngrok-free\.(app|dev)|ngrok\.(app|io))$/i.test(new URL(API_URL).hostname)) {
+    JSON_HEADER['ngrok-skip-browser-warning'] = '1';
+  }
+} catch {
+  // 잘못된 서버 주소는 기존 request()의 연결 오류 안내에서 처리합니다.
+}
 
 export { ApiError };
 
