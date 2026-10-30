@@ -8,6 +8,7 @@
 # 설치하면 생기는 파일 (각자 다시 설치하면 됨)
 node_modules/
 .expo/
+admin/.vite/
 dist/
 web-build/
 __pycache__/
