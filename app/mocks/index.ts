@@ -237,6 +237,9 @@ function gradeTerms(): GradeTerm[] {
   });
 }
 
+/** 서버에 졸업 기준이 있는 학과 (예시 데이터 기준) */
+const hasGradRules = () => ['소프트웨어학과', '전자컴퓨터공학과'].includes(me.department ?? '');
+
 const graduation = () => {
   const areas = Object.entries(AREA_REQUIRED).map(([name, required]) => {
     const items = gradeItems.filter((g) => areaOf(g.area) === name);
@@ -302,7 +305,7 @@ const home = (): Home => {
     today_todos: open.slice(0, 9),
     next_event: next ? { id: next.id, title: next.title, start_date: next.start_date, d_day: next.d_day } : null,
     menu_status: {
-      study: `졸업까지 ${graduation().remaining_total}학점`,
+      study: hasGradRules() ? `졸업까지 ${graduation().remaining_total}학점` : '적용 졸업 기준 확인 필요',
       scholarship: `신청 가능 ${eligible}건${scholarships.some((s) => !s.applied && s.verdict !== 'ineligible' && s.deadline?.startsWith(d(0))) ? ' · 오늘 마감' : ''}`,
       admin: `새 공지 ${newNotices}건`,
     },
@@ -499,7 +502,10 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
       return { ...n, eligibility: s ? { verdict: s.verdict, reasons: s.reasons } : null, todo_id: todo?.id ?? null, applied: !!s?.applied };
     }
     case 'GET /calendar': return calendar();
-    case 'GET /graduation': return graduation();
+    case 'GET /graduation':
+      // 서버처럼: 졸업 기준이 있는 학과가 아니면 404
+      if (!hasGradRules()) throw new ApiError(404, 'GRADUATION_RULES_NOT_FOUND', '이 학과·입학년도의 적용 졸업 기준은 확인 중이에요.');
+      return graduation();
     case 'GET /grades': return gradeTerms();
     case 'POST /grades': case 'PUT /grades/:id': case 'DELETE /grades/:id': {
       const before = graduation().areas.filter((a) => (a.earned ?? 0) >= a.required).length;

@@ -30,6 +30,12 @@
       "expo-sqlite",
       "expo-notifications",
       ["expo-image-picker", { "photosPermission": "습득물 사진을 올리려고 사진첩에 접근해요." }]
-    ]
+    ],
+    "owner": "kaluso71s-team",
+    "extra": {
+      "eas": {
+        "projectId": "c83b21d7-dd13-4280-9f46-c0ce068187a8"
+      }
+    }
   }
 }
