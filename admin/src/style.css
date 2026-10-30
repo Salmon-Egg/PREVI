@@ -121,6 +121,18 @@ td a { color: var(--primary); text-decoration: underline; }
 tr.click { cursor: pointer; }
 pre { margin: 0; font-size: 12px; white-space: pre-wrap; max-height: 320px; overflow: auto; }
 
+/* 공지 발송: 작성 + 학생 화면 미리보기 */
+.compose { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+.preview { position: sticky; top: 24px; display: flex; flex-direction: column; gap: 10px; }
+.preview h2 { font-size: 18px; overflow-wrap: anywhere; }
+.preview-body { margin: 0 0 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.preview .preview-body { margin: 0; }
+.intro { margin-bottom: 16px; }
+@media (max-width: 1100px) {
+  .compose { grid-template-columns: 1fr; }
+  .preview { position: static; }
+}
+
 /* 창 */
 .backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, .35); display: grid; place-items: center; padding: 16px; z-index: 10; }
 .modal { background: #fff; border-radius: 20px; padding: 24px; width: min(560px, 100%); max-height: 90vh; overflow: auto; }

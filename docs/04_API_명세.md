@@ -72,7 +72,8 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 | `GET /admin/feedback` | 30일 안에 👎 받은 답과 그 앞 질문 |
 | `GET` · `POST /admin/documents` · `DELETE /admin/documents/{id}` | 챗봇 참고 문서. 올리기는 `{title, kind, url?, filename, content_base64}` (PDF·TXT·MD, 20MB) |
 | `POST /admin/answers` | 관리자 답변 `{question, answer, ids}` → 문서 한 문단으로 저장, ids는 처리 완료 |
-| `GET /admin/notices?status=` · `POST /admin/notices/{id}/retry` | 공지 수집·AI 정리 상태, 실패 다시 정리 |
+| `GET /admin/notices?status=` · `GET /admin/notices/stats` · `POST /admin/notices/{id}/retry` | 학교 게시판에서 모은 공지의 AI 정리 상태(보낸 공지 제외), 오늘 숫자, 실패 다시 정리 |
+| `GET /admin/broadcasts` · `DELETE /admin/broadcasts/{id}` | 보낸 공지 최근 100건 (내용·대상, `listed` 앱 목록 학생 수, `notified` 알림 학생 수) · 내리기 (판정·할 일·신청 기록·앱 알림 삭제, 학교 공지는 404) |
 | `POST /admin/broadcast/preview` · `POST /admin/broadcast` | 대상 `{grades, departments, statuses}` 인원 · 발송 (notices에 '학생지원팀' 공지로 넣고 아침 파이프라인 함수로 판정·할 일·푸시) |
 | `GET` · `POST /admin/data/{calendar\|courses}` · `PUT` · `DELETE /admin/data/{kind}/{id}` | 학사일정·과목 고치기 |
 | `GET /admin/graduation` | 졸업 기준 보기 (수정 없음) |
