@@ -5,7 +5,7 @@ import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
 import { Image, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type PointerEvent, type StyleProp, type TextStyle } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SHEET_BAR } from '../../components/ChatSheet';
 import { Text } from '../../components/Text';
@@ -61,6 +61,8 @@ export default function Home() {
   const [page, setPage] = useState(0);
   const [cardWidth, setCardWidth] = useState(0);
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  // 대화창 바는 아래 안전 영역(안드로이드 하단 바)만큼 더 높음 → 스크롤 끝 여백에도 더해야 메뉴 칸 글자가 안 가려짐
+  const insets = useSafeAreaInsets();
   // 화면 폭(웹은 휴대폰 폭 최대 480)에 맞춰 피그마 비율로 위치 계산
   const W = Platform.OS === 'web' ? Math.min(screenWidth, 480) : screenWidth;
   const minHeight = W * FIG.cardTop - HERO_TOP + CARD_OVERLAP;
@@ -149,7 +151,7 @@ export default function Home() {
       <Image accessibilityLabel="서경대학교 캠퍼스" source={require('../../assets/home-bg.jpg')} pointerEvents="none"
         style={[st.bg, { width: bgW, height: bgW * BG_RATIO, left: (W - bgW) / 2 }]} />
       <SafeAreaView style={st.safeInner} edges={['top']}>
-        <ScrollView contentContainerStyle={st.scroll}>
+        <ScrollView contentContainerStyle={[st.scroll, { paddingBottom: st.scroll.paddingBottom + insets.bottom }]}>
           {/* 머리: 로고 · 알림 · 내 정보 */}
           <View style={st.header}>
             <View>
@@ -354,7 +356,8 @@ function TodoRow({ t, open }: { t: Todo; open: (href: Href) => void }) {
 const shadow = { shadowColor: '#0C6B3F', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 3 };
 
 // 사진 위 글자가 잘 읽히게 글자 둘레만 하얗게 번지게 (사진은 그대로)
-const glow = { textShadowColor: '#fff', textShadowRadius: 6, textShadowOffset: { width: 0, height: 0 } };
+// 휴대폰은 뒤 판이 옅어서 번짐을 조금 더 크게
+const glow = { textShadowColor: '#fff', textShadowRadius: Platform.OS === 'web' ? 6 : 10, textShadowOffset: { width: 0, height: 0 } };
 
 // 새 홈 시안의 글자색 (진한 초록 제목, 회청색 설명, 남색 할 일 제목)
 // hero: 로고 'PREVI'·인사말 (제목보다 조금 밝은 초록)
@@ -393,15 +396,16 @@ const st = StyleSheet.create({
   hero: { flexGrow: 1, marginBottom: -34 },
   heroText: { gap: 8, width: '72%' }, // 커진 설명 문구가 두 줄에 들어가게
   // 글자 뒤 하얀 번짐: 배경 그림이 복잡한 곳에서도 글자가 잘 보이게 (웹은 가장자리를 흐리게, 휴대폰은 반투명 둥근 판)
-  halo: { position: 'absolute', top: -12, left: -14, right: -14, bottom: -12, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.62)', ...(Platform.OS === 'web' ? ({ filter: 'blur(14px)' } as object) : null) },
+  // 휴대폰은 blur가 없어 판이 그대로 보이므로 훨씬 옅게 (10/30 실기기: 흰 상자처럼 보임)
+  halo: { position: 'absolute', top: -12, left: -14, right: -14, bottom: -12, borderRadius: 28, ...(Platform.OS === 'web' ? ({ backgroundColor: 'rgba(255,255,255,0.62)', filter: 'blur(14px)' } as object) : { backgroundColor: 'rgba(255,255,255,0.28)' }) },
   // 인사말 줄 뒤 흐림 (시안처럼 건물을 가릴 만큼 진하게, 범위는 글자 둘레만): 웹은 그 줄 뒤 배경 그림만 흐리게(backdrop-filter)
-  // + 하얀 막, 가장자리는 lineMask로 점점 투명. 휴대폰은 backdrop-filter가 없어서 반투명 하얀 판만 (모서리 둥글기는 같음)
+  // + 하얀 막, 가장자리는 lineMask로 점점 투명. 휴대폰은 backdrop-filter·가장자리 페이드가 없어서 옅은 판 + 글자 번짐(glow)으로 읽히게
   textBox: { alignSelf: 'flex-start' },
   textBlur: {
-    position: 'absolute', left: -BLUR_X, right: -BLUR_X, backgroundColor: 'rgba(255,255,255,0.7)',
+    position: 'absolute', left: -BLUR_X, right: -BLUR_X,
     ...(Platform.OS === 'web'
-      ? ({ backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' } as object)
-      : null),
+      ? ({ backgroundColor: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' } as object)
+      : { backgroundColor: 'rgba(255,255,255,0.32)' }),
   },
   hello: { fontWeight: '800', color: HOME_INK.hero, ...glow },
   helloSub: { color: HOME_INK.sub, fontWeight: '700', ...glow },
