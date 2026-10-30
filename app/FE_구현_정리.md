@@ -50,10 +50,21 @@
 - 서버 푸시 모양은 앱과 맞음: `data: { type, title, target_id }`, 종류 notice·deadline·calendar → 공지·할 일·학사일정 화면. 방해 금지 시간(`notify_quiet`)·알림 시각(`notify_time`)도 서버가 지킴 (`server/jobs/pipeline.py`)
 - 참고: 팀 결정(10/27)으로 '답변 도착' 푸시는 안 보냄. 앱의 `chat` 알림 처리·M-5 '답변 도착' 켜기는 조장 확인 후 뺄지 정하기
 
-### 4. 제출용 빌드 — ◐
-- ☑ 웹 시연 링크: https://claude.ai/artifact/KSy1QoVa8q13N759se35Pp (예시 데이터 모드라 서버 없이 항상 열림, 버전 42 = `fe/mvp3`)
-- ☐ 실제 서버에 붙은 웹이 필요하면: 서버 공개 주소가 생긴 뒤 `npm run export:web` (`.env` 값으로 만들어짐)
-- ☐ 안드로이드 APK: 3번의 1·2를 한 뒤 `npm run build:apk` (preview 프로필, 실제 서버·Supabase 로그인) → 끝나면 나오는 링크로 내려받기
+### 4. 제출용 빌드 — ◐ (서버 고정 주소 기다리는 중, 10/30)
+- ☑ 웹 시연 링크(예시 데이터): https://claude.ai/artifact/KSy1QoVa8q13N759se35Pp (서버 없이 항상 열림)
+- ☑ EAS 프로젝트: `kaluso71s-team/seokyeong-ai-secretary` (projectId가 `app.json`에 들어감)
+- ☐ **서버 고정 주소 받기**: BE A가 ngrok 고정 주소로 바꾸는 중 (`docs/배포_자동실행_설정.md`). 앱·관리자 웹은 ngrok 주소면 안내 화면을 건너뛰는 헤더를 자동으로 붙임. 서버 CORS는 모든 주소 허용
+- ☐ `.env` 채우기 (깃에 안 올라감. 서버 전용 키 `SUPABASE_SECRET_KEY`는 절대 넣지 않기)
+  - `app/.env`: `EXPO_PUBLIC_API_URL`=고정 주소, `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`
+  - `admin/.env`: `.env.example`을 복사해 `VITE_API_URL`=고정 주소, `VITE_SUPABASE_URL`, `VITE_SUPABASE_KEY`
+- ☐ 웹 공유 링크 (Cloudflare Pages, 주소 고정 `*.pages.dev`)
+  1. `npx wrangler login` (Cloudflare 계정, 한 번만)
+  2. `cd app` → `npm run export:web` → `npx wrangler pages deploy dist --project-name previ`
+- ☐ 관리자 웹 (Cloudflare Pages)
+  - `cd admin` → `npm install` → `npm run build` → `npx wrangler pages deploy dist --project-name previ-admin`
+  - 관리자 로그인은 서버 `.env`의 `ADMIN_EMAILS`에 있는 학교 메일만 (☑ 설정됨, `012_admin.sql` ☑ 적용됨)
+- ☐ 안드로이드 APK: 3번의 2(EAS에 값 넣기, `--environment preview`)를 한 뒤 `npm run build:apk` → 끝나면 나오는 링크로 내려받기. 푸시까지 받으려면 Firebase(FCM) 키도 EAS에 올려야 함
+- 서버 주소가 바뀌면 웹·관리자 웹은 다시 빌드·배포, APK는 다시 빌드
 
 ## 점검 13·14번 (2026-10-29)
 
