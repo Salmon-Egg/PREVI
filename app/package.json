@@ -33,7 +33,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "typecheck": "tsc --noEmit",
-    "export:web": "expo export --platform web",
+    "export:web": "expo export --platform web && node scripts/fix-web-assets.mjs",
     "build:dev": "eas build --profile development --platform android",
     "build:apk": "eas build --profile preview --platform android",
     "build:demo": "node scripts/build-demo.mjs"
