@@ -6,20 +6,20 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from './Text';
-import { coursesInArea, overall, termLabel } from '../lib/format';
+import { overall, termLabel } from '../lib/format';
 import { color } from '../lib/theme';
-import type { GradeTerm, Graduation } from '../lib/types';
+import type { Graduation } from '../lib/types';
 
 type Area = Graduation['areas'][number];
 
-/** grades: 성적 목록 (서버 졸업 응답에 과목이 없으면 여기서 영역별로 나눠 보여 줌) */
-export function AreaCard({ area, bar = false, grades }: { area: Area; bar?: boolean; grades?: GradeTerm[] | null }) {
+export function AreaCard({ area, bar = false }: { area: Area; bar?: boolean }) {
   const [open, setOpen] = useState(false);
   // earned가 null = 서버가 확정 못 함 → '확인 필요'
   const earned = area.earned;
   const done = earned !== null && earned >= area.required;
   const pct = earned === null ? 0 : Math.min(1, earned / area.required);
-  const courses = [...(area.courses ?? (grades ? coursesInArea(area.name, grades) : []))].sort((a, b) => a.term.localeCompare(b.term));
+  const courses = [...(area.courses ?? [])].sort((a, b) => a.term.localeCompare(b.term));
+  const taking = area.taking ?? [];
   // 이 영역 평점 (P·F 규칙은 성적 조회와 같음)
   const { gpa } = overall([{ term: '', gpa: null, items: courses.map((c, i) => ({ id: i, area: area.name, ...c })) }]);
 
@@ -41,8 +41,17 @@ export function AreaCard({ area, bar = false, grades }: { area: Area; bar?: bool
 
       {open && (
         <View style={st.list}>
+          {taking.map((c, i) => (
+            <View key={`taking-${c.course_name}-${i}`} style={st.row}>
+              <View style={{ flex: 1 }}>
+                <Text style={st.course} numberOfLines={1}>{c.course_name}</Text>
+                <Text style={st.term}>이번 학기 · {c.credits}학점 · 성적이 나오면 학점에 들어가요</Text>
+              </View>
+              <Text style={st.taking}>수강 중</Text>
+            </View>
+          ))}
           {courses.length === 0 ? (
-            <Text style={st.empty}>아직 이 영역에서 들은 과목이 없어요. 성적 조회에서 과목을 입력하면 여기에 모여요.</Text>
+            taking.length === 0 && <Text style={st.empty}>아직 이 영역에서 들은 과목이 없어요. 성적 조회에서 과목을 입력하면 여기에 모여요.</Text>
           ) : (
             <>
               {courses.map((c, i) => (
@@ -80,5 +89,6 @@ const st = StyleSheet.create({
   term: { fontSize: 12, color: color.inkSub, marginTop: 1 },
   grade: { minWidth: 34, textAlign: 'center', fontSize: 14, fontWeight: '800', color: color.primary, backgroundColor: color.primarySoft, borderRadius: 8, paddingVertical: 3, overflow: 'hidden' },
   sum: { fontSize: 12, color: color.inkSub, marginTop: 4 },
+  taking: { fontSize: 12, fontWeight: '800', color: color.warn, backgroundColor: color.warnSoft, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3, overflow: 'hidden' },
   empty: { fontSize: 13, color: color.inkSub, paddingVertical: 6 },
 });

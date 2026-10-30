@@ -1,17 +1,18 @@
 // ▶ FE 25번에 해당하는 부분: S-2 장학 공지 상세 (AI 요약, 판정, 원문 링크, 신청 완료 체크) — A-1(FE 27번) 공지 상세도 같이 씀
 // 새 시안 '장학금 안내': 흰 창(🎓 장학금 안내 ✕) 안의 공지 칸에 제목 → AI 핵심 요약(마감·판정 근거) → 원문 → AI 요약 유의사항,
-// 창 아래 [📢 공지사항 가기 | ☑️ 신청 완료 체크]. ✕를 누르면 들어오기 전 화면으로
+// 창 아래 [신청 여부 체크] + [📢 공지사항 가기 | 💬 프리비에게 묻기]. ✕를 누르면 들어오기 전 화면으로
 import { router, useLocalSearchParams } from 'expo-router';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { CloseButton } from '../../../components/form';
+import { sheet as st } from '../../../components/sheet';
 import { Text } from '../../../components/Text';
 import { Button, goBack, isSafeUrl, openLink, Screen, StateView } from '../../../components/ui';
-import { api, attempt, useApi } from '../../../lib/api';
+import { api, attempt, useApi, useSubmit } from '../../../lib/api';
 import { askChat } from '../../../lib/chatStore';
 import { deadlineText, dotDate } from '../../../lib/format';
 import { color } from '../../../lib/theme';
-import type { NoticeDetail } from '../../../lib/types';
+import type { NoticeDetail, TodoDetail } from '../../../lib/types';
 
 const VERDICT = { eligible: '✅ 나의 판정: 신청 가능', check: '⚠️ 나의 판정: 확인 필요', ineligible: '⛔ 나의 판정: 조건 미충족' };
 
@@ -21,12 +22,18 @@ export default function Notice() {
   const isScholarship = n?.category === '장학';
   const summary = n?.summary ?? [];
   const name = isScholarship ? '장학금 안내' : '공지 안내';
+  const { busy, run } = useSubmit();
 
-  async function markApplied() {
-    if (!n?.todo_id) return;
-    // 서버가 신청 내역에 기록
-    if (await attempt(() => api.patch(`/todos/${n.todo_id}`, { done: true }))) reload();
-  }
+  // 할 일을 완료/취소하면 DB가 신청 내역에 기록/삭제함. 할 일이 없는 공지(조건 미충족 등)는 먼저 만듦
+  const toggleApplied = () => run(async () => {
+    if (!n) return;
+    const dueDate = n.deadline ? new Date(new Date(n.deadline).getTime() + 9 * 3600e3).toISOString().slice(0, 10) : null; // 한국 날짜
+    const ok = await attempt(async () => {
+      const todoId = n.todo_id ?? (await api.post<TodoDetail>('/todos', { title: n.title, type: 'scholarship', due_date: dueDate, source: { kind: 'notice', id: n.id } })).id;
+      await api.patch(`/todos/${todoId}`, { done: !n.applied });
+    });
+    if (ok) reload();
+  });
 
   return (
     <Screen title={name} scroll={false} gap={0}>
@@ -62,19 +69,19 @@ export default function Notice() {
                 </View>
               </View>
             </ScrollView>
+            {isScholarship && (
+              <View style={{ paddingHorizontal: 12, paddingTop: 12 }}>
+                <Button compact kind={n.applied ? 'ghost' : undefined} disabled={busy}
+                  label={n.applied ? '✅ 신청 완료 (누르면 취소)' : '☑️ 신청했어요'} onPress={toggleApplied} />
+              </View>
+            )}
             <View style={st.bottom}>
               <View style={{ flex: 1 }}>
                 <Button compact kind="ghost" label="📢 공지사항 가기" onPress={() => (isSafeUrl(n.url) ? openLink(n.url) : router.push('/office'))} />
               </View>
               <View style={{ flex: 1 }}>
-                {n.applied ? (
-                  <Button compact kind="ghost" label="✅ 신청 완료" disabled onPress={() => {}} />
-                ) : n.todo_id ? (
-                  <Button compact label="☑️ 신청 완료 체크" onPress={markApplied} />
-                ) : (
-                  <Button compact label="💬 프리비에게 묻기"
-                    onPress={() => askChat('이 공지 나도 해당돼?', { kind: 'notice', id: n.id })} />
-                )}
+                <Button compact label="💬 프리비에게 묻기"
+                  onPress={() => askChat('이 공지 나도 해당돼?', { kind: 'notice', id: n.id })} />
               </View>
             </View>
           </View>
@@ -83,24 +90,3 @@ export default function Notice() {
     </Screen>
   );
 }
-
-const st = StyleSheet.create({
-  sheet: { flex: 1, backgroundColor: '#fff', borderRadius: 24, margin: -6, overflow: 'hidden' },
-  head: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderColor: color.line },
-  headIcon: { fontSize: 18 },
-  headTitle: { flex: 1, fontSize: 17, fontWeight: '800', color: color.title },
-  body: { padding: 12, gap: 12 },
-  ai: { backgroundColor: '#E6F4EC', borderWidth: 1, borderColor: color.field, borderRadius: 14, padding: 14, gap: 6, marginBottom: 6 },
-  aiHead: { fontSize: 13, fontWeight: '800', color: color.title },
-  aiLine: { fontSize: 13, color: color.ink, lineHeight: 19 },
-  verdict: { fontSize: 13, color: color.title, fontWeight: '700', lineHeight: 19 },
-  article: { backgroundColor: '#F4FAF6', borderWidth: 1, borderColor: color.field, borderRadius: 16, padding: 16, gap: 6 },
-  title: { fontSize: 17, fontWeight: '800', color: color.title, lineHeight: 24 },
-  meta: { fontSize: 12, color: color.inkSub },
-  rule: { height: 1, backgroundColor: color.field, marginVertical: 6 },
-  text: { fontSize: 14, color: color.ink, lineHeight: 22 },
-  caution: { marginTop: 12, backgroundColor: '#FFF6EA', borderWidth: 1, borderColor: '#F3C98B', borderRadius: 12, padding: 12, gap: 4 },
-  cautionHead: { fontSize: 13, fontWeight: '800', color: '#B4630B' },
-  cautionText: { fontSize: 12, color: color.ink, lineHeight: 18 },
-  bottom: { flexDirection: 'row', gap: 8, padding: 12, borderTopWidth: 1, borderColor: color.line },
-});

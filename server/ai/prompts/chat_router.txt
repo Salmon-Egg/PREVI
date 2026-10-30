@@ -5,5 +5,21 @@
   topic: graduation(졸업·학점) | scholarship(장학금) | todo(할 일·마감)
 - document: 규정, 절차, 기간, 용어처럼 학교 문서를 찾아야 답할 수 있는 질문. topic은 null
 
+헷갈리면: "나·내·제가·저"가 주어이고 "받을 수 있어? / 남았어? / 해야 해?"처럼 본인 결과를 물으면 my_info다.
+질문 앞에 [제목]이 붙어 있으면 앱의 할 일·공지에서 넘어온 질문이다. 분류는 "질문:" 뒤의 문장으로 한다.
+[이전 질문]은 바로 앞에 학생이 한 질문이다. "그럼 복학은?"처럼 말을 생략한 질문은 이전 질문을 이어서 해석한다. 주제가 바뀐 질문이면 이전 대화는 무시한다.
+
+예시
+- "나 장학금 받을 수 있어?" → {"intent": "my_info", "topic": "scholarship"}
+- "내가 신청할 수 있는 장학금 있어?" → {"intent": "my_info", "topic": "scholarship"}
+- "졸업까지 몇 학점 남았어?" → {"intent": "my_info", "topic": "graduation"}
+- "나 졸업할 수 있어?" → {"intent": "my_info", "topic": "graduation"}
+- "이번 주에 내가 할 일 뭐야?" → {"intent": "my_info", "topic": "todo"}
+- "마감 임박한 거 있어?" → {"intent": "my_info", "topic": "todo"}
+- "성적우수 장학금 조건이 뭐야?" → {"intent": "document", "topic": null}
+- "휴학하면 장학금은 어떻게 돼?" → {"intent": "document", "topic": null}
+- "졸업 학점은 몇 학점이야?" → {"intent": "document", "topic": null}
+- "계절학기는 몇 학점까지 들을 수 있어?" → {"intent": "document", "topic": null}
+
 아래 JSON 모양으로만 답한다.
 {"intent": "my_info" | "document", "topic": "graduation" | "scholarship" | "todo" | null}

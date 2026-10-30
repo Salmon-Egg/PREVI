@@ -1,43 +1,59 @@
-"""로그인 확인. 라우트에서 `uid: str = Depends(current_user)`로 씁니다."""
-import time
+from datetime import datetime
+import re
+from uuid import UUID
 
 import httpx
-from fastapi import Header
+from fastapi import Depends, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, ValidationError
 
-import config
-from errors import ApiError
+from server.errors import APIError
 
-_cache: dict[str, tuple[str, str, float]] = {}  # 토큰 → (user_id, email, 만료 시각)
-
-
-def _verify_with_supabase(token: str) -> tuple[str, str]:
-    """Supabase에 토큰을 보여 주고 누구인지 받아옴. 1분 동안 기억해 둠."""
-    hit = _cache.get(token)
-    if hit and hit[2] > time.time():
-        return hit[0], hit[1]
-    res = httpx.get(
-        f"{config.SUPABASE_URL}/auth/v1/user",
-        headers={"Authorization": f"Bearer {token}", "apikey": config.SUPABASE_ANON_KEY},
-        timeout=10,
-    )
-    if res.status_code != 200:
-        raise ApiError(401, "UNAUTHORIZED", "다시 로그인해 주세요")
-    user = res.json()
-    _cache[token] = (user["id"], user.get("email") or "", time.time() + 60)
-    return user["id"], user.get("email") or ""
+bearer = HTTPBearer(auto_error=False)
 
 
-def current_user_with_email(authorization: str = Header(default="")) -> tuple[str, str]:
-    token = authorization.removeprefix("Bearer ").strip()
-    if not token:
-        raise ApiError(401, "UNAUTHORIZED", "로그인이 필요해요")
-    if config.DEV_AUTH and token.startswith("dev-"):
-        return token.removeprefix("dev-"), ""
-    uid, email = _verify_with_supabase(token)
-    if config.ALLOWED_EMAIL_DOMAIN and not email.endswith("@" + config.ALLOWED_EMAIL_DOMAIN):
-        raise ApiError(401, "UNAUTHORIZED", "학교 이메일로만 가입할 수 있어요")
-    return uid, email
+class AuthenticatedUser(BaseModel):
+    id: UUID
+    email: str | None = None
+    email_confirmed_at: datetime | None = None
 
 
-def current_user(authorization: str = Header(default="")) -> str:
-    return current_user_with_email(authorization)[0]
+def validate_school_user(user: AuthenticatedUser):
+    email = (user.email or "").lower()
+    if re.fullmatch(r"[^@\s]+@skuniv\.ac\.kr", email) is None:
+        raise APIError(401, "SCHOOL_EMAIL_REQUIRED", "@skuniv.ac.kr 학교 이메일로 로그인해 주세요.")
+    if user.email_confirmed_at is None:
+        raise APIError(401, "EMAIL_NOT_VERIFIED", "학교 이메일 인증을 완료해 주세요.")
+
+
+async def require_user(
+    request: Request,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
+) -> AuthenticatedUser:
+    if credentials is None:
+        raise APIError(401, "UNAUTHORIZED", "로그인이 필요해요.")
+    settings = request.app.state.settings
+    try:
+        response = await request.app.state.http.get(
+            f"{settings.supabase_url}/auth/v1/user",
+            headers={"apikey": settings.publishable_key, "Authorization": f"Bearer {credentials.credentials}"},
+        )
+    except httpx.RequestError:
+        raise APIError(500, "AUTH_SERVICE_UNAVAILABLE", "로그인 확인 서버에 연결할 수 없어요.") from None
+    if response.status_code in (401, 403):
+        raise APIError(401, "UNAUTHORIZED", "로그인이 만료됐거나 올바르지 않아요. 다시 로그인해 주세요.")
+    if response.status_code != 200:
+        raise APIError(500, "AUTH_SERVICE_UNAVAILABLE", "지금은 로그인을 확인할 수 없어요.")
+    try:
+        user = AuthenticatedUser.model_validate(response.json())
+    except (ValueError, ValidationError):
+        raise APIError(500, "AUTH_SERVICE_INVALID_RESPONSE", "로그인 확인 응답을 처리할 수 없어요.") from None
+    validate_school_user(user)
+    return user
+
+
+async def require_admin(request: Request, user: AuthenticatedUser = Depends(require_user)) -> AuthenticatedUser:
+    """학교 메일 확인(require_user) 뒤 .env의 ADMIN_EMAILS에 있는 메일만."""
+    if (user.email or "").lower() not in request.app.state.settings.admin_emails:
+        raise APIError(403, "ADMIN_ONLY", "관리자만 쓸 수 있어요.")
+    return user

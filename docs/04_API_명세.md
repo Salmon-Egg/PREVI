@@ -59,6 +59,24 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 | `GET /notifications` · `PATCH /notifications/{id}` | 받은 알림·읽음 처리 | T-4 |
 | `DELETE /me` | 계정 삭제 (성적 포함 모든 데이터) | M-3 |
 | `PATCH /conversations/{id}` | 대화 고정 `{ "pinned": true }` | H-3 |
+| `PATCH /messages/{id}/feedback` | 챗봇 답 평가 `{ "feedback": "up" \| "down" \| null }` (관리자 '아쉬워요') | H-2 |
+
+### 관리자 `/admin/*` (관리자 웹 `admin/`, 10/29)
+
+`.env`의 `ADMIN_EMAILS`에 있는 학교 메일만 (아니면 `403 ADMIN_ONLY`). 서버가 `SUPABASE_SECRET_KEY`로 읽고 씀. 질문한 학생이 누구인지는 돌려주지 않음.
+
+| 요청 | 하는 일 |
+|---|---|
+| `GET /admin/summary` | 처리할 일 숫자: 못한 질문, 7일 질문 수·답변 성공률, 아쉬워요, 공지 정리 실패, 푸시 실패, 학생·문서 수 |
+| `GET /admin/unanswered?status=open\|done` · `PATCH /admin/unanswered` | 못한 질문 (같은 문장끼리 묶음·횟수) · `{ids, status?, cause?}` 처리 완료·원인 |
+| `GET /admin/feedback` | 30일 안에 👎 받은 답과 그 앞 질문 |
+| `GET` · `POST /admin/documents` · `DELETE /admin/documents/{id}` | 챗봇 참고 문서. 올리기는 `{title, kind, url?, filename, content_base64}` (PDF·TXT·MD, 20MB) |
+| `POST /admin/answers` | 관리자 답변 `{question, answer, ids}` → 문서 한 문단으로 저장, ids는 처리 완료 |
+| `GET /admin/notices?status=` · `POST /admin/notices/{id}/retry` | 공지 수집·AI 정리 상태, 실패 다시 정리 |
+| `POST /admin/broadcast/preview` · `POST /admin/broadcast` | 대상 `{grades, departments, statuses}` 인원 · 발송 (notices에 '학생지원팀' 공지로 넣고 아침 파이프라인 함수로 판정·할 일·푸시) |
+| `GET` · `POST /admin/data/{calendar\|courses}` · `PUT` · `DELETE /admin/data/{kind}/{id}` | 학사일정·과목 고치기 |
+| `GET /admin/graduation` | 졸업 기준 보기 (수정 없음) |
+| `GET /admin/users` · `DELETE /admin/users/{user_id}` | 가입 계정 목록 (메일·학과·학년·학적·가입·마지막 로그인, 최근 가입 먼저) · 계정 삭제 (탈퇴와 같이 개인 데이터 cascade, ADMIN_EMAILS 계정은 400) |
 
 > MVP 뼈대(10/23)에서 더한 것: `DELETE /me`, `PATCH /conversations/{id}`, `GET /conversations?q=` 검색,
 > `GET /me`의 `completed_requirements`, `GET /notices/{id}`의 `eligibility`·`todo_id`·`applied`(S-2 판정·신청 완료 체크용),
@@ -186,6 +204,11 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 
 ### 졸업 요건 `GET /graduation`
 
+- 학과명·입학년도와 정확히 일치하는 등록 기준을 우선 사용한다.
+- 2021~2024학번이 개편 후 이름인 `컴퓨터소프트웨어전공`을 선택했고 정확한 기준이 없을 때, 같은 입학년도의 `소프트웨어학과` 등록 기준을 **참고 기준**으로 표시할 수 있다. 프로필이나 DB 기준은 변경하지 않는다.
+- 참고 기준에서는 `required_total`과 `areas[].required`도 개인 적용이 확정된 수치가 아니다. `requirements`의 확인 안내를 함께 표시하고 `remaining_total=null`로 반환한다. FE는 이를 졸업 가능·학점 충족으로 표시하지 않는다.
+- 홈과 챗봇에서도 남은 학점을 단정하지 않는다. 알려지지 않은 학과·학번, 통합 전 컴퓨터공학과·전자공학과에는 이 참고 기준 연결을 확장하지 않는다.
+
 ```json
 {
   "required_total": 130,
@@ -278,6 +301,7 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 
 - `cards`: 넘겨 보는 카드. 공지·졸업 요건·(분실물) 모두 같은 모양 → FE는 카드 부품을 한 번만 만들면 됩니다.
 - `actions`: 답변 아래 버튼. `add_todo` 누르면 FE가 `POST /todos`를 부릅니다.
+  `ask`(`{ "type": "ask", "label": "최대 기간", "payload": { "text": "휴학은 최대 몇 학기까지 할 수 있어?" } }`)는 "휴학 알려줘"처럼 주제만 물었을 때 비서가 되묻는 버튼이고, 누르면 FE가 `payload.text`를 새 질문으로 보냅니다.
 - 답을 모를 때도 같은 모양이고, `text`가 "학교 문서에서 근거를 찾지 못했어요..." 같은 문장, 나머지는 빈 목록입니다.
 
 ### 대화 `GET /conversations` · `GET /conversations/{id}`

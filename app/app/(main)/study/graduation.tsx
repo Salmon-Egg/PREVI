@@ -7,13 +7,12 @@ import { AreaCard } from '../../../components/AreaCard';
 import { Body, Card, DdayBadge, Row, Screen, StateView, Sub, Title } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
-import type { GradeTerm, Graduation, Todo } from '../../../lib/types';
+import type { Graduation, Todo } from '../../../lib/types';
 
 export default function GraduationDetail() {
   const { data, error, loading, reload } = useApi<Graduation>('/graduation');
   // 관련 마감: 졸업 종류 할 일 (GET /todos?type=graduation)
   const deadlines = useApi<Todo[]>('/todos?type=graduation&done=false');
-  const grades = useApi<GradeTerm[]>('/grades'); // 영역별 과목 목록용
 
   return (
     <Screen title="졸업 요건">
@@ -31,14 +30,15 @@ export default function GraduationDetail() {
 
             <Title>영역별 이수 현황</Title>
             {/* 이수 학점 오른쪽 ⌄: 그 영역에서 들은 과목과 성적 */}
-            {data.areas.map((a) => <AreaCard key={a.name} area={a} bar grades={grades.data} />)}
+            {data.areas.map((a) => <AreaCard key={a.name} area={a} bar />)}
 
             <Title>남은 요건</Title>
             {data.requirements.map((r) => (
               <Card key={r.name} onPress={r.todo_id ? () => router.push(`/todos/${r.todo_id}`) : undefined}>
                 <Row>
-                  <Text style={{ fontSize: 18 }}>{r.done ? '✅' : r.done === null ? '❔' : '⬜'}</Text>
+                  <Text style={{ fontSize: 18 }}>{r.done ? '✅' : r.taking ? '📘' : r.done === null ? '❔' : '⬜'}</Text>
                   <Body style={{ flex: 1 }}>{r.name}</Body>
+                  {!r.done && r.taking && <Sub>수강 중</Sub>}
                   {r.todo_id && <Sub>할 일 ›</Sub>}
                 </Row>
               </Card>

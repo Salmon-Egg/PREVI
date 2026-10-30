@@ -129,7 +129,7 @@ export default function TimetableEdit() {
 
       {/* 과목 추가 방식 선택 */}
       <Sheet visible={popup === 'choose'} onClose={() => setPopup(null)} title="과목 추가 방식 선택" sub="원하시는 추가 방식을 선택해 주세요.">
-        <Choice icon="🔍" title="과목 검색으로 추가" sub="과목명 또는 과목코드로 빠르게 검색" onPress={() => setPopup('search')} />
+        <Choice icon="🔍" title="과목 검색으로 추가" sub="과목명으로 빠르게 검색" onPress={() => setPopup('search')} />
         <Choice icon="✍️" title="직접 입력으로 추가" sub="과목명, 요일, 교시 등을 직접 입력" onPress={() => setPopup('direct')} />
       </Sheet>
 
@@ -187,7 +187,7 @@ function Search({ q, setQ, onAdd, added }: { q: string; setQ: (q: string) => voi
   return (
     <View style={{ gap: 12 }}>
       <View>
-        <Input value={q} onChangeText={setQ} placeholder="과목명 또는 과목코드를 입력하세요" autoFocus style={{ paddingRight: 44 }} />
+        <Input value={q} onChangeText={setQ} placeholder="과목명을 입력하세요" autoFocus style={{ paddingRight: 44 }} />
         {q
           ? <Pressable accessibilityLabel="검색어 지우기" onPress={() => setQ('')} style={st.clear}><Feather name="x" size={14} color="#fff" /></Pressable>
           : <View style={st.searchIcon}><Feather name="search" size={20} color={color.title} /></View>}
@@ -200,7 +200,7 @@ function Search({ q, setQ, onAdd, added }: { q: string; setQ: (q: string) => voi
       ) : (
         <>
           <Sub>검색 결과 {list.length}건</Sub>
-          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 10 }}>
+          <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: 10 }} nestedScrollEnabled>
             {list.map((c) => (
               <View key={c.id} style={st.result}>
                 <View style={st.row}>

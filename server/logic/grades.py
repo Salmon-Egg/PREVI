@@ -1,41 +1,25 @@
-"""성적: 평점, 학기별 묶기, 직전 학기."""
+from collections import defaultdict
+from decimal import Decimal, ROUND_DOWN
 
-POINTS = {"A+": 4.5, "A0": 4.0, "B+": 3.5, "B0": 3.0, "C+": 2.5, "C0": 2.0, "D+": 1.5, "D0": 1.0, "F": 0.0}
-# P(통과)는 학점은 인정, 평점 계산에서는 뺌. F는 평점에 넣고 학점은 인정 안 함.
-
-
-def term_key(term: str) -> tuple[int, int]:
-    """'4-1' → (4, 1). 정렬용."""
-    year, sem = term.split("-")
-    return int(year), int(sem)
+POINTS = {"A+": Decimal("4.5"), "A0": Decimal("4.0"), "B+": Decimal("3.5"),
+          "B0": Decimal("3.0"), "C+": Decimal("2.5"), "C0": Decimal("2.0"),
+          "D+": Decimal("1.5"), "D0": Decimal("1.0"), "F": Decimal("0")}
 
 
-def gpa(items: list[dict]) -> float | None:
-    scored = [i for i in items if i["grade"] in POINTS]
-    credits = sum(i["credits"] for i in scored)
-    if credits == 0:
+def semester_gpa(items: list[dict]) -> float | None:
+    """P는 제외하고, F는 0점으로 포함하는 학점 가중 평균."""
+    credits = sum((Decimal(str(item["credits"])) for item in items if item["grade"] != "P"), Decimal(0))
+    if not credits:
         return None
-    return round(sum(POINTS[i["grade"]] * i["credits"] for i in scored) / credits, 2)
+    weighted = sum((Decimal(str(item["credits"])) * POINTS[item["grade"]]
+                    for item in items if item["grade"] != "P"), Decimal(0))
+    # 서경대 공식 성적 안내: 소수점 셋째 자리 이하 절사.
+    return float((weighted / credits).quantize(Decimal("0.01"), rounding=ROUND_DOWN))
 
 
-def earned_credits(items: list[dict]) -> int:
-    return sum(i["credits"] for i in items if i["grade"] != "F")
-
-
-def by_term(items: list[dict]) -> list[dict]:
-    """API 모양: [{term, gpa, items}] 최근 학기가 위."""
-    terms = sorted({i["term"] for i in items}, key=term_key, reverse=True)
-    out = []
-    for t in terms:
-        rows = [i for i in items if i["term"] == t]
-        out.append({"term": t, "gpa": gpa(rows), "items": rows})
-    return out
-
-
-def last_term(items: list[dict]) -> tuple[float | None, int]:
-    """직전 학기(성적이 있는 가장 최근 학기)의 (평점, 이수 학점). 장학 판정·학점 상한에 씀."""
-    if not items:
-        return None, 0
-    t = max((i["term"] for i in items), key=term_key)
-    rows = [i for i in items if i["term"] == t]
-    return gpa(rows), earned_credits(rows)
+def grouped_grades(rows: list[dict]) -> list[dict]:
+    groups = defaultdict(list)
+    for row in rows:
+        groups[row["term"]].append({key: row[key] for key in ("id", "course_name", "credits", "grade", "area")})
+    return [{"term": term, "gpa": semester_gpa(groups[term]), "items": groups[term]}
+            for term in sorted(groups, key=lambda term: tuple(map(int, term.split("-"))), reverse=True)]

@@ -10,7 +10,7 @@ import { Screen, StateView, Title } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { semesterLabel } from '../../../lib/format';
 import { color, gradient, gradientBg } from '../../../lib/theme';
-import type { GradeTerm, Graduation, Me } from '../../../lib/types';
+import type { Graduation, Me } from '../../../lib/types';
 
 const LINKS: { icon: keyof typeof Feather.glyphMap; title: string; sub: string; href: Href }[] = [
   { icon: 'calendar', title: '시간표', sub: `${semesterLabel()} · 수강 과목 편집`, href: '/study/timetable' },
@@ -19,7 +19,6 @@ const LINKS: { icon: keyof typeof Feather.glyphMap; title: string; sub: string; 
 
 export default function Study() {
   const grad = useApi<Graduation>('/graduation');
-  const grades = useApi<GradeTerm[]>('/grades'); // 영역별 과목 목록용
   const me = useApi<Me>(grad.error ? '/me' : null); // 졸업 정보가 없을 때 소속·입학연도를 보여 주려고
   const g = grad.data;
 
@@ -57,7 +56,7 @@ export default function Study() {
       {g && (
         <>
           <Title>영역별 이수 현황</Title>
-          {g.areas.map((a) => <AreaCard key={a.name} area={a} grades={grades.data} />)}
+          {g.areas.map((a) => <AreaCard key={a.name} area={a} />)}
         </>
       )}
     </Screen>

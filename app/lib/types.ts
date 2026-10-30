@@ -104,8 +104,9 @@ export type Graduation = {
   earned_total: number | null;
   remaining_total: number | null;
   // ▶ FE 20번·21번: courses는 그 영역에서 들은 과목과 성적 (영역 카드를 펼치면 보임). API 명세에 없는 새 필드라 조장 확인 필요
-  areas: { name: string; required: number; earned: number | null; courses?: AreaCourse[] }[];
-  requirements: { name: string; done: boolean | null; todo_id?: number }[];
+  // taking: 이번 학기 시간표에 넣은 과목 (성적 전이라 학점·완료에는 안 들어감)
+  areas: { name: string; required: number; earned: number | null; courses?: AreaCourse[]; taking?: { course_name: string; credits: number }[] }[];
+  requirements: { name: string; done: boolean | null; todo_id?: number; taking?: boolean }[];
 };
 
 /** 졸업 영역에 들어간 과목 하나 (학기 "4-1", 성적 A+~F·P) */
@@ -128,7 +129,8 @@ export type ChatCard = { image_url: string | null; title: string; lines: string[
 export type ChatAction =
   | { type: 'add_todo'; label: string; payload: { title: string; due_date: string | null } }
   | { type: 'open_link'; label: string; payload: { url: string } }
-  | { type: 'open_screen'; label: string; payload: { screen: string; id?: number } };
+  | { type: 'open_screen'; label: string; payload: { screen: string; id?: number } }
+  | { type: 'ask'; label: string; payload: { text: string } };
 export type Message = {
   id: number;
   role: 'user' | 'assistant';
@@ -151,3 +153,21 @@ export type Notification = {
   read: boolean;
   sent_at: string;
 };
+
+// 분실물(습득물). place = 주운 곳, 보관 장소는 상세(LostItemDetail)에서 답을 맞혔거나 내 글일 때만 옴
+export const LOST_CATEGORIES = ['전자기기', '지갑·카드', '가방', '의류', '책·문구', '기타'] as const;
+export type LostCategory = (typeof LOST_CATEGORIES)[number];
+export type LostItem = {
+  id: number;
+  created_at: string;
+  title: string;
+  category: LostCategory;
+  place: string;
+  found_on: string;
+  description: string;
+  image_url: string | null;
+  question: string;
+  status: 'open' | 'closed';
+  mine: boolean;
+};
+export type LostItemDetail = LostItem & { storage_place: string | null; tries_left: number };

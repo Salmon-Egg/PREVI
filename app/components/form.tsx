@@ -13,6 +13,9 @@ export function Label({ children, required }: { children: ReactNode; required?: 
   return <Text style={f.label}>{children}{required ? ' *' : ''}</Text>;
 }
 
+/** Screen 판(flexGrow) 안에 Input을 바로 놓을 때: f.input의 flex:1로 칸이 세로로 늘어나지 않게 */
+export const NO_GROW = { flex: 0 };
+
 /** error=true면 빨간 테두리 (로그인 오류) */
 export function Input({ error, ...props }: TextInputProps & { error?: boolean }) {
   return <TextInput placeholderTextColor="#9AA6A0" {...props} style={[f.box, f.input, error && f.error, props.style]} />;
@@ -90,7 +93,10 @@ export function Sheet({ visible, onClose, title, sub, children }: {
               <CloseButton onPress={onClose} />
             </View>
           )}
-          {children}
+          {/* 내용이 창 높이를 넘으면 스크롤: 작은 휴대폰에서 맨 아래 '저장하기'가 잘려 안 보였음 */}
+          <ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ gap: 10 }} keyboardShouldPersistTaps="handled" nestedScrollEnabled>
+            {children}
+          </ScrollView>
         </View>
       </View>
     </Modal>
