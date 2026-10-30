@@ -127,6 +127,20 @@ def _clarify(text: str) -> dict | None:
             "cards": [], "actions": [{"type": "ask", "label": label, "payload": {"text": q}} for label, q in CLARIFY[topic]]}
 
 
+MAX_CARDS = 3
+# shortcut: 앱이 학생 거주지를 몰라서 제목 낱말로 지역 공지를 거름. 프로필에 지역이 생기면 그걸로 대조하기
+REGIONAL = re.compile(r"(?<![가-힣])(?!수시|정시|임시|교시|즉시|동시|전시|연구|해군|육군|공군|학군)[가-힣]{1,4}(?:시|군|구)(?=\s)"
+                      r"|경기도|강원|충청|전라|전북|전남|경상|경북|경남|제주|지역\s*(?:출신|인재)")
+
+
+def _pick_scholarships(rows: list[dict], today: str) -> tuple[list[dict], int]:
+    """채팅 카드 후보: 안 지난·미신청·미충족 아닌 것을 신청 가능 먼저, 마감 순으로. 지역 공지는 빼고 개수만 돌려줌."""
+    live = [r for r in rows if r["verdict"] != "ineligible" and not r["applied"] and (not r["deadline"] or r["deadline"][:10] >= today)]
+    picked = [r for r in live if not REGIONAL.search(r["title"])]
+    picked.sort(key=lambda r: (r["verdict"] != "eligible", r["deadline"] or "9999"))
+    return picked, len(live) - len(picked)
+
+
 async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: str | None, question: str) -> dict:
     """⑫ 내 상황 답변: 서버가 계산한 결과로 카드와 버튼을 만들고, 문장은 AI가 다듬음."""
     cards = []
@@ -148,11 +162,15 @@ async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: st
             summary += f" 남은 요건 {len(pending)}가지: " + ", ".join(pending)
         actions = [{"type": "open_screen", "label": "졸업 요건 자세히", "payload": {"screen": "L-2"}}]
     elif topic == "scholarship":
-        rows = [r for r in await scholarship_rows(request, user) if r["verdict"] != "ineligible" and not r["applied"]]
-        summary = f"신청할 수 있거나 확인이 필요한 장학금이 {len(rows)}개 있어요." if rows else "지금 신청할 수 있는 장학금이 없어요."
+        rows, regional = _pick_scholarships(await scholarship_rows(request, user), date.today().isoformat())
+        summary = f"신청할 수 있거나 확인이 필요한 장학금이 {len(rows)}개 있어요." if rows else "지금 바로 추천할 장학금이 없어요."
+        if len(rows) > MAX_CARDS:
+            summary += f" 신청 가능한 것과 마감이 가까운 것부터 {MAX_CARDS}개만 보여 드릴게요."
+        if regional:
+            summary += f" 특정 지역 대상 장학금 {regional}개는 '나에게 맞는 장학금'에서 볼 수 있어요."
         cards = [{"image_url": None, "title": r["title"],
                   "lines": [VERDICT_KO[r["verdict"]], f"마감 {r['deadline'][:10]}" if r["deadline"] else "마감 없음"],
-                  "link": None} for r in rows]
+                  "link": None} for r in rows[:MAX_CARDS]]
         actions = [{"type": "open_screen", "label": "나에게 맞는 장학금", "payload": {"screen": "S-1"}}]
     else:
         rows = await database_rows(request, "GET", "todos", params={
