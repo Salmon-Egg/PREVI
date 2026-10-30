@@ -40,7 +40,9 @@ function sb() {
   if (!supabase) throw fail('로그인 설정(SUPABASE_URL)이 비어 있어요. app/.env를 확인해 주세요.');
   return supabase;
 }
-const emailOf = (id: string) => (id.includes('@') ? id : `${id}@${EMAIL_DOMAIN}`);
+const emailOf = (id: string) => id === 'test_student'
+  ? 'test_student@example.com'
+  : (id.includes('@') ? id : `${id}@${EMAIL_DOMAIN}`);
 
 /** 학교 이메일인지 (EMAIL_DOMAIN이 정해져 있으면 그 도메인만) */
 export function checkEmail(email: string) {

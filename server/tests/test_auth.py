@@ -12,12 +12,18 @@ from server.main import create_app
 USER_ID = str(uuid4())
 
 
-def make_client(handler):
-    app = create_app(Settings("https://example.supabase.co", "test-public-key"), httpx.MockTransport(handler))
+def make_client(handler, settings=None):
+    app = create_app(settings or Settings("https://example.supabase.co", "test-public-key"), httpx.MockTransport(handler))
 
     # 검증 전용 경로: 실제 API에 임시 인증 경로를 추가하지 않는다.
     @app.get("/protected")
     async def protected(user: AuthenticatedUser = Depends(require_user)):
+        return {"id": str(user.id)}
+
+    from server.auth import require_admin
+
+    @app.get("/admin-protected")
+    async def admin_protected(user: AuthenticatedUser = Depends(require_admin)):
         return {"id": str(user.id)}
 
     return TestClient(app, raise_server_exceptions=False)
@@ -96,3 +102,22 @@ def test_school_domain_case_insensitive():
     user = {"id": USER_ID, "email": "Student@SKUNIV.AC.KR", "email_confirmed_at": "2026-10-27T00:00:00Z"}
     with make_client(lambda request: httpx.Response(200, json=user)) as client:
         assert client.get("/protected", headers={"Authorization": "Bearer test"}).status_code == 200
+
+
+@pytest.mark.parametrize("allowed,confirmed,admin,expected_user,expected_admin", [
+    (True, True, True, 200, 200),
+    (True, True, False, 200, 403),
+    (False, True, True, 401, 401),
+    (True, False, True, 401, 401),
+])
+def test_submission_accounts_require_verified_uuid_and_separate_admin_allowlist(allowed, confirmed, admin, expected_user, expected_admin):
+    email = 'test_student@example.com'
+    user = {'id': USER_ID, 'email': email}
+    if confirmed:
+        user['email_confirmed_at'] = '2026-10-30T00:00:00Z'
+    settings = Settings('https://example.supabase.co', 'pk', admin_emails=frozenset({email}) if admin else frozenset(),
+                        demo_user_ids=frozenset({USER_ID}) if allowed else frozenset())
+    with make_client(lambda request: httpx.Response(200, json=user), settings) as client:
+        headers = {'Authorization': 'Bearer test'}
+        assert client.get('/protected', headers=headers).status_code == expected_user
+        assert client.get('/admin-protected', headers=headers).status_code == expected_admin

@@ -68,9 +68,10 @@ function Login({ denied, onTry }) {
   async function submit(e) {
     e.preventDefault();
     onTry();
-    if (!/^[^\s@]+@skuniv\.ac\.kr$/i.test(email.trim())) return setError('@skuniv.ac.kr 학교 메일로 로그인해 주세요.');
+    const loginEmail = email.trim() === 'test_admin' ? 'test_admin@example.com' : email.trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(loginEmail)) return setError('관리자 이메일 또는 시연용 아이디를 입력해 주세요.');
     setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
     setBusy(false);
     setError(error ? (error.status === 400 ? '메일 또는 비밀번호가 맞지 않아요.' : '로그인할 수 없어요. 잠시 뒤 다시 시도해 주세요.') : '');
   }
@@ -80,7 +81,7 @@ function Login({ denied, onTry }) {
       <form onSubmit={submit} className="card">
         <h1>PREVI <span className="badge">관리자</span></h1>
         <p className="sub">학생지원팀 관리자 메일로 로그인해 주세요.</p>
-        <label>학교 메일<input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
+        <label>이메일 또는 아이디<input type="text" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
         <label>비밀번호<input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
         {(error || denied) && <p className="note bad" role="alert">{error || denied}</p>}
         <button className="primary" disabled={busy}>{busy ? '확인 중…' : '로그인'}</button>
