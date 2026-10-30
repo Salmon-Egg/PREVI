@@ -21,6 +21,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "name": "PREVI",
       "favicon": "./assets/favicon.png",
       "output": "single"
     },
