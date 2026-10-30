@@ -106,10 +106,10 @@ function Preview({ f }) {
     <aside className="card preview" aria-label="학생 화면 미리보기">
       <p className="note">학생 화면 미리보기</p>
       <h2>[{f.category}] {f.title || '제목'}</h2>
-      <p className="note">작성일 : {new Date().toLocaleDateString('ko-KR')} | 작성자 : 학교 공지</p>
+      <p className="note">작성일 : {new Date().toLocaleDateString('ko-KR')} | 작성자 : 학생지원팀</p>
       <div className="answer">
-        <strong>✨ AI 핵심 요약</strong>{f.deadline && <span className="bad">   ⏰ {fmt(new Date(f.deadline).toISOString())} 마감</span>}
-        <br />{f.body.trim().slice(0, 120) || '내용 앞부분 120자가 요약으로 들어가요.'}
+        <strong>📌 핵심 내용</strong>{f.deadline && <span className="bad">   ⏰ {fmt(new Date(f.deadline).toISOString())} 마감</span>}
+        <br />{f.body.trim().slice(0, 120) || '내용 앞부분 120자가 들어가요.'}
       </div>
       {f.body && <p className="preview-body">{f.body}</p>}
     </aside>

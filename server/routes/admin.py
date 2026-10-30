@@ -316,18 +316,17 @@ async def broadcasts(request: Request):
 
 @router.delete("/broadcasts/{notice_id}", status_code=204)
 async def retract_broadcast(notice_id: int, request: Request):
-    todos = await _all_rows(request, "todos", source_kind="eq.notice", source_id=f"eq.{notice_id}", select="id")
-    # 판정·할 일·신청 기록은 외래 키 cascade. 학교 게시판 공지는 여기서 못 지움
-    found = await admin_rows(request, "DELETE", "notices", headers={"Prefer": "return=representation"}, params={
-        "id": f"eq.{notice_id}", "board_post_id": SENT, "select": "id"})
-    if not found:
+    sent = {"id": f"eq.{notice_id}", "board_post_id": SENT}  # 학교 게시판 공지는 여기서 못 지움
+    if not await admin_rows(request, "GET", "notices", params={**sent, "select": "id"}):
         raise APIError(404, "NOT_FOUND", "보낸 공지를 찾을 수 없어요.")
-    # 알림은 외래 키가 없어 따로 지움. 안 지우면 학생 알림함에 열리지 않는 항목이 남음
+    todos = await _all_rows(request, "todos", source_kind="eq.notice", source_id=f"eq.{notice_id}", select="id")
+    # 알림은 외래 키가 없어 따로 지움. 공지를 맨 뒤에 지워야 중간에 실패해도 다시 눌러 남은 알림까지 정리됨
     await admin_rows(request, "DELETE", "notifications", params={"type": "eq.notice", "target_id": f"eq.{notice_id}"})
     ids = [t["id"] for t in todos]
     for i in range(0, len(ids), 200):  # 주소 길이 제한
         await admin_rows(request, "DELETE", "notifications", params={
             "type": "eq.deadline", "target_id": f"in.({','.join(map(str, ids[i:i + 200]))})"})
+    await admin_rows(request, "DELETE", "notices", params=sent)  # 판정·할 일·신청 기록은 외래 키 cascade
 
 
 # ── 계정 관리: 가입자 목록·삭제. 삭제는 학생 앱 탈퇴(/me DELETE)와 같은 길, 개인 데이터는 외래 키 cascade ──
