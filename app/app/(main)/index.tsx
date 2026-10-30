@@ -4,11 +4,11 @@
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import { Image, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type PointerEvent, type StyleProp, type TextStyle } from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, useWindowDimensions, View, type PointerEvent, type StyleProp, type TextStyle } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SHEET_BAR } from '../../components/ChatSheet';
-import { Text } from '../../components/Text';
+import { Pressable, Text } from '../../components/Text';
 import { StateView } from '../../components/ui';
 import { useApi } from '../../lib/api';
 import { WEEKDAYS } from '../../lib/constants';
@@ -148,7 +148,7 @@ export default function Home() {
     <View style={st.safe}>
       {/* ▶ FE 12번에 해당하는 부분: 홈 전체 배경 그림(받은 그림 그대로). 스크롤해도 배경은 그 자리, 카드만 위로 지나감
           로고·인사말·미어캣은 그 위에 그림. 눌러도 이동하지 않음(채팅은 아래 바로) */}
-      <Image accessibilityLabel="서경대학교 캠퍼스" source={require('../../assets/home-bg.jpg')} pointerEvents="none"
+      <Image accessibilityLabel="캠퍼스 배경 그림" source={require('../../assets/home-bg.jpg')} pointerEvents="none"
         style={[st.bg, { width: bgW, height: bgW * BG_RATIO, left: (W - bgW) / 2 }]} />
       <SafeAreaView style={st.safeInner} edges={['top']}>
         <ScrollView contentContainerStyle={[st.scroll, { paddingBottom: st.scroll.paddingBottom + insets.bottom }]}>
@@ -160,7 +160,7 @@ export default function Home() {
                 <Text style={[st.logo, { fontSize: fs.logo }]}>PREVI</Text>
                 <MaterialCommunityIcons name="leaf" size={22} color={HOME_INK.leaf} />
               </View>
-              <Text style={[st.logoSub, { fontSize: fs.logoSub }]}>서경대학교 스마트 비서</Text>
+              <Text style={[st.logoSub, { fontSize: fs.logoSub }]}>서경대학교 학생을 위한 스마트 비서</Text>
             </View>
             <View style={[st.row, { gap: 20 }]}>
               <Pressable accessibilityLabel="알림" onPress={() => router.push('/notifications')}>
@@ -233,7 +233,7 @@ export default function Home() {
                 {/* 어떤 도움이 필요하신가요? 4칸 */}
                 <View style={st.helpBox}>
                   <Text style={st.helpTitle}>어떤 도움이 필요하신가요?</Text>
-                  <Text style={st.helpSub}>PREVI가 빠르고 정확하게 도와드릴게요.</Text>
+                  <Text style={st.helpSub}>PREVI가 학교 자료를 찾아 도와드릴게요.</Text>
                   <View style={st.grid}>
                     {MENUS.map((m) => (
                       <Pressable key={m.label} style={st.tile} onPress={() => router.push(m.href)}>

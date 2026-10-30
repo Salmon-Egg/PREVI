@@ -120,7 +120,7 @@
 | 12 | "서경 AI" → "프리비" | 홈 인사·도움 문구, 아래 질문 바, 로그인 안내, 대화 시작 문구, 학적 변경 안내, 공지 "프리비에게 묻기". 로고·대화 제목 PREVI와 앱 이름 "서경 AI 비서"는 그대로 | 여러 화면 |
 | 16 | AI 비서 설정의 알림 시간 중복 | "마감 알림 받을 시간" 뺌 (마이페이지 '마감 임박 및 브리핑 알림'만) | `me/assistant.tsx` |
 | 17 | 비밀번호 안내가 영어 | Supabase 영어 오류를 한국어로 바꿔 보여 줌(비밀번호 길이·쉬운 비밀번호·이미 가입·요청 많음·인증번호 만료 등). 비밀번호 최소 길이를 Supabase 기본값 **6자**로 맞춤(4자로 안내하면 서버가 영어로 거절) | `lib/auth.ts`, `signup.tsx`, `me/index.tsx` |
-| 18 | 개인정보 처리방침 정렬 | 가운데 정렬 알림창 → 항목 제목 + 한 줄에 하나씩 보이는 창 | `components/form.tsx`(PrivacySheet), `lib/constants.ts` |
+| 18 | 개인정보 처리방침 정렬 | 가운데 정렬 알림창 → 항목 제목 + 한 줄에 하나씩 보이는 창 | `components/form.tsx`(LegalSheet), `lib/legal.ts` |
 | 9 | 학과가 2개뿐 | 처음 설정·학적 정보 변경에 **'직접 입력'** 추가 (목록에 없는 학과는 졸업 요건 기준이 없어 '확인 필요'로 보일 수 있음) | `onboarding.tsx`, `me/status.tsx`, `lib/constants.ts` |
 | 6 | 마감 아닌 일에 "마감" | **안 고침(설명만)**: 배지는 할 일 `type`. 서버(`jobs/pipeline.py`)가 공지로 할 일을 만들 때 장학 공지 → `scholarship`(장학), **학사 공지 중 마감일이 있는 것 → 모두 `deadline`(마감)**. 직접·채팅으로 등록한 일도 기본 `deadline`. 바꾸려면 BE가 종류를 나누거나 FE가 이름을 '학사'로 |
 
@@ -195,7 +195,7 @@ BE에 요청할 것 (앱은 대신 처리해 둠)
 | ~~답변 평가~~ | **명세 반영(10/29)**: `PATCH /messages/{id}/feedback { feedback: up\|down\|null }`, 앱이 서버에 저장 (Supabase `012_admin.sql` 적용 필요) | FE 31 |
 | ~~되묻기 버튼~~ | **명세 반영(10/30)**: `actions`의 `{ type: "ask", label, payload: { text } }` → 누르면 `payload.text`를 새 질문으로 | FE 31 |
 | 로그인 방식 | 학번 + 비밀번호. 실제 모드는 Supabase `signInWithPassword`에 `학번@EMAIL_DOMAIN`을 넣음 → 서버 시연 계정도 `학번@skuniv.ac.kr`이라 맞음 (실제 학생 이메일이 다른 꼴이면 학번→이메일 찾는 API 필요) | FE 7 |
-| 회원가입 | Supabase 인증번호 메일(`signInWithOtp` → `verifyOtp`) 후 `updateUser({ password, data: { student_id, name } })`. 서버가 `student_id`·`name`을 내 정보로 옮겨야 함 | FE 7 |
+| 회원가입 | Supabase 인증번호 메일(`signInWithOtp` → `verifyOtp`) 후 `updateUser({ password, data: { name, terms_agreed_at } })`. 학번은 받지 않음. 이름은 처음 설정 때 내 정보로 저장 | FE 7 |
 | 방해 금지 시간 | `PUT /me`의 `notify.quiet = "22:00-07:00"` (빈 값 = 끔). 서버가 이 시간에는 푸시를 보내지 않아야 함 | FE 9 |
 
 ## 직접 확인이 필요한 것 (이번에 확인 못 함)

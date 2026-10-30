@@ -5,10 +5,10 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Confirm, Input, Label, Segmented, Select, Sheet } from '../../../components/form';
-import { Text } from '../../../components/Text';
+import { Pressable, Text } from '../../../components/Text';
 import { Button, PicText, Screen, showAlert, StateView, Sub } from '../../../components/ui';
 import { api, ApiError, useApi } from '../../../lib/api';
 import { CLASS_DAYS } from '../../../lib/constants';
@@ -251,7 +251,7 @@ function Direct({ onAdd }: { onAdd: (body: DirectBody) => void }) {
         <View style={{ width: 92 }}><Select value={day} items={CLASS_DAYS} label={(d) => `${d}요일`} onChange={setDay} title="요일" /></View>
         {/* 교시 칸: 누르면 아래에 교시 버튼이 펼쳐짐 */}
         <Pressable style={[st.timeBox, picking && { borderColor: color.primaryLight }]} onPress={() => setPicking(!picking)}>
-          <Text style={[st.timeText, !time && { color: '#9AA6A0' }]} numberOfLines={1}>
+          <Text style={[st.timeText, !time && { color: color.placeholder }]} numberOfLines={1}>
             {time ? `${sorted.map(pad).join(', ')} 교시 (${time.start}~${time.end})` : '교시 선택'}
           </Text>
         </Pressable>
@@ -322,6 +322,6 @@ const st = StyleSheet.create({
   periods: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, backgroundColor: '#F4FAF6', borderRadius: 12, padding: 10 },
   period: { width: 42, paddingVertical: 8, borderRadius: 10, alignItems: 'center', backgroundColor: '#fff', borderWidth: 1, borderColor: color.field },
   warn: { alignSelf: 'stretch', backgroundColor: '#FFF4E6', borderWidth: 1, borderColor: '#F3C98B', borderRadius: 14, padding: 14, alignItems: 'center', gap: 4 },
-  warnStrong: { color: '#B4630B', fontWeight: '800', textAlign: 'center' },
+  warnStrong: { color: '#9A5208', fontWeight: '800', textAlign: 'center' },
   warnText: { color: color.ink, textAlign: 'center', fontSize: 13, lineHeight: 19 },
 });

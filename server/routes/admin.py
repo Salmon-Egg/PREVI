@@ -21,6 +21,7 @@ from server.auth import require_admin
 from server.errors import APIError
 from server.jobs.pipeline import pipeline_client
 from server.logic.eligibility import matches_target
+from server.routes.lost_items import delete_user_photos
 from server.scripts import load_yoram
 
 router = APIRouter(prefix="/admin", tags=["관리자"], dependencies=[Depends(require_admin)])
@@ -353,6 +354,7 @@ async def delete_user(user_id: UUID, request: Request):
     account = await admin_rows(request, "GET", f"users/{user_id}", api="auth/v1/admin")
     if (account.get("email") or "").lower() in request.app.state.settings.admin_emails:
         raise APIError(400, "ADMIN_ACCOUNT", "관리자 계정은 여기서 지울 수 없어요. .env의 ADMIN_EMAILS에서 먼저 빼 주세요.")
+    await delete_user_photos(request, str(user_id), request.app.state.settings.secret_key)
     await admin_rows(request, "DELETE", f"users/{user_id}", api="auth/v1/admin")
 
 

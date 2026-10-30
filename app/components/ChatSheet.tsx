@@ -8,14 +8,14 @@
 import { Feather } from '@expo/vector-icons';
 import { usePathname } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
-import { Animated, BackHandler, PanResponder, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { Animated, BackHandler, PanResponder, Platform, ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { loadChat, newChat, onChatSheet } from '../lib/chatStore';
 import { color } from '../lib/theme';
 import { ChatHistory } from './ChatHistory';
 import { ChatPanel } from './ChatPanel';
-import { Text } from './Text';
+import { Pressable, Text } from './Text';
 import { Character } from './ui';
 
 /** 접혀 있을 때 보이는 높이 (손잡이 + 바) — 여기에 아래 안전 영역이 더해짐 */

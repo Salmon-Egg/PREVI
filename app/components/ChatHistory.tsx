@@ -2,12 +2,12 @@
 // 홈의 끌어 올리는 대화창(ChatSheet) 안과 대화 기록 화면(chat/history)이 같이 씀. 대화를 누르면 onOpen
 import { Feather } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { api, attempt, useApi } from '../lib/api';
 import { color } from '../lib/theme';
 import type { ChatCategory, Conversation } from '../lib/types';
-import { Text, TextInput } from './Text';
+import { Pressable, Text, TextInput } from './Text';
 import { Chips, StateView, Sub } from './ui';
 
 const CATS: ('전체' | ChatCategory)[] = ['전체', '수업/졸업', '장학금', '학사 행정', '기타'];
@@ -55,7 +55,7 @@ export function ChatHistory({ onOpen }: { onOpen: (conversationId: number) => vo
         {list.map((c) => {
           const k = categoryOf(c);
           return (
-            <Pressable key={c.id} style={st.row} onPress={() => onOpen(c.id)}>
+            <Pressable key={c.id} accessibilityRole={undefined} style={st.row} onPress={() => onOpen(c.id)}>
               <View style={st.icon}><Feather name={ICON[k]} size={18} color={color.primary} /></View>
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={st.title} numberOfLines={1}>{c.title}</Text>
@@ -64,7 +64,7 @@ export function ChatHistory({ onOpen }: { onOpen: (conversationId: number) => vo
               <View style={{ alignItems: 'flex-end', gap: 6 }}>
                 <Text style={st.date}>{Number(c.updated_at.slice(5, 7))}월 {Number(c.updated_at.slice(8, 10))}일</Text>
                 <Pressable accessibilityLabel={c.pinned ? '고정 풀기' : '고정하기'} onPress={() => togglePin(c)} hitSlop={8}>
-                  <Feather name="bookmark" size={16} color={c.pinned ? color.primary : color.line} />
+                  <Feather name="bookmark" size={16} color={c.pinned ? color.primary : color.inkSub} />
                 </Pressable>
               </View>
             </Pressable>

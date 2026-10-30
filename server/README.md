@@ -232,5 +232,5 @@ server/
 
 `DELETE /me`는 검증된 학교 계정 토큰의 본인만 삭제하고 성공 시 204를 반환합니다.
 서버에 `SUPABASE_SECRET_KEY`가 필요하며 앱에는 이 키를 넣지 않습니다.
-Supabase Auth 계정 삭제와 외래 키 cascade로 개인 데이터를 정리합니다. 공용 공지·학교 문서는 유지합니다.
+분실물 사진을 저장소에서 먼저 지우고(실패하면 계정 삭제도 멈춤), Supabase Auth 계정 삭제와 외래 키 cascade로 개인 데이터를 정리합니다. 공용 공지·학교 문서는 유지합니다. 관리자 계정 삭제도 같습니다.
 실제 DB 검사는 `python -m server.check_account_deletion_live`로 실행하며, 검사 전용 가상 계정을 생성하고 삭제합니다.

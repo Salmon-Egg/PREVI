@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from server.auth import AuthenticatedUser, bearer, require_user
 from server.errors import APIError
+from server.routes.lost_items import delete_user_photos
 from starlette.responses import Response
 
 router = APIRouter(tags=["내 정보"])
@@ -119,6 +120,7 @@ async def delete_me(request: Request, user: AuthenticatedUser = Depends(require_
     if not secret:
         raise APIError(503, "ACCOUNT_DELETE_UNAVAILABLE", "계정 삭제 설정을 확인해야 해요.")
     settings = request.app.state.settings
+    await delete_user_photos(request, user.id, secret)
     try:
         response = await request.app.state.http.delete(
             f"{settings.supabase_url}/auth/v1/admin/users/{user.id}",

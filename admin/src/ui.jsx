@@ -1,4 +1,6 @@
 // 작은 공용 부품: 아이콘, 탭, 창, 불러오기 상태
+import { useEffect, useRef } from 'react';
+
 const PATHS = {
   home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
   chat: 'M21 11.5a8.4 8.4 0 0 1-12.2 7.5L3 21l2-5.6A8.4 8.4 0 1 1 21 11.5z',
@@ -29,13 +31,16 @@ export function Tabs({ tabs, value, onChange }) {
 }
 
 export function Modal({ title, onClose, children }) {
+  // 브라우저 dialog: Esc로 닫기, 창 안에서만 Tab 이동, 닫으면 포커스 복귀
+  const ref = useRef(null);
+  useEffect(() => { if (!ref.current.open) ref.current.showModal(); }, []);
   return (
-    <div className="backdrop" onClick={onClose}>
-      <div className="modal" role="dialog" aria-modal="true" aria-label={title} onClick={(e) => e.stopPropagation()}>
+    <dialog ref={ref} className="modal" aria-label={title} onClose={onClose} onClick={(e) => e.target === ref.current && onClose()}>
+      <div>
         <h2>{title}</h2>
         {children}
       </div>
-    </div>
+    </dialog>
   );
 }
 

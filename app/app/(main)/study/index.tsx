@@ -2,10 +2,10 @@
 // 새 시안은 시간표·성적 조회가 각각 한 화면이라 탭 대신 칸을 눌러 들어감
 import { Feather } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AreaCard } from '../../../components/AreaCard';
-import { Text } from '../../../components/Text';
+import { Pressable, Text } from '../../../components/Text';
 import { Screen, StateView, Title } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { semesterLabel } from '../../../lib/format';
@@ -72,7 +72,7 @@ const st = StyleSheet.create({
   linkTitle: { fontSize: 16, fontWeight: '800', color: color.ink },
   linkSub: { fontSize: 12, color: color.inkSub },
   notice: { backgroundColor: '#FFF6EA', borderWidth: 1, borderColor: '#F3C98B', borderRadius: 18, padding: 16, gap: 6 },
-  noticeTitle: { fontSize: 15, fontWeight: '800', color: '#B4630B' },
+  noticeTitle: { fontSize: 15, fontWeight: '800', color: '#9A5208' },
   noticeText: { fontSize: 13, color: color.ink, lineHeight: 19 },
   retry: { fontSize: 13, fontWeight: '800', color: color.primary, marginTop: 2 },
 });

@@ -56,10 +56,9 @@ export const mockAuth = {
     if (!signupCodes[email] || signupCodes[email] !== code) throw authFail('인증번호가 맞지 않아요.');
     verified.add(email);
   },
-  signUp(a: { studentId: string; name: string; email: string; password: string }) {
+  signUp(a: { name: string; email: string; password: string }) {
     if (!verified.has(a.email)) throw authFail('이메일 인증을 먼저 해 주세요.');
-    if (accounts.some((x) => x.studentId === a.studentId)) throw authFail('이미 가입한 학번이에요. 로그인해 주세요.');
-    const account = { ...a, id: `mock-${Date.now()}` };
+    const account = { ...a, studentId: a.email.split('@')[0], id: `mock-${Date.now()}` };
     accounts.push(account);
     saveAccounts();
     return `dev-${account.id}`; // 내 정보가 없어서 처음 설정(M-2)부터 시작

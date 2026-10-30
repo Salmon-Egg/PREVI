@@ -2,11 +2,11 @@
 // 라벨, 입력칸, 드롭다운, 버튼 묶음, 가운데 뜨는 창(Sheet), 확인 창 (2026-10-27 새 시안: 흰 칸 + 연한 초록 테두리, 고른 버튼은 초록 그라데이션)
 import { Feather } from '@expo/vector-icons';
 import { useState, type ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View, type TextInputProps } from 'react-native';
+import { Modal, ScrollView, StyleSheet, View, type TextInputProps } from 'react-native';
 
-import { PRIVACY } from '../lib/constants';
+import { LEGAL, type LegalDoc } from '../lib/legal';
 import { color, gradient, gradientBg } from '../lib/theme';
-import { Text, TextInput } from './Text';
+import { Pressable, Text, TextInput } from './Text';
 import { Button } from './ui';
 
 export function Label({ children, required }: { children: ReactNode; required?: boolean }) {
@@ -18,7 +18,7 @@ export const NO_GROW = { flex: 0 };
 
 /** error=true면 빨간 테두리 (로그인 오류) */
 export function Input({ error, ...props }: TextInputProps & { error?: boolean }) {
-  return <TextInput placeholderTextColor="#9AA6A0" {...props} style={[f.box, f.input, error && f.error, props.style]} />;
+  return <TextInput placeholderTextColor={color.placeholder} {...props} style={[f.box, f.input, error && f.error, props.style]} />;
 }
 
 /** 누르면 목록이 뜨는 드롭다운 */
@@ -132,11 +132,11 @@ export function Confirm({ visible, title, children, okLabel, onOk, onCancel }: {
   );
 }
 
-/** 개인정보 수집·이용 안내: 항목 제목 + 한 줄에 하나씩 (로그인 아래 문구, 마이페이지 이용약관) */
-export function PrivacySheet({ visible, onClose }: { visible: boolean; onClose: () => void }) {
+/** 이용약관·개인정보 처리방침: 항목 제목 + 한 줄에 하나씩 (로그인·회원가입, 마이페이지). doc이 null이면 닫힘 */
+export function LegalSheet({ doc, onClose }: { doc: LegalDoc | null; onClose: () => void }) {
   return (
-    <Sheet visible={visible} onClose={onClose} title="개인정보 수집·이용 안내">
-      {PRIVACY.map((sec) => (
+    <Sheet visible={!!doc} onClose={onClose} title={doc ? LEGAL[doc].title : undefined}>
+      {doc && LEGAL[doc].sections.map((sec) => (
         <View key={sec.title} style={f.privacy}>
           <Text style={f.privacyTitle}>{sec.title}</Text>
           {sec.lines.map((l) => <Text key={l} style={f.privacyLine}>· {l}</Text>)}
@@ -145,6 +145,22 @@ export function PrivacySheet({ visible, onClose }: { visible: boolean; onClose: 
       <View style={{ height: 6 }} />
       <Button label="확인" onPress={onClose} />
     </Sheet>
+  );
+}
+
+/** 동의 체크 한 줄. onView가 있으면 오른쪽에 '보기' (약관 내용 열기) */
+export function ConsentCheck({ checked, label, onChange, onView }: { checked: boolean; label: string; onChange: (v: boolean) => void; onView?: () => void }) {
+  return (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      {/* react-native-web은 checkbox 역할에 스페이스 키를 연결하지 않아서 직접 처리 */}
+      <Pressable accessibilityRole="checkbox" aria-checked={checked} accessibilityLabel={label} onPress={() => onChange(!checked)}
+        {...({ onKeyDown: (e: { key: string; preventDefault: () => void }) => { if (e.key === ' ') { e.preventDefault(); onChange(!checked); } } } as object)}
+        style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+        <Text style={{ fontSize: 20, color: color.primary }}>{checked ? '☑' : '☐'}</Text>
+        <Text style={{ flex: 1, fontSize: 14, color: color.ink }}>{label}</Text>
+      </Pressable>
+      {onView && <Pressable accessibilityLabel={`${label} 내용 보기`} hitSlop={8} onPress={onView}><Text style={f.view}>보기</Text></Pressable>}
+    </View>
   );
 }
 
@@ -171,4 +187,5 @@ export const f = StyleSheet.create({
   privacy: { gap: 4, paddingVertical: 8, borderTopWidth: 1, borderColor: color.line },
   privacyTitle: { fontSize: 14, fontWeight: '800', color: color.title },
   privacyLine: { fontSize: 14, color: color.ink, lineHeight: 21 },
+  view: { fontSize: 13, color: color.title, fontWeight: '700', textDecorationLine: 'underline' },
 });

@@ -79,9 +79,10 @@ export async function verifySignupCode(email: string, code: string) {
   if (error) throw fail(korean(error.message, '인증번호가 맞지 않아요.'));
 }
 
-export async function signUp(a: { studentId: string; name: string; email: string; password: string }) {
+export async function signUp(a: { name: string; email: string; password: string }) {
   if (USE_MOCK) return login(mockAuth.signUp(a));
-  const { error } = await sb().auth.updateUser({ password: a.password, data: { student_id: a.studentId, name: a.name } });
+  // 약관·개인정보·만 14세 이상 동의 시각은 계정 정보에 남김 (학적 동의 시각은 처음 설정 때 profiles에)
+  const { error } = await sb().auth.updateUser({ password: a.password, data: { name: a.name, terms_agreed_at: new Date().toISOString() } });
   const { data } = await sb().auth.getSession();
   if (error || !data.session) throw fail(error ? korean(error.message) : '이메일 인증을 먼저 해 주세요.');
   login(data.session.access_token);
