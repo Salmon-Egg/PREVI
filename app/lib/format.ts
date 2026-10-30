@@ -1,5 +1,5 @@
 // 화면에 보여 줄 글자 모양 만들기
-import type { ClassTime, GradeTerm } from './types';
+import type { AreaCourse, ClassTime, GradeTerm } from './types';
 import { WEEKDAYS } from './constants';
 
 
@@ -55,6 +55,18 @@ export function overall(terms: GradeTerm[]) {
 export function ddayOf(date: string) {
   const today = new Date();
   return Math.round((new Date(date + 'T00:00:00').getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 864e5);
+}
+
+// 졸업 영역에 들어가는 과목: 서버(server/logic/graduation.py)와 같은 규칙 — 공백·대소문자 무시, '전공'·'교양'은 하위 영역을 모두 포함
+const norm = (s: string) => s.normalize('NFKC').replace(/\s+/g, '').toLowerCase();
+const MAJOR_AREAS = ['전공', '전공기초', '전공핵심', '전공심화', '전공필수', '전공선택'].map(norm);
+const GENERAL_AREAS = ['교양', '교양필수', '핵심역량교양필수', '교양선택', '기초학문교양선택', '균형교양', '자유선택'].map(norm);
+
+/** 그 졸업 영역에서 들은 과목 (서버가 courses를 안 줄 때 성적 목록에서 만듦) */
+export function coursesInArea(areaName: string, terms: GradeTerm[]): AreaCourse[] {
+  const names = areaName === '전공' ? MAJOR_AREAS : areaName === '교양' ? GENERAL_AREAS : [norm(areaName)];
+  return terms.flatMap((t) => t.items).filter((g) => names.includes(norm(g.area)))
+    .map(({ term, course_name, credits, grade }) => ({ term, course_name, credits, grade }));
 }
 
 /** "2026.09.15" */

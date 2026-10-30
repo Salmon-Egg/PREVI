@@ -29,6 +29,12 @@
       "expo-status-bar",
       "expo-sqlite",
       "expo-notifications"
-    ]
+    ],
+    "owner": "kaluso71s-team",
+    "extra": {
+      "eas": {
+        "projectId": "c83b21d7-dd13-4280-9f46-c0ce068187a8"
+      }
+    }
   }
 }

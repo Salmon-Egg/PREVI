@@ -6,19 +6,20 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import { Text } from './Text';
-import { overall, termLabel } from '../lib/format';
+import { coursesInArea, overall, termLabel } from '../lib/format';
 import { color } from '../lib/theme';
-import type { Graduation } from '../lib/types';
+import type { GradeTerm, Graduation } from '../lib/types';
 
 type Area = Graduation['areas'][number];
 
-export function AreaCard({ area, bar = false }: { area: Area; bar?: boolean }) {
+/** grades: 성적 목록 (서버 졸업 응답에 과목이 없으면 여기서 영역별로 나눠 보여 줌) */
+export function AreaCard({ area, bar = false, grades }: { area: Area; bar?: boolean; grades?: GradeTerm[] | null }) {
   const [open, setOpen] = useState(false);
   // earned가 null = 서버가 확정 못 함 → '확인 필요'
   const earned = area.earned;
   const done = earned !== null && earned >= area.required;
   const pct = earned === null ? 0 : Math.min(1, earned / area.required);
-  const courses = [...(area.courses ?? [])].sort((a, b) => a.term.localeCompare(b.term));
+  const courses = [...(area.courses ?? (grades ? coursesInArea(area.name, grades) : []))].sort((a, b) => a.term.localeCompare(b.term));
   // 이 영역 평점 (P·F 규칙은 성적 조회와 같음)
   const { gpa } = overall([{ term: '', gpa: null, items: courses.map((c, i) => ({ id: i, area: area.name, ...c })) }]);
 
