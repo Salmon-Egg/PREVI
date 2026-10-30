@@ -1,0 +1,45 @@
+# 통합본에 앱 코드가 올라오면 웹 앱을 https://previ-skuniv.pages.dev 에 배포.
+# 저장소 Settings의 secret CLOUDFLARE_API_TOKEN, variable CLOUDFLARE_ACCOUNT_ID·EXPO_PUBLIC_API_URL·EXPO_PUBLIC_SUPABASE_URL·EXPO_PUBLIC_SUPABASE_ANON_KEY 필요
+name: 웹 앱 배포
+
+on:
+  push:
+    branches: [통합본]
+    paths: ['app/**', '.github/workflows/deploy-web.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# 연달아 올리면 마지막 것만 배포
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: npm ci
+      - run: npm run export:web
+        env:
+          EXPO_PUBLIC_API_URL: ${{ vars.EXPO_PUBLIC_API_URL }}
+          EXPO_PUBLIC_SUPABASE_URL: ${{ vars.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ vars.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+          EXPO_PUBLIC_USE_MOCK: '0'
+          EXPO_PUBLIC_DEV_LOGIN: '0'
+          EXPO_PUBLIC_EMAIL_DOMAIN: skuniv.ac.kr
+      # --branch main: 없으면 실제 주소가 아니라 미리보기 주소로 올라감
+      - run: npx wrangler@4 pages deploy dist --project-name previ-skuniv --branch main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
