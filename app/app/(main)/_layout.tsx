@@ -8,11 +8,15 @@ import { View } from 'react-native';
 
 import { ChatSheet } from '../../components/ChatSheet';
 import { api, ApiError } from '../../lib/api';
+import type { Me } from '../../lib/types';
 
 export default function MainLayout() {
   // 처음 쓰는 학생: API 명세는 NO_PROFILE, 서버(server/routes/me.py)는 PROFILE_NOT_FOUND → 둘 다 받음
   useEffect(() => {
-    api.get('/me').catch((e: ApiError) => {
+    api.get<Me>('/me').then((me) => {
+      // 프로필 행이 있어도 최초 설정이 끝나지 않은 계정은 설정 화면으로 보낸다.
+      if (!me.department || !me.admission_year || !me.grade || !me.semester || !me.consent.agreed) router.replace('/onboarding');
+    }).catch((e: ApiError) => {
       if (e.code === 'NO_PROFILE' || e.code === 'PROFILE_NOT_FOUND') router.replace('/onboarding');
     });
   }, []);

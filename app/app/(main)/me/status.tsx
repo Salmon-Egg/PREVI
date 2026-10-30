@@ -14,10 +14,12 @@ import { STATUSES } from '../../../lib/constants';
 import { color } from '../../../lib/theme';
 import { STATUS_KO, type Me, type Status } from '../../../lib/types';
 
-type Form = { department: string; minor: string; status: Status; grade: number; semester: number };
+type Form = { department: string; minor: string; status: Status; grade: number; semester: number; admission_year: number | null };
+const YEARS = Array.from({ length: new Date().getFullYear() - 2015 + 1 }, (_, i) => 2015 + i);
 
 const formOf = (me: Me): Form => ({
   department: me.department ?? '', minor: me.minor ?? '없음', status: me.status, grade: me.grade ?? 1, semester: me.semester ?? 1,
+  admission_year: me.admission_year,
 });
 
 export default function StatusEdit() {
@@ -43,15 +45,18 @@ export default function StatusEdit() {
   const set = (patch: Partial<Form>) => form && setEdit({ ...form, ...patch });
 
   return (
-    <Screen title="학적 정보 변경" footer={form && <Button label="학적 정보 변경하기" disabled={busy || !form.department} onPress={() => setAsking(true)} />}>
+    <Screen title="학적 정보 변경" footer={form && <Button label="학적 정보 변경하기" disabled={busy || !form.department || !form.admission_year} onPress={() => setAsking(true)} />}>
       <StateView loading={loading} error={error} empty={!form} onRetry={reload}>
         {form && (
           <>
+            <Label required>입학연도</Label>
+            <Select value={form.admission_year ?? 0} items={form.admission_year && !YEARS.includes(form.admission_year) ? [...YEARS, form.admission_year] : YEARS}
+              label={(year) => year ? `${year}년` : '입학연도를 선택하세요'} onChange={(admission_year) => set({ admission_year })} />
             <Label required>주전공</Label>
             {/* 입학연도(내 정보)에 맞는 학과를 위로 올려 보여 줌 */}
-            <DeptPicker value={form.department} year={me?.admission_year ?? null} onChange={(department) => set({ department })} />
+            <DeptPicker value={form.department} year={form.admission_year} onChange={(department) => set({ department })} />
             <Label>복수 / 부전공 선택</Label>
-            <MinorPicker value={form.minor} year={me?.admission_year ?? null} onChange={(minor) => set({ minor })} />
+            <MinorPicker value={form.minor} year={form.admission_year} onChange={(minor) => set({ minor })} />
             <Label required>학적 상태 변경</Label>
             <Segmented value={form.status} items={STATUSES} label={(v) => STATUS_KO[v]} onChange={(status) => set({ status })} />
             <Label required>현재 학년 및 이수 학기</Label>
@@ -77,6 +82,7 @@ export default function StatusEdit() {
           <>
             <View style={st.box}>
               <Text style={st.boxMain}>{form.department} ({form.grade}학년 {form.semester}학기 {STATUS_KO[form.status]})</Text>
+              <Text style={st.boxSub}>{form.admission_year}년 입학</Text>
               {form.minor !== '없음' && <Text style={st.boxSub}>{form.minor.replace(/^(.+) \((.+)\)$/, '$2: $1')}</Text>}
             </View>
             <Text style={st.ask}>위 정보가 본인의 실제 학적 정보와 일치합니까?</Text>
