@@ -125,3 +125,13 @@ def test_notice_detail_and_application_history():
     with client_for(db) as client:
         assert client.get("/notices/2", headers=HEADERS).json()["documents"] == []
         assert client.get("/scholarship-applications", headers=HEADERS).json() == []
+
+
+def test_notice_detail_tells_my_application_state():
+    def db(request):
+        table = request.url.path.removeprefix("/rest/v1/")
+        return httpx.Response(200, json={"notices": [NOTICE], "eligibility": [{"verdict": "check", "reasons": ["토익"]}], "todos": [{"id": 7}],
+                                         "scholarship_applications": [{"id": 1}]}[table])
+    with client_for(db) as client:
+        n = client.get("/notices/2", headers=HEADERS).json()
+    assert n["todo_id"] == 7 and n["applied"] is True and n["eligibility"]["verdict"] == "check"

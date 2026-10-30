@@ -160,3 +160,15 @@ def test_many_questions_answered_one_by_one(monkeypatch):
     text = res.json()["message"]["text"]
     assert text.startswith("① 휴학 기간은 최대 몇 학기야") and "② 복학 신청은 언제 해" in text and "③ 학식 메뉴는" in text
     assert "나머지 1개 질문" in text
+
+
+def test_chat_scholarship_cards_skip_regional_and_put_eligible_first():
+    from server.routes.chat import _pick_scholarships
+    def row(title, verdict="check", deadline="2026-12-01", applied=False):
+        return {"title": title, "verdict": verdict, "deadline": deadline, "applied": applied}
+    rows = [row("2026년 2학기 안산시 대학생 등록금 지원"), row("거창군 지역출신 대학생 지원"), row("연구 장학생 모집", deadline="2026-11-01"),
+            row("성적우수장학금", "eligible", "2026-12-20"), row("지난 장학금", deadline="2026-01-01"), row("미충족", "ineligible"), row("낸 것", applied=True),
+            row("푸른등대 기부장학금", deadline=None)]
+    picked, regional = _pick_scholarships(rows, "2026-10-30")
+    assert [r["title"] for r in picked] == ["성적우수장학금", "연구 장학생 모집", "푸른등대 기부장학금"]
+    assert regional == 2

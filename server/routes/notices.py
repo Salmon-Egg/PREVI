@@ -26,4 +26,9 @@ async def notices(request: Request, user: AuthenticatedUser = Depends(require_us
 
 @router.get("/notices/{notice_id}")
 async def notice_detail(request: Request, notice_id: int = Path(gt=0), user: AuthenticatedUser = Depends(require_user)):
-    return await notice_by_id(request, notice_id)
+    notice = await notice_by_id(request, notice_id)
+    mine = {"user_id": f"eq.{user.id}"}
+    verdicts = await database_rows(request, "GET", "eligibility", params={**mine, "notice_id": f"eq.{notice_id}", "select": "verdict,reasons"})
+    todos = await database_rows(request, "GET", "todos", params={**mine, "source_kind": "eq.notice", "source_id": f"eq.{notice_id}", "select": "id"})
+    applied = await database_rows(request, "GET", "scholarship_applications", params={**mine, "notice_id": f"eq.{notice_id}", "select": "id"})
+    return {**notice, "eligibility": verdicts[0] if verdicts else None, "todo_id": todos[0]["id"] if todos else None, "applied": bool(applied)}
