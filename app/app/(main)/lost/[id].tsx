@@ -1,9 +1,10 @@
-// 습득물 상세 — 확인 질문에 맞게 답하면 보관 장소가 보임. 내 글이면 보관 장소 + 찾아감/삭제
+// 습득물 상세 — 확인 질문에 맞게 답하면 보관 장소가 보임. 내 글이면 보관 장소 + 전달 완료/삭제
 import { useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Image, View } from 'react-native';
+import { View } from 'react-native';
 
 import { Input, Label, NO_GROW } from '../../../components/form';
+import { LostPhoto } from '../../../components/LostPhoto';
 import { Text } from '../../../components/Text';
 import { Badge, Body, Button, Card, confirmAsk, goBack, Row, Screen, StateView, Sub } from '../../../components/ui';
 import { api, attempt, useApi, useSubmit } from '../../../lib/api';
@@ -32,13 +33,13 @@ export default function LostDetail() {
       <StateView loading={loading} error={error} empty={!it} onRetry={reload}>
         {it && (
           <>
-            {it.image_url && <Image source={{ uri: it.image_url }} style={{ width: '100%', height: 220, borderRadius: 16 }} resizeMode="cover" accessibilityLabel={it.title} />}
-            <Row><Badge label={it.category} />{it.status === 'closed' && <Badge label="주인이 찾아감" tone="warn" />}</Row>
+            {(it.image_url || it.status === 'closed') && <LostPhoto it={it} style={{ width: '100%', height: 220, borderRadius: 16 }} />}
+            <Row><Badge label={it.category} />{it.status === 'closed' && <Badge label="전달 완료" tone="warn" />}</Row>
             <Text style={{ fontSize: 19, fontWeight: '800', color: color.ink }}>{it.title}</Text>
             <Sub>{it.place} · {it.found_on}에 주웠어요</Sub>
             {!!it.description && <Body>{it.description}</Body>}
 
-            <Card>
+            {it.status === 'closed' && !it.mine ? <Sub>주인에게 전달을 마친 물건이에요.</Sub> : <Card>
               <Label>확인 질문</Label>
               <Body>{it.question}</Body>
               {it.storage_place ? (
@@ -53,12 +54,12 @@ export default function LostDetail() {
                   <Button label="확인" disabled={!answer.trim() || busy} onPress={claim} />
                 </>
               ) : <Sub>3번 모두 틀려서 더 답할 수 없어요. 학생지원팀에 문의해 주세요.</Sub>}
-            </Card>
+            </Card>}
 
             {it.mine && (
               <Row>
                 <View style={{ flex: 1 }}><Button compact kind="ghost" label="지우기" disabled={busy} onPress={remove} /></View>
-                <View style={{ flex: 1.5 }}><Button compact label={it.status === 'open' ? '주인이 찾아갔어요' : '다시 보관 중으로'} disabled={busy} onPress={toggle} /></View>
+                <View style={{ flex: 1.5 }}><Button compact label={it.status === 'open' ? '전달 완료로 바꾸기' : '다시 보관 중으로'} disabled={busy} onPress={toggle} /></View>
               </Row>
             )}
           </>

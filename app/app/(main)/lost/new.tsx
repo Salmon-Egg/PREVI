@@ -51,7 +51,7 @@ export default function LostNew() {
       <Label required>주운 날 (YYYY-MM-DD)</Label>
       <Input style={NO_GROW} value={form.found_on} onChangeText={set('found_on')} placeholder="2026-10-30" maxLength={10} />
       <Label>설명</Label>
-      <Input style={NO_GROW} value={form.description} onChangeText={set('description')} placeholder="주인을 알아볼 만한 특징은 아래 질문으로 남겨 주세요" maxLength={1000} multiline />
+      <Input style={{ ...NO_GROW, minHeight: 120, textAlignVertical: 'top' }} value={form.description} onChangeText={set('description')} placeholder="주인을 알아볼 만한 특징은 아래 질문으로 남겨 주세요" maxLength={1000} multiline />
 
       <View style={{ height: 8 }} />
       <Sub>주인만 알 만한 질문을 정해 주세요. 맞게 답한 학생에게만 보관 장소가 보여요. (띄어쓰기·대소문자 무시, 3번까지)</Sub>
