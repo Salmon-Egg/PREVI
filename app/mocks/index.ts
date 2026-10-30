@@ -427,6 +427,10 @@ const lostItems: any[] = [{
   id: 1, created_at: '2026-10-29T09:00:00+09:00', title: '검은색 에어팟 케이스', category: '전자기기', place: '북악관 3층 복도',
   found_on: '2026-10-29', description: '', image_url: null, question: '케이스에 붙은 스티커 색은?', answer: '노란색',
   storage_place: '학생지원팀(북악관 1층)', status: 'open', mine: false, solved: false,
+}, {
+  id: 2, created_at: '2026-10-27T09:00:00+09:00', title: '갈색 가죽 지갑', category: '지갑·카드', place: '도서관 2층',
+  found_on: '2026-10-27', description: '', image_url: `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 3"><rect width="4" height="3" fill="#8a5a2b"/><rect x="1" y="1" width="2" height="1" fill="#f2d7a6"/></svg>')}`, question: '지갑 안 학생증 이름은?', answer: '홍길동',
+  storage_place: '도서관 대출대', status: 'closed', mine: false, solved: false,
 }];
 
 /** 서버처럼: 없는 id면 404 (예전에는 다른 공지를 대신 보여 줬음) */
@@ -491,8 +495,8 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
     case 'GET /notices/:id': {
       const n = found(notices.find((x) => x.id === id));
       const s = scholarships.find((x) => x.notice_id === id);
-      const todo = todos.find((t) => t.source?.kind === 'notice' && t.source.id === id && !t.done);
-      return { ...n, eligibility: s ? { verdict: s.verdict, reasons: s.reasons } : null, todo_id: s?.applied ? null : todo?.id ?? null, applied: !!s?.applied };
+      const todo = todos.find((t) => t.source?.kind === 'notice' && t.source.id === id);
+      return { ...n, eligibility: s ? { verdict: s.verdict, reasons: s.reasons } : null, todo_id: todo?.id ?? null, applied: !!s?.applied };
     }
     case 'GET /calendar': return calendar();
     case 'GET /graduation': return graduation();
