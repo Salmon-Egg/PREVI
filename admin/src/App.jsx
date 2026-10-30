@@ -78,7 +78,7 @@ function Login({ denied, onTry }) {
   return (
     <main className="login">
       <form onSubmit={submit} className="card">
-        <h1>서경 AI <span className="badge">관리자</span></h1>
+        <h1>PREVI <span className="badge">관리자</span></h1>
         <p className="sub">학생지원팀 관리자 메일로 로그인해 주세요.</p>
         <label>학교 메일<input type="email" autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} required /></label>
         <label>비밀번호<input type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
@@ -95,7 +95,7 @@ function Shell({ email }) {
   return (
     <div className="shell">
       <nav className="side">
-        <div className="brand">서경 AI <span className="badge">관리자</span></div>
+        <div className="brand">PREVI <span className="badge">관리자</span></div>
         {MENU.map(([key, label, icon]) => (
           <a key={key} href={'#/' + key} className={page === key ? 'on' : ''} aria-current={page === key ? 'page' : undefined}>
             <Icon name={icon} size={20} />{label}
