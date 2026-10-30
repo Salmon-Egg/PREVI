@@ -153,3 +153,21 @@ export type Notification = {
   read: boolean;
   sent_at: string;
 };
+
+// 분실물(습득물). place = 주운 곳, 보관 장소는 상세(LostItemDetail)에서 답을 맞혔거나 내 글일 때만 옴
+export const LOST_CATEGORIES = ['전자기기', '지갑·카드', '가방', '의류', '책·문구', '기타'] as const;
+export type LostCategory = (typeof LOST_CATEGORIES)[number];
+export type LostItem = {
+  id: number;
+  created_at: string;
+  title: string;
+  category: LostCategory;
+  place: string;
+  found_on: string;
+  description: string;
+  image_url: string | null;
+  question: string;
+  status: 'open' | 'closed';
+  mine: boolean;
+};
+export type LostItemDetail = LostItem & { storage_place: string | null; tries_left: number };
