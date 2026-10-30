@@ -3,9 +3,9 @@
 // 성적 조회는 '학기별'로, 여기는 '이수 영역별'로 모아 보여 줌 (같은 성적 기록을 다르게 묶은 것)
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { Text } from './Text';
+import { Pressable, Text } from './Text';
 import { overall, termLabel } from '../lib/format';
 import { color } from '../lib/theme';
 import type { Graduation } from '../lib/types';

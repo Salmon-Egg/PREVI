@@ -3,9 +3,9 @@
 import { Feather } from '@expo/vector-icons';
 
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { Text } from '../../../components/Text';
+import { Pressable, Text } from '../../../components/Text';
 import { Badge, Card, Row, Screen, StateView, Sub } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { ddayOf } from '../../../lib/format';

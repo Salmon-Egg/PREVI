@@ -1,7 +1,7 @@
 // ▶ FE 22번에 해당하는 부분: L-3 시간표 (새 시안 '2026학년도 2학기 시간표': 제목 옆 ✎ → L-4 수강 과목 편집)
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { Pressable, ScrollView } from 'react-native';
+import { ScrollView } from 'react-native';
 
 import { TimetableGrid } from '../../../components/TimetableGrid';
 import { Screen, StateView } from '../../../components/ui';
@@ -9,6 +9,7 @@ import { useApi } from '../../../lib/api';
 import { semesterLabel } from '../../../lib/format';
 import { color } from '../../../lib/theme';
 import type { TimetableEntry } from '../../../lib/types';
+import { Pressable } from '../../../components/Text';
 
 export default function Timetable() {
   const { data, error, loading, reload } = useApi<TimetableEntry[]>('/timetable');

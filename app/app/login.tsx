@@ -2,16 +2,17 @@
 // 확인은 lib/auth.ts (예시 데이터 모드·시연 서버·실제 Supabase). 처음이면 회원가입(signup.tsx)
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { AuthField, AuthFrame, AuthLink } from '../components/AuthFrame';
-import { Text } from '../components/Text';
-import { PrivacySheet } from '../components/form';
+import { Pressable, Text } from '../components/Text';
+import { LegalSheet } from '../components/form';
 import { Button } from '../components/ui';
 import { useSubmit } from '../lib/api';
 import { signIn } from '../lib/auth';
 import { DEV_LOGIN, DEV_PASSWORD, PERSONAS, USE_MOCK } from '../lib/config';
 import { ApiError } from '../lib/errors';
+import type { LegalDoc } from '../lib/legal';
 import { color } from '../lib/theme';
 import { mockPersonaDesc } from '../mocks';
 
@@ -20,7 +21,7 @@ export default function Login() {
   const [pw, setPw] = useState('');
   const [error, setError] = useState('');
   const [showDemo, setShowDemo] = useState(false);
-  const [privacy, setPrivacy] = useState(false);
+  const [doc, setDoc] = useState<LegalDoc | null>(null);
   const { busy, run } = useSubmit(); // 여러 번 눌러도 한 번만
 
   const submit = () => run(async () => {
@@ -39,13 +40,14 @@ export default function Login() {
   };
 
   return (
-    <AuthFrame title="로그인" sub="학교 아이디로 프리비를 시작해요." top={0.12}
+    <AuthFrame title="로그인" sub="가입한 학교 이메일로 프리비를 시작해요." top={0.12}
       footer={(
-        <Pressable onPress={() => setPrivacy(true)} style={{ paddingTop: 24 }}>
-          <Text style={st.footer}>로그인하면 개인정보 수집·이용에 관한 안내에 동의한 것으로 봐요.</Text>
-        </Pressable>
+        <View style={st.footerRow}>
+          <Pressable onPress={() => setDoc('terms')}><Text style={st.footer}>이용약관</Text></Pressable>
+          <Pressable onPress={() => setDoc('privacy')}><Text style={st.footer}>개인정보 처리방침</Text></Pressable>
+        </View>
       )}>
-      <AuthField label="아이디" placeholder="아이디를 입력하세요" value={id} onChangeText={edit(setId)} error={!!error}
+      <AuthField label="아이디" placeholder="학교 이메일을 입력하세요" value={id} onChangeText={edit(setId)} error={!!error}
         autoCapitalize="none" autoComplete="username" />
       <AuthField label="비밀번호" placeholder="비밀번호를 입력하세요" value={pw} onChangeText={edit(setPw)} error={error}
         secureTextEntry autoComplete="password" onSubmitEditing={submit} returnKeyType="go" />
@@ -67,13 +69,14 @@ export default function Login() {
           ))}
         </View>
       )}
-      <PrivacySheet visible={privacy} onClose={() => setPrivacy(false)} />
+      <LegalSheet doc={doc} onClose={() => setDoc(null)} />
     </AuthFrame>
   );
 }
 
 const st = StyleSheet.create({
-  footer: { textAlign: 'center', fontSize: 13, color: color.inkSub },
+  footerRow: { flexDirection: 'row', justifyContent: 'center', gap: 16, paddingTop: 24 },
+  footer: { fontSize: 13, color: '#3D4743', textDecorationLine: 'underline' },
   demo: { borderTopWidth: 1, borderColor: color.line, paddingTop: 10, gap: 6 },
   demoHead: { textAlign: 'center', fontSize: 12, color: color.inkSub, fontWeight: '700' },
   demoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: color.primarySoft, borderRadius: 10, paddingVertical: 8, paddingHorizontal: 12 },

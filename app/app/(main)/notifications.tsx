@@ -1,8 +1,8 @@
 // ▶ FE 19번에 해당하는 부분: T-4 알림 센터 — 푸시로 받은 알림 목록, 읽음 처리, 누르면 대상 화면
 import { Feather } from '@expo/vector-icons';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 
-import { Text } from '../../components/Text';
+import { Pressable, Text } from '../../components/Text';
 import { Card, Row, Screen, StateView, Sub } from '../../components/ui';
 import { api, useApi } from '../../lib/api';
 import { openNotification } from '../../lib/push';

@@ -4,7 +4,8 @@ import { Platform } from 'react-native';
 export const color = {
   primary: '#0C6B3F',
   primarySoft: '#E9F3EE',
-  primaryLight: '#17A05D', // 피그마 홈: D-DAY 배지, 진행 점, '오늘 마감' 글자
+  primaryLight: '#0F7F49', // 피그마 홈: D-DAY 배지, 진행 점, '오늘 마감' 글자 (흰 바탕 대비 4.5 이상)
+  placeholder: '#68736E', // 입력칸 안내 글자, 안 고른 값
   title: '#0E5A42', // 새 시안: 화면 제목·창 제목·라벨의 진한 초록
   homeBg: '#F3F8F4', // 피그마 홈 배경
   warmSoft: '#FFF1E8', // 시안: 교양 과목 칸, 미신청 장학 카드, 주의 상자
@@ -18,12 +19,12 @@ export const color = {
   warnSoft: '#FBF0DC',
   warn: '#7A5205',
   badSoft: '#FBE9E3',
-  red: '#E0574F', // 새 시안: 오류 테두리·문구, 빼기(−) 버튼, '미신청' 배지
+  red: '#B8322B', // 새 시안: 오류 테두리·문구, 빼기(−) 버튼, '미신청' 배지 (redSoft 바탕 대비 4.5 이상)
   redSoft: '#FCE3E1',
 };
 
 export const gradient = {
-  primary: 'linear-gradient(135deg, #17995D 0%, #0B6B3F 100%)', // 주 버튼
+  primary: 'linear-gradient(135deg, #0F8050 0%, #0B6B3F 100%)', // 주 버튼 (흰 글자 대비 4.5 이상)
   screen: 'linear-gradient(180deg, #CBE5F3 0%, #E4F1EE 50%, #D3ECDB 100%)', // 화면 배경
   login: 'linear-gradient(180deg, #BFDDF2 0%, #DCEEF0 45%, #D6EEDC 100%)', // 로그인 배경 (하늘이 더 파랗게)
 };

@@ -5,10 +5,10 @@ import { Feather } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, View } from 'react-native';
+import { StyleSheet, Switch, View } from 'react-native';
 
-import { Input, Label, OptionSheet, PrivacySheet, Select, Sheet } from '../../../components/form';
-import { Text } from '../../../components/Text';
+import { Input, Label, LegalSheet, OptionSheet, Select, Sheet } from '../../../components/form';
+import { Pressable, Text } from '../../../components/Text';
 import { Button, confirmAsk, Screen, showAlert, StateView } from '../../../components/ui';
 import { api, attempt, ApiError, useApi, useSubmit } from '../../../lib/api';
 import { changePassword, PASSWORD_MIN } from '../../../lib/auth';
@@ -28,7 +28,7 @@ export default function MyPage() {
   const { data: me, error, loading, reload, setData } = useApi<Me>('/me');
   const grad = useApi<Graduation>('/graduation');
   const display = useDisplay();
-  const [picker, setPicker] = useState<null | 'time' | 'quiet' | 'quietCustom' | 'password' | 'privacy'>(null);
+  const [picker, setPicker] = useState<null | 'time' | 'quiet' | 'quietCustom' | 'password' | 'terms' | 'privacy'>(null);
   const allOn = !!me && me.notify.notice && me.notify.deadline && me.notify.calendar && me.notify.chat;
 
   async function setNotify(notify: Partial<Me['notify']>) {
@@ -38,7 +38,7 @@ export default function MyPage() {
   // 계정 삭제는 되돌릴 수 없어서 경고를 두 번 띄움 → 두 번째에서도 '삭제'를 눌러야 지움 (지운 뒤 로그인 화면으로)
   function deleteAccount() {
     confirmAsk('계정 삭제 및 탈퇴', '성적을 포함한 모든 정보와 AI 브리핑 기록이 지워져요.', '계속', () => {
-      confirmAsk('정말 삭제하시겠습니까?', '삭제하면 원래대로 되돌릴 수 없습니다.\n학적·성적·시간표·할 일·채팅 기록이 모두 지워져요.', '삭제', async () => {
+      confirmAsk('정말 삭제하시겠습니까?', '삭제하면 원래대로 되돌릴 수 없습니다.\n학적·성적·시간표·할 일·채팅 기록과 분실물 글·사진이 모두 지워져요.', '삭제', async () => {
         try {
           await api.del('/me');
           await logout();
@@ -101,11 +101,12 @@ export default function MyPage() {
             <Section title="계정 관리">
               <Item title="비밀번호 변경" onPress={() => setPicker('password')} />
               <Item title="로그아웃" onPress={logout} />
-              <Item title="계정 삭제 및 탈퇴" sub="모든 개인 설정 및 AI 브리핑 기록이 삭제됩니다" danger onPress={deleteAccount} />
+              <Item title="계정 삭제 및 탈퇴" sub="학적·성적·시간표·채팅·분실물 글과 사진을 포함한 내 정보가 모두 삭제됩니다" danger onPress={deleteAccount} />
             </Section>
 
             <Section title="서비스 정보">
-              <Item title="이용약관 및 개인정보 처리방침" onPress={() => setPicker('privacy')} />
+              <Item title="이용약관" onPress={() => setPicker('terms')} />
+              <Item title="개인정보 처리방침" onPress={() => setPicker('privacy')} />
               <Item title="현재 앱 버전" right={<Text style={st.value}>v{Constants.expoConfig?.version ?? '1.0.0'}</Text>} />
             </Section>
 
@@ -122,7 +123,7 @@ export default function MyPage() {
         )}
       </StateView>
       <PasswordSheet visible={picker === 'password'} onClose={() => setPicker(null)} />
-      <PrivacySheet visible={picker === 'privacy'} onClose={() => setPicker(null)} />
+      <LegalSheet doc={picker === 'terms' || picker === 'privacy' ? picker : null} onClose={() => setPicker(null)} />
     </Screen>
   );
 }
@@ -198,7 +199,8 @@ function Item({ title, sub, value, right, danger, onPress }: {
   title: string; sub?: string; value?: string; right?: ReactNode; danger?: boolean; onPress?: () => void;
 }) {
   return (
-    <Pressable style={st.item} onPress={onPress} disabled={!onPress}>
+    // onPress가 없는 줄은 안에 스위치·버튼이 들어가므로 버튼 역할을 주지 않음
+    <Pressable accessibilityRole={onPress ? 'button' : undefined} style={st.item} onPress={onPress} disabled={!onPress}>
       <View style={{ flex: 1 }}>
         <Text style={[st.itemTitle, danger && { color: color.red }]}>{title}</Text>
         {sub && <Text style={st.itemSub}>{sub}</Text>}
@@ -217,7 +219,7 @@ const st = StyleSheet.create({
   avatarText: { color: '#fff', fontSize: 22, fontWeight: '800' },
   name: { fontSize: 20, fontWeight: '800', color: color.ink },
   dept: { fontSize: 13, color: color.inkSub, marginTop: 4 },
-  bar: { height: 22, borderRadius: 11, backgroundColor: '#DCE6E0', overflow: 'hidden', justifyContent: 'center' },
+  bar: { height: 22, borderRadius: 11, backgroundColor: '#5E7268', overflow: 'hidden', justifyContent: 'center' },
   barFill: { position: 'absolute', left: 0, top: 0, bottom: 0, ...gradientBg(gradient.primary, color.primary), borderRadius: 11 },
   barText: { textAlign: 'center', color: '#fff', fontSize: 12, fontWeight: '800' },
   section: { borderTopWidth: 1, borderColor: color.field, paddingTop: 14, paddingBottom: 6, gap: 2 },

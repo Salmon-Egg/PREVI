@@ -2,10 +2,10 @@
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Image, Pressable, View } from 'react-native';
+import { Image, View } from 'react-native';
 
 import { Input, Label, NO_GROW, Select } from '../../../components/form';
-import { Text } from '../../../components/Text';
+import { Pressable, Text } from '../../../components/Text';
 import { Button, Screen, Sub } from '../../../components/ui';
 import { api, attempt, useSubmit } from '../../../lib/api';
 import { color } from '../../../lib/theme';
@@ -38,7 +38,7 @@ export default function LostNew() {
       <Label>사진</Label>
       <Pressable onPress={pick} accessibilityLabel="사진 고르기"
         style={{ height: 160, borderRadius: 14, borderWidth: 1.5, borderColor: color.field, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        {photo ? <Image source={{ uri: photo.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" /> : <Text style={{ color: color.inkSub }}>눌러서 사진 고르기 (선택)</Text>}
+        {photo ? <Image accessibilityLabel="고른 사진" source={{ uri: photo.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" /> : <Text style={{ color: color.inkSub }}>눌러서 사진 고르기 (선택)</Text>}
       </Pressable>
       {photo && <Pressable onPress={() => setPhoto(null)}><Sub style={{ color: color.primary }}>사진 빼기</Sub></Pressable>}
 

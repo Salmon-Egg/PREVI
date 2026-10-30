@@ -5,14 +5,14 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 import { api, ApiError, useApi, useSubmit } from '../lib/api';
 import { overall, termLabel } from '../lib/format';
 import { color, gradient, gradientBg } from '../lib/theme';
 import type { GradeItem, GradeTerm, Graduation } from '../lib/types';
 import { Input, Label, Select, Sheet } from './form';
-import { Text } from './Text';
+import { Pressable, Text } from './Text';
 import { Button, Screen, showAlert, StateView, Sub } from './ui';
 
 const TERMS = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2', '4-1', '4-2'];
@@ -103,7 +103,7 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
                 <Feather name={isOpen ? 'chevron-up' : 'chevron-down'} size={20} color={color.ink} />
               </Pressable>
               {isOpen && t.items.map((g) => (
-                <Pressable key={g.id} style={st.item} disabled={!editing} onPress={() => setDraft(g)}>
+                <Pressable key={g.id} accessibilityRole={undefined} style={st.item} disabled={!editing} onPress={() => setDraft(g)}>
                   <Text style={st.itemName}>{g.course_name} ({g.credits}학점)</Text>
                   {editing ? (
                     <Pressable accessibilityLabel={`${g.course_name} 삭제`} hitSlop={6} onPress={() => remove(g.id)} style={st.minus}>

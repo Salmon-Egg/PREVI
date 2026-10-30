@@ -110,10 +110,13 @@ function Graduation() {
           <table>
             <thead><tr><th>학과</th><th>입학년도</th><th>총 학점</th><th>필수 과목</th><th>인증</th></tr></thead>
             <tbody>{rows.map((r) => (
-              <tr key={r.id} className="click" onClick={() => setOpen(open === r.id ? null : r.id)}>
+              <tr key={r.id}>
                 <td>{r.department}</td><td>{r.admission_year}</td><td>{r.total_credits}</td>
                 <td>{r.required_courses.length}개</td>
-                <td>{open === r.id ? <pre>{JSON.stringify({ 영역: r.areas, 필수: r.required_courses, 인증: r.certifications }, null, 2)}</pre> : `${r.certifications.length}개 · 눌러서 자세히`}</td>
+                <td>
+                  <button className="link" aria-expanded={open === r.id} onClick={() => setOpen(open === r.id ? null : r.id)}>{r.certifications.length}개 · {open === r.id ? '접기' : '자세히'}</button>
+                  {open === r.id && <pre>{JSON.stringify({ 영역: r.areas, 필수: r.required_courses, 인증: r.certifications }, null, 2)}</pre>}
+                </td>
               </tr>
             ))}</tbody>
           </table>

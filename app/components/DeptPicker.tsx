@@ -2,12 +2,12 @@
 // 창 안: [현재 학과·전공 | 개편 전 학과·전공] + 검색. 입학연도에 맞는 학과는 위로 올리고 '추천' 표시 (막지는 않음 — lib/departments.ts)
 import { Feather } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { CURRENT_DEPTS, LEGACY_DEPTS, recommended, type Dept } from '../lib/departments';
 import { color } from '../lib/theme';
 import { f, Input, Segmented, Sheet } from './form';
-import { Text } from './Text';
+import { Pressable, Text } from './Text';
 
 type Tab = 'current' | 'legacy';
 const TAB_KO: Record<Tab, string> = { current: '현재 학과·전공', legacy: '개편 전 학과·전공' };
@@ -20,7 +20,7 @@ export function DeptPicker({ value, onChange, year, title = '주전공' }: {
   return (
     <>
       <Pressable onPress={() => setOpen(true)} style={[f.box, f.select]}>
-        <Text style={[f.input, !value && { color: '#9AA6A0' }]} numberOfLines={1}>{value || '학과·전공을 골라 주세요'}</Text>
+        <Text style={[f.input, !value && { color: color.placeholder }]} numberOfLines={1}>{value || '학과·전공을 골라 주세요'}</Text>
         <Feather name="chevron-down" size={20} color={color.title} />
       </Pressable>
       {open && <DeptSheet value={value} year={year} title={title} onClose={() => setOpen(false)} onPick={(n) => { onChange(n); setOpen(false); }} />}

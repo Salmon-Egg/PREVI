@@ -26,6 +26,15 @@
 
 ---
 
+## 사용한 AI 모델과 라이선스
+
+- Kanana 1.5 8B Instruct (Kakao): Apache 2.0
+- EmbeddingGemma 300M (Google): [Gemma Terms of Use](https://ai.google.dev/gemma/terms)
+
+글꼴·이미지 출처와 개인정보·접근성 점검 결과는 [점검 문서](docs/보안_점검_20261030.md)에 있습니다.
+
+---
+
 ## 폴더 구조
 
 폴더마다 **맡은 사람**이 정해져 있습니다. 내 폴더가 아닌 곳을 고쳐야 하면, 그 폴더 담당자에게 먼저 말해 주세요.

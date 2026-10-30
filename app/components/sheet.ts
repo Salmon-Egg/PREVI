@@ -19,7 +19,7 @@ export const sheet = StyleSheet.create({
   rule: { height: 1, backgroundColor: color.field, marginVertical: 6 },
   text: { fontSize: 14, color: color.ink, lineHeight: 22 },
   caution: { marginTop: 12, backgroundColor: '#FFF6EA', borderWidth: 1, borderColor: '#F3C98B', borderRadius: 12, padding: 12, gap: 4 },
-  cautionHead: { fontSize: 13, fontWeight: '800', color: '#B4630B' },
+  cautionHead: { fontSize: 13, fontWeight: '800', color: '#9A5208' },
   cautionText: { fontSize: 12, color: color.ink, lineHeight: 18 },
   bottom: { flexDirection: 'row', gap: 8, padding: 12, borderTopWidth: 1, borderColor: color.line },
 });
