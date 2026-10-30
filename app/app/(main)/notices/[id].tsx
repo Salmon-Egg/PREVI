@@ -22,6 +22,7 @@ export default function Notice() {
   const isScholarship = n?.category === '장학';
   const summary = n?.summary ?? [];
   const name = isScholarship ? '장학금 안내' : '공지 안내';
+  const byStaff = n?.url?.startsWith('admin:'); // 관리자 웹에서 쓴 공지: AI 요약이 아니라 본문 앞부분
   const { busy, run } = useSubmit();
 
   // 할 일을 완료/취소하면 DB가 신청 내역에 기록/삭제함. 할 일이 없는 공지(조건 미충족 등)는 먼저 만듦
@@ -49,10 +50,10 @@ export default function Notice() {
               {/* [학사]·[장학] 공지 칸 하나에: 제목 → AI 핵심 요약 → 원문 → 유의사항 */}
               <View style={st.article}>
                 <Text style={st.title}>[{n.category ?? '공지'}] {n.title}</Text>
-                <Text style={st.meta}>작성일 : {n.posted_at ? dotDate(n.posted_at) : '-'} | 작성자 : 학교 공지</Text>
+                <Text style={st.meta}>작성일 : {n.posted_at ? dotDate(n.posted_at) : '-'} | 작성자 : {byStaff ? '학생지원팀' : '학교 공지'}</Text>
                 <View style={st.rule} />
                 <View style={st.ai}>
-                  <Text style={st.aiHead}>✨ AI 핵심 요약{n.deadline ? <Text style={{ color: color.red }}>   ⏰ {deadlineText(n.deadline).replace('!', '')}</Text> : null}</Text>
+                  <Text style={st.aiHead}>{byStaff ? '📌 핵심 내용' : '✨ AI 핵심 요약'}{n.deadline ? <Text style={{ color: color.red }}>   ⏰ {deadlineText(n.deadline).replace('!', '')}</Text> : null}</Text>
                   {summary.map((l) => <Text key={l} style={st.aiLine}>{l}</Text>)}
                   {/* 나의 판정과 근거 (요약에 이미 있는 근거는 빼고) */}
                   {n.eligibility && (
@@ -63,10 +64,12 @@ export default function Notice() {
                 </View>
                 {/* 서버(GET /notices/{id})는 아직 원문(body)을 안 줌 → 있을 때만 */}
                 {!!n.body && <Text style={st.text}>{n.body}</Text>}
-                <View style={st.caution}>
-                  <Text style={st.cautionHead}>⚠️ AI 요약 정보 유의사항</Text>
-                  <Text style={st.cautionText}>본 요약은 공지 원문을 바탕으로 생성되었습니다.{'\n'}실제 신청 전 학교의 전체 공지사항을 반드시 확인해주세요.</Text>
-                </View>
+                {!byStaff && (
+                  <View style={st.caution}>
+                    <Text style={st.cautionHead}>⚠️ AI 요약 정보 유의사항</Text>
+                    <Text style={st.cautionText}>본 요약은 공지 원문을 바탕으로 생성되었습니다.{'\n'}실제 신청 전 학교의 전체 공지사항을 반드시 확인해주세요.</Text>
+                  </View>
+                )}
               </View>
             </ScrollView>
             {isScholarship && (

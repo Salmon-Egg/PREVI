@@ -6,6 +6,7 @@ import httpx
 from fastapi.testclient import TestClient
 
 from server.config import Settings
+from server.errors import APIError
 from server.main import create_app
 from server.routes import admin
 
@@ -115,25 +116,38 @@ def test_broadcasts_count_listed_and_notified():
 
 
 def test_retract_only_sent_notice_and_clears_notifications():
-    client, saved = make(rows={"todos": [{"id": 11}, {"id": 12}]})
+    client, saved = make(rows={"notices": [{"id": 5}], "todos": [{"id": 11}, {"id": 12}]})
     with client:
         assert client.delete("/admin/broadcasts/5", headers=HEADERS).status_code == 204
     deletes = [(table, params) for method, table, params, _ in saved if method == "DELETE"]
-    assert deletes[0][0] == "notices" and deletes[0][1]["board_post_id"] == "like.admin-*"
-    assert deletes[1] == ("notifications", {"type": "eq.notice", "target_id": "eq.5"})
-    assert deletes[2] == ("notifications", {"type": "eq.deadline", "target_id": "in.(11,12)"})
+    assert deletes == [
+        ("notifications", {"type": "eq.notice", "target_id": "eq.5"}),
+        ("notifications", {"type": "eq.deadline", "target_id": "in.(11,12)"}),
+        ("notices", {"id": "eq.5", "board_post_id": "like.admin-*"}),  # 공지는 맨 뒤
+    ]
 
 
-def test_retract_missing_notice_keeps_notifications(monkeypatch):
-    calls = []
-    async def nothing(request, method, table, **kwargs):
-        calls.append((method, table))
-        return []
-    monkeypatch.setattr(admin, "admin_rows", nothing)
-    client, _ = make()
+def test_retract_failed_midway_can_be_retried(monkeypatch):
+    client, saved = make(rows={"notices": [{"id": 5}]})
+    real = admin.admin_rows
+    failures = [APIError(500, "DATABASE_ERROR", "실패")]
+    async def fail_once(request, method, table, **kwargs):
+        if method == "DELETE" and table == "notifications" and failures:
+            raise failures.pop()
+        return await real(request, method, table, **kwargs)
+    monkeypatch.setattr(admin, "admin_rows", fail_once)
+    with client:
+        assert client.delete("/admin/broadcasts/5", headers=HEADERS).status_code == 500
+        assert not saved  # 공지가 남아 있어야 다시 시도 가능
+        assert client.delete("/admin/broadcasts/5", headers=HEADERS).status_code == 204
+    assert [table for _, table, _, _ in saved] == ["notifications", "notices"]
+
+
+def test_retract_missing_notice_deletes_nothing():
+    client, saved = make(rows={"notices": []})
     with client:
         assert client.delete("/admin/broadcasts/5", headers=HEADERS).status_code == 404
-    assert ("DELETE", "notifications") not in calls
+    assert not saved
 
 
 def test_collected_notices_leave_out_sent_ones():
