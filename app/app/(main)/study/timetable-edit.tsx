@@ -9,7 +9,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 
 import { Confirm, Input, Label, Segmented, Select, Sheet } from '../../../components/form';
 import { Pressable, Text } from '../../../components/Text';
-import { Button, Screen, showAlert, StateView, Sub } from '../../../components/ui';
+import { Button, PicText, Screen, showAlert, StateView, Sub } from '../../../components/ui';
 import { api, ApiError, useApi } from '../../../lib/api';
 import { CLASS_DAYS } from '../../../lib/constants';
 import { periodsToTime, semesterLabel, timesText } from '../../../lib/format';
@@ -153,7 +153,7 @@ export default function TimetableEdit() {
         setPopup(returnTo);
       }}>
         <View style={st.warn}>
-          <Text style={st.warnStrong}>⚠️ {blocked?.lines[0]}</Text>
+          <View style={{ alignSelf: 'center' }}><PicText name="warn" style={st.warnStrong}>{blocked?.lines[0]}</PicText></View>
           {blocked?.lines.slice(1).map((l) => <Text key={l} style={st.warnText}>{l}</Text>)}
         </View>
       </Confirm>

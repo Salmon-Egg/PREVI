@@ -7,6 +7,7 @@ import { Feather } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useRef, useState, type ComponentRef } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Pressable, Text, TextInput } from './Text';
 import { Character, InfoCard, openLink, showAlert, Sources, TypingDots } from './ui';
@@ -46,6 +47,7 @@ const filled = (m: Message): Message => ({ ...m, cards: m.cards ?? [], sources: 
  *  대화 내용은 lib/chatStore.ts에 있어서, 답을 기다리다 창을 내렸다 올려도 그대로 보임 */
 export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) {
   const { messages, waiting } = useChat();
+  const insets = useSafeAreaInsets(); // 대화창은 화면 맨 아래까지 → 입력창이 안드로이드 하단 바에 가리지 않게
   const [text, setText] = useState('');
   const [feedback, setFeedback] = useState<Record<number, 'up' | 'down'>>({});
   const [added, setAdded] = useState<Set<string>>(() => new Set()); // 이미 할 일로 등록한 버튼 (두 번 눌러 같은 할 일이 두 번 생기지 않게)
@@ -168,7 +170,7 @@ export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) 
           </View>
         )}
       </ScrollView>
-      <View style={st.inputBar}>
+      <View style={[st.inputBar, { marginBottom: 12 + insets.bottom }]}>
         <View style={st.inputAvatar}><Character face size={36} /></View>
         <TextInput style={st.input} placeholder="무엇이든 물어보세요..." placeholderTextColor={color.inkSub} value={text}
           onChangeText={setText} onSubmitEditing={() => send(text)} returnKeyType="send" />

@@ -13,7 +13,7 @@ import { color, gradient, gradientBg } from '../lib/theme';
 import type { GradeItem, GradeTerm, Graduation } from '../lib/types';
 import { Input, Label, Select, Sheet } from './form';
 import { Pressable, Text } from './Text';
-import { Button, Screen, showAlert, StateView, Sub } from './ui';
+import { Button, PicText, Screen, showAlert, StateView, Sub } from './ui';
 
 const TERMS = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2', '4-1', '4-2'];
 const GRADES = ['A+', 'A0', 'B+', 'B0', 'C+', 'C0', 'D+', 'D0', 'F', 'P'];
@@ -174,7 +174,7 @@ function GradeSheet({ draft, onClose, onSaved }: { draft: Draft; onClose: () => 
       </View>
       <Label>이수 영역</Label>
       <Select value={area} items={AREAS} onChange={setArea} title="이수 영역" />
-      <View style={st.tip}><Text style={st.tipText}>💡 직접 수정/입력한 성적은 졸업 학점 계산에 반영돼요.</Text></View>
+      <View style={st.tip}><PicText name="idea" size={18} style={st.tipText}>직접 수정/입력한 성적은 졸업 학점 계산에 반영돼요.</PicText></View>
       <Button label="저장하기" disabled={!name.trim() || busy} onPress={save} />
     </Sheet>
   );

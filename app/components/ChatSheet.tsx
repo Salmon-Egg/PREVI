@@ -21,6 +21,7 @@ import { Character } from './ui';
 /** 접혀 있을 때 보이는 높이 (손잡이 + 바) — 여기에 아래 안전 영역이 더해짐 */
 export const SHEET_BAR = 90;
 const HEADER = 56; // 펼쳤을 때 머리줄 높이
+const TAP = 10; // 이만큼 안 움직였으면 끌기가 아니라 누르기
 const native = Platform.OS !== 'web';
 
 export function ChatSheet() {
@@ -82,8 +83,10 @@ export function ChatSheet() {
     let start = 0;
     const clamp = (v: number) => Math.max(0, Math.min(closedY, v));
     return PanResponder.create({
-      // 위아래로 끄는 움직임일 때만 가로챔. 그냥 누르기(바·화살표·⌄)는 그대로 버튼으로 동작
-      onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dy) > 6 && Math.abs(g.dy) > Math.abs(g.dx),
+      // 접힌 바는 처음 닿을 때부터 잡음: 실기기에서 손가락으로 누르면 몇 px 움직여서, 버튼 누르기가 '조금 끈 것'으로 바뀌어
+      // 다시 내려가던 문제(10/30 APK) → 바는 끌기·누르기를 여기서 둘 다 처리. 펼친 머리줄은 버튼(⌄·✎·⏱)이 있어서 끌 때만 가로챔
+      onStartShouldSetPanResponderCapture: () => !open,
+      onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dy) > TAP && Math.abs(g.dy) > Math.abs(g.dx),
       onPanResponderGrant: () => {
         start = pos.current;
         y.stopAnimation();
@@ -92,6 +95,8 @@ export function ChatSheet() {
       onPanResponderMove: (_, g) => y.setValue(clamp(start + g.dy)),
       onPanResponderRelease: (_, g) => {
         setGrabbing(false);
+        // 거의 안 움직였으면 누른 것 → 올림
+        if (Math.abs(g.dy) < TAP && Math.abs(g.dx) < TAP) return moveTo(true);
         const v = clamp(start + g.dy);
         // 빠르게 튕기면 그 방향으로, 아니면 반 넘게 올렸는지로 결정
         moveTo(g.vy < -0.5 ? true : g.vy > 0.5 ? false : v < closedY / 2);
@@ -101,7 +106,7 @@ export function ChatSheet() {
         moveTo(pos.current === 0);
       },
     });
-  }, [closedY, moveTo, y]);
+  }, [closedY, moveTo, open, y]);
   /* eslint-enable react-hooks/refs, react-hooks/immutability */
 
   return (
