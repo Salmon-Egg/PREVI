@@ -367,6 +367,25 @@ async def data_delete(kind: Kind, row_id: int, request: Request):
     await admin_rows(request, "DELETE", TABLES[kind][0], params={"id": f"eq.{row_id}"})
 
 
+# ── 분실물: 전체 글 보기(보관 장소 포함)·부적절한 글 지우기 ──
+@router.get("/lost-items")
+async def lost_items(request: Request, status: Literal["open", "closed"] | None = None):
+    params = {"select": "id,title,category,place,found_on,storage_place,image_path,status,created_at", "order": "id.desc", "limit": 500}
+    if status:
+        params["status"] = f"eq.{status}"
+    url = request.app.state.settings.supabase_url
+    return [{**r, "image_url": r["image_path"] and f"{url}/storage/v1/object/public/lost-items/{r['image_path']}"}
+            for r in await admin_rows(request, "GET", "lost_items", params=params)]
+
+
+@router.delete("/lost-items/{item_id}", status_code=204)
+async def delete_lost_item(item_id: int, request: Request):
+    rows = await admin_rows(request, "DELETE", "lost_items", headers={"Prefer": "return=representation"},
+                            params={"id": f"eq.{item_id}", "select": "image_path"})
+    if rows and rows[0]["image_path"]:
+        await admin_rows(request, "DELETE", f"lost-items/{rows[0]['image_path']}", api="storage/v1/object")
+
+
 @router.get("/graduation")
 async def graduation(request: Request):
     return await admin_rows(request, "GET", "grad_requirements", params={

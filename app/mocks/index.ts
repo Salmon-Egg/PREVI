@@ -422,6 +422,13 @@ function chat(body: { conversation_id: number | null; text: string; context: { k
   return { conversation_id: c.id, message };
 }
 
+// 분실물 예시 (답: 노란색)
+const lostItems: any[] = [{
+  id: 1, created_at: '2026-10-29T09:00:00+09:00', title: '검은색 에어팟 케이스', category: '전자기기', place: '북악관 3층 복도',
+  found_on: '2026-10-29', description: '', image_url: null, question: '케이스에 붙은 스티커 색은?', answer: '노란색',
+  storage_place: '학생지원팀(북악관 1층)', status: 'open', mine: false, solved: false,
+}];
+
 /** 서버처럼: 없는 id면 404 (예전에는 다른 공지를 대신 보여 줬음) */
 function found<T>(x: T | undefined): T {
   if (x === undefined) throw new ApiError(404, 'NOT_FOUND', '찾을 수 없어요. 지워졌거나 주소가 바뀌었을 수 있어요.');
@@ -539,6 +546,32 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
     case 'PATCH /messages/:id/feedback': return { id, feedback: body.feedback };
     case 'GET /notifications': return notifications;
     case 'PATCH /notifications/:id': return Object.assign(notifications.find((n) => n.id === id)!, body);
+    // 분실물: 서버처럼 보관 장소는 내 글이거나 답을 맞혔을 때만 (예시라 남은 기회는 안 셈)
+    case 'GET /lost-items':
+      return lostItems.filter((x) => x.status === (q.get('status') ?? 'open') && (!q.get('category') || x.category === q.get('category'))
+        && (!q.get('q') || [x.title, x.place, x.description].join(' ').includes(q.get('q')!))).map(({ answer, storage_place, ...x }) => x);
+    case 'GET /lost-items/:id': {
+      const { answer, storage_place, ...x } = found(lostItems.find((i) => i.id === id));
+      return { ...x, storage_place: x.mine || x.solved ? storage_place : null, tries_left: 3 };
+    }
+    case 'POST /lost-items': {
+      const { image_base64, ...rest } = body;
+      const x = { ...rest, id: Date.now(), created_at: now(), image_url: null, status: 'open', mine: true, solved: false };
+      lostItems.unshift(x);
+      return { ...x, tries_left: 3 };
+    }
+    case 'POST /lost-items/:id/claim': {
+      const x = found(lostItems.find((i) => i.id === id));
+      const norm = (s: string) => s.replace(/\s/g, '').toLowerCase();
+      if (norm(body.answer) !== norm(x.answer)) throw new ApiError(400, 'WRONG_ANSWER', '답이 맞지 않아요. 남은 기회 2번');
+      x.solved = true;
+      return { storage_place: x.storage_place, tries_left: 3 };
+    }
+    case 'PATCH /lost-items/:id': return Object.assign(found(lostItems.find((i) => i.id === id)), body);
+    case 'DELETE /lost-items/:id': {
+      lostItems.splice(lostItems.findIndex((i) => i.id === id), 1);
+      return undefined;
+    }
     default: throw new Error(`예시 데이터 없음: ${key}`);
   }
 }

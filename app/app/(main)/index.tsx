@@ -16,12 +16,13 @@ import { onPushReceived } from '../../lib/push';
 import { color } from '../../lib/theme';
 import type { Home as HomeData, Me, Notification, Todo } from '../../lib/types';
 
-// ▶ FE 14번에 해당하는 부분: 메뉴 칸 3개 (2026-10-27 캠퍼스 생활·분실물 뺌, 세 칸이 같은 폭으로 나눠 씀)
-// status는 GET /home의 menu_status 키 (칸마다 비서 한 줄). 아이콘 색은 피그마 '01_홈화면_1'처럼 칸마다 다른 색 (tint: 아이콘 뒤 동그라미)
-const MENUS: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; tone: string; tint: string; href: Href; status: keyof HomeData['menu_status'] }[] = [
+// ▶ FE 14번에 해당하는 부분: 메뉴 칸 4개 (2026-10-27 캠퍼스 생활 뺌, 2026-10-30 분실물 다시 넣음. 칸이 같은 폭으로 나눠 씀)
+// status는 GET /home의 menu_status 키 (칸마다 비서 한 줄, 분실물은 없음). 아이콘 색은 피그마 '01_홈화면_1'처럼 칸마다 다른 색 (tint: 아이콘 뒤 동그라미)
+const MENUS: { label: string; icon: keyof typeof MaterialCommunityIcons.glyphMap; tone: string; tint: string; href: Href; status?: keyof HomeData['menu_status'] }[] = [
   { label: '내 학업', icon: 'book-open-variant', tone: '#3B7DDD', tint: '#E6EFFC', href: '/study', status: 'study' },
   { label: '장학금', icon: 'school-outline', tone: '#D99A0B', tint: '#FCF3DC', href: '/scholarships', status: 'scholarship' },
   { label: '학사 행정', icon: 'file-document-outline', tone: '#E0574F', tint: '#FCE9E7', href: '/office', status: 'admin' },
+  { label: '분실물', icon: 'magnify', tone: '#7A5AE0', tint: '#EEE9FC', href: '/lost' },
 ];
 // 다음 일정 카드(오늘 챙길 일 마지막 쪽) 아이콘 색: 학사 일정 = 학사 행정 칸과 같은 색
 const EVENT_TONE = { tone: '#E0574F', tint: '#FCE9E7' };
@@ -227,7 +228,7 @@ export default function Home() {
                   )}
                 </View>
 
-                {/* 어떤 도움이 필요하신가요? 3칸 */}
+                {/* 어떤 도움이 필요하신가요? 4칸 */}
                 <View style={st.helpBox}>
                   <Text style={st.helpTitle}>어떤 도움이 필요하신가요?</Text>
                   <Text style={st.helpSub}>PREVI가 빠르고 정확하게 도와드릴게요.</Text>
@@ -237,7 +238,7 @@ export default function Home() {
                         <View style={[st.tileIcon, { backgroundColor: m.tint }]}><MaterialCommunityIcons name={m.icon} size={24} color={m.tone} /></View>
                         <Text style={st.tileLabel}>{m.label}</Text>
                         {/* 비서 한 줄 상태 */}
-                        {!!data.menu_status[m.status] && <Text style={st.tileStatus} numberOfLines={2}>{data.menu_status[m.status]}</Text>}
+                        {m.status && !!data.menu_status[m.status] &&<Text style={st.tileStatus} numberOfLines={2}>{data.menu_status[m.status]}</Text>}
                       </Pressable>
                     ))}
                   </View>
