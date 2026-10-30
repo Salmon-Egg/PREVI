@@ -1,9 +1,9 @@
 // 이용약관·개인정보 처리방침 (쿠키, 요금·환불, 운영자 정보 포함). 화면은 components/form.tsx LegalSheet
-// ⚠️ 공개 전에 대괄호 자리를 실제 값으로 채우고, 법률 검토를 받을 것
-const OPERATOR = { name: '[팀명]', officer: '[개인정보 보호책임자 이름]', email: '[연락 이메일]', bizNo: '[사업자등록번호, 없으면 이 줄 삭제]' };
+// ⚠️ 법률 검토를 받지 않은 초안
+const OPERATOR = { name: 'team ecs', officer: '허성우', email: 'voiceactor@skuniv.ac.kr' };
 const EFFECTIVE = '2026년 10월 30일';
 
-const CONTACT = [`운영자: ${OPERATOR.name}`, `사업자등록번호: ${OPERATOR.bizNo}`, `개인정보 보호책임자: ${OPERATOR.officer}`, `문의: ${OPERATOR.email}`];
+const CONTACT = [`운영자: ${OPERATOR.name}`,`개인정보 보호책임자: ${OPERATOR.officer}`, `문의: ${OPERATOR.email}`];
 
 export type LegalDoc = 'terms' | 'privacy';
 type Section = { title: string; lines: string[] };
@@ -35,10 +35,10 @@ export const LEGAL: Record<LegalDoc, { title: string; sections: Section[] }> = {
         '자동 생성: 가입·로그인 시각, 동의 시각, 보낸 알림 기록, 서버 접속 기록(IP 주소 등)',
       ] },
       { title: '2. 이용 목적', lines: ['나에게 해당하는 공지·장학금·졸업 요건 안내', '마감·학사일정 알림, 챗봇 답변', '분실물 게시판 운영', '답하지 못한 질문을 모아 안내 자료 개선 (관리자에게는 누가 물었는지 보이지 않아요)'] },
-      { title: '3. 보관 기간과 파기', lines: ['계정을 삭제하면 위 정보를 지체 없이 지워요. 분실물 글과 사진도 함께 지워요.', '서버 접속 기록은 [보관 기간] 뒤 지워요.', '법령에 따라 보관해야 하는 정보는 그 기간만 따로 보관해요.'] },
+      { title: '3. 보관 기간과 파기', lines: ['계정을 삭제하면 위 정보를 지체 없이 지워요. 분실물 글과 사진도 함께 지워요.', 'Supabase 접속 기록은 24시간 뒤 지워요.', '법령에 따라 보관해야 하는 정보는 그 기간만 따로 보관해요.'] },
       { title: '4. 다른 사람에게 보이는 정보', lines: ['개인정보를 제3자에게 팔거나 제공하지 않아요.', '분실물 글은 다른 학생이 볼 수 있고, 사진은 주소를 아는 사람이면 로그인 없이 볼 수 있어요. 얼굴이나 연락처가 나오지 않게 찍어 주세요.'] },
       { title: '5. 처리 위탁과 국외 이전', lines: [
-        'Supabase: 계정, 데이터, 사진 저장 ([저장 국가·리전])',
+        'Supabase: 계정, 데이터, 사진 저장 (Northeast Asia, Seoul)',
         'Expo(미국): 휴대폰 알림 전송 (알림 토큰, 알림 제목·내용)',
         'ngrok(미국): 앱과 학교 서버 사이 통신 연결',
         'Google Fonts(미국): 웹 버전의 글꼴 전달 (IP 주소)',
