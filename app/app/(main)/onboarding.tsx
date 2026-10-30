@@ -2,11 +2,12 @@
 // 학적(학과·부전공·학년·학기·학적 상태) → 개인정보 동의(성적 포함) → 알림 허용
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 
-import { Text } from '../../components/Text';
+import { Pressable, Text } from '../../components/Text';
 import { DeptPicker, MinorPicker } from '../../components/DeptPicker';
-import { Body, Button, Card, Character, Row, Screen, Sub, Title } from '../../components/ui';
+import { ConsentCheck, LegalSheet } from '../../components/form';
+import { Body, Button, Card, Character, Screen, Sub, Title } from '../../components/ui';
 import { api, ApiError } from '../../lib/api';
 import { signupName } from '../../lib/auth';
 import { registerPush } from '../../lib/push';
@@ -43,6 +44,7 @@ export default function Onboarding() {
   const [status, setStatus] = useState<Status>('enrolled');
   const [year, setYear] = useState<number | null>(null);
   const [agreed, setAgreed] = useState(false);
+  const [doc, setDoc] = useState(false);
   const [msg, setMsg] = useState('');
 
   // 2단계(동의)까지 마치면 학적·동의를 먼저 저장 → 3단계에서 알림 허용만 따로 물음
@@ -94,13 +96,13 @@ export default function Onboarding() {
         <>
           <Title>개인정보 수집·이용 동의</Title>
           <Card>
-            <Body>수집 항목: 학과, 부전공, 학년·학기, 학적 상태, 입학년도, 직접 입력한 성적, 시간표, 채팅 내용</Body>
+            <Body>필수 항목: 입학년도, 학과, 부전공, 학년·학기, 학적 상태</Body>
+            <Body>선택 항목: 직접 입력할 때만 성적, 시간표, 할 일, 채팅 내용, 분실물 글·사진. 넣지 않아도 되고, 마이 › AI 비서 설정에서 비서가 보지 않게 끌 수 있어요.</Body>
             <Body>이용 목적: 나에게 해당하는 공지·장학금·졸업 요건 안내와 알림</Body>
             <Body>보관: 계정을 삭제하면 성적을 포함한 모든 정보가 함께 지워져요.</Body>
           </Card>
-          <Pressable onPress={() => setAgreed(!agreed)}>
-            <Row><Text style={{ fontSize: 20 }}>{agreed ? '☑' : '☐'}</Text><Body>위 내용에 동의해요 (필수)</Body></Row>
-          </Pressable>
+          <ConsentCheck label="위 내용에 동의해요 (필수)" checked={agreed} onChange={setAgreed} onView={() => setDoc(true)} />
+          <LegalSheet doc={doc ? 'privacy' : null} onClose={() => setDoc(false)} />
           <Button label="동의하고 다음" disabled={!agreed} onPress={saveProfile} />
           <Button label="이전" kind="ghost" onPress={() => setStep(0)} />
         </>

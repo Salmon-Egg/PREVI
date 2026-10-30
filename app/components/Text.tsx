@@ -1,8 +1,8 @@
-// 앱의 모든 Text·TextInput은 react-native 대신 이 파일에서 가져옴
+// 앱의 모든 Text·TextInput·Pressable은 react-native 대신 이 파일에서 가져옴
 // ▶ FE 9번에 해당하는 부분: 글자 크기 '크게' — 글자 크기·줄 높이에만 배율을 곱함 (안에 든 글자는 바깥 크기를 이어받으므로 크기가 정해진 글자만)
 // ▶ 글꼴 통일: 웹은 화면·브라우저마다 기본 글꼴이 달라서(입력칸은 특히) 모든 글자를 Noto Sans KR 하나로. 휴대폰은 기기 기본 글꼴
 import { forwardRef, type ComponentRef } from 'react';
-import { Platform, Text as RNText, TextInput as RNTextInput, StyleSheet, type StyleProp, type TextInputProps, type TextProps, type TextStyle } from 'react-native';
+import { Platform, Pressable as RNPressable, Text as RNText, TextInput as RNTextInput, StyleSheet, type PressableProps, type StyleProp, type TextInputProps, type TextProps, type TextStyle } from 'react-native';
 
 import { FONT_SCALE, useDisplay } from '../lib/display';
 
@@ -23,6 +23,11 @@ function scaled(style: StyleProp<TextStyle>, large: boolean) {
   if (!fontSize) return [FONT, style];
   return [FONT, style, { fontSize: fontSize * FONT_SCALE, ...(lineHeight ? { lineHeight: lineHeight * FONT_SCALE } : null) }];
 }
+
+/** 누르는 칸은 기본으로 버튼 역할 (화면 읽기·웹 키보드). 안에 다른 버튼이 든 칸은 accessibilityRole={undefined}로 끔 */
+export const Pressable = forwardRef<ComponentRef<typeof RNPressable>, PressableProps>(function Pressable(props, ref) {
+  return <RNPressable ref={ref} accessibilityRole="button" {...props} />;
+});
 
 export function Text(props: TextProps) {
   const { large } = useDisplay();

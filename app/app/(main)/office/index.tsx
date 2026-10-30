@@ -2,9 +2,9 @@
 import { Feather } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet } from 'react-native';
+import { StyleSheet } from 'react-native';
 
-import { Text } from '../../../components/Text';
+import { Pressable, Text } from '../../../components/Text';
 import { Badge, Chips, ItemCard, Row, Screen, StateView, Sub, Title } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';

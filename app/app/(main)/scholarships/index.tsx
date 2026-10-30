@@ -3,9 +3,9 @@
 // 카드: 상태 배지(신청 완료 · 미신청 · 조건 미충족) + 장학금 이름 + 신청일 또는 마감. 누르면 장학금 안내(S-2). 판정 근거는 안내 화면에
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
-import { Text } from '../../../components/Text';
+import { Pressable, Text } from '../../../components/Text';
 import { Screen, StateView } from '../../../components/ui';
 import { useApi } from '../../../lib/api';
 import { deadlineText, dotDate } from '../../../lib/format';

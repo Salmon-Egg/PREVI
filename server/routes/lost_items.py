@@ -75,6 +75,26 @@ async def storage(request: Request, method: str, path: str, **kwargs):
         raise APIError(500, "STORAGE_ERROR", "사진을 저장하거나 지울 수 없어요.")
 
 
+async def delete_user_photos(request: Request, user_id: str, secret: str):
+    """계정 삭제 전에 호출. 사진은 저장소에 있어 DB cascade로 지워지지 않는다. 실패하면 계정 삭제도 멈춰 다시 시도할 수 있게 한다."""
+    s = request.app.state.settings
+    headers = {"apikey": secret, "Authorization": f"Bearer {secret}"}
+    try:
+        rows = await request.app.state.http.get(f"{s.supabase_url}/rest/v1/lost_items", headers=headers,
+            params={"user_id": f"eq.{user_id}", "image_path": "not.is.null", "select": "image_path"})
+        if rows.status_code == 404:  # 013 마이그레이션 전이면 지울 사진도 없음
+            return
+        if rows.status_code != 200:
+            raise httpx.RequestError("lost_items 조회 실패")
+        paths = [r["image_path"] for r in rows.json()]
+        if paths:
+            res = await request.app.state.http.request("DELETE", f"{s.supabase_url}/storage/v1/object/{BUCKET}", headers=headers, json={"prefixes": paths})
+            if res.status_code != 200:
+                raise httpx.RequestError("사진 삭제 실패")
+    except httpx.RequestError:
+        raise APIError(503, "ACCOUNT_DELETE_FAILED", "계정을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.") from None
+
+
 async def item_row(request: Request, item_id: int):
     rows = await database_rows(request, "GET", "lost_items", params={"id": f"eq.{item_id}", "select": PUBLIC_COLUMNS})
     if not rows: raise APIError(404, "LOST_ITEM_NOT_FOUND", "분실물 글을 찾을 수 없어요.")

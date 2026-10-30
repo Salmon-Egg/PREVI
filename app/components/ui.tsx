@@ -4,13 +4,13 @@
 import { Feather } from '@expo/vector-icons';
 import { router, Stack } from 'expo-router';
 import { useEffect, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Alert, Animated, Image, Linking, Modal, Platform, Pressable, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Image, Linking, Modal, Platform, ScrollView, StyleSheet, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ApiError } from '../lib/api';
 import { color, gradient, gradientBg, webBlur } from '../lib/theme';
 import type { ChatCard, Verdict } from '../lib/types';
-import { Text } from './Text';
+import { Pressable, Text } from './Text';
 
 const web = Platform.OS === 'web';
 
@@ -208,7 +208,7 @@ export function InfoCard({ card }: { card: ChatCard }) {
   const ratio = ratioOf(card.lines[1]);
   return (
     <Pressable style={s.infoCard} disabled={!isSafeUrl(card.link)} onPress={() => openLink(card.link)}>
-      {card.image_url && <Image source={{ uri: card.image_url }} style={s.infoImage} />}
+      {card.image_url && <Image accessibilityLabel={card.title} source={{ uri: card.image_url }} style={s.infoImage} />}
       <Text style={s.infoTitle}>{card.title}</Text>
       <Text style={s.infoBig}>{card.lines[0]}</Text>
       {ratio ? (
@@ -236,7 +236,7 @@ export function ItemCard({ title, desc, icon, badge, meta, onPress }: {
   badge?: ReactNode; meta?: string | null; onPress?: () => void;
 }) {
   return (
-    <Pressable style={({ pressed }) => [s.card, s.item, pressed && { opacity: 0.7 }]} onPress={onPress} disabled={!onPress}>
+    <Pressable accessibilityRole={onPress ? 'button' : undefined} style={({ pressed }) => [s.card, s.item, pressed && { opacity: 0.7 }]} onPress={onPress} disabled={!onPress}>
       {icon && <View style={s.itemIcon}><Feather name={icon} size={20} color={color.primary} /></View>}
       <View style={{ flex: 1, gap: 3 }}>
         {badge}

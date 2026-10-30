@@ -1,12 +1,12 @@
 // ▶ FE 7번에 해당하는 부분: 로그인·회원가입 공통 틀 (새 시안: 하늘 배경 + 흐린 구름, 왼쪽 위 PREVI 로고, 가운데 흰 카드)
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, useWindowDimensions, View, type TextInputProps } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, useWindowDimensions, View, type TextInputProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { color, gradient, webBlur } from '../lib/theme';
 import { Input } from './form';
-import { Text } from './Text';
+import { Pressable, Text } from './Text';
 import { AppBackground } from './ui';
 
 const web = Platform.OS === 'web';
@@ -27,7 +27,7 @@ export function AuthFrame({ title, sub, top, footer, children }: { title: string
             <Text style={st.logo}>PREVI</Text>
             <MaterialCommunityIcons name="leaf" size={30} color="#2FA160" />
           </View>
-          <Text style={st.logoSub}>서경대학교 스마트 비서</Text>
+          <Text style={st.logoSub}>서경대학교 학생을 위한 스마트 비서</Text>
           <View style={[st.card, { marginTop: Math.max(28, height * top) }]}>
             <Text style={st.title}>{title}</Text>
             <Text style={st.sub}>{sub}</Text>
@@ -49,7 +49,7 @@ export function AuthField({ label, error, action, ...props }: TextInputProps & {
     <View style={{ gap: 6 }}>
       <Text style={st.label}>{label}</Text>
       <View>
-        <Input {...props} error={!!error} style={[st.input, action && { paddingRight: 128 }]} />
+        <Input accessibilityLabel={label} {...props} error={!!error} style={[st.input, action && { paddingRight: 128 }]} />
         {action && (
           <Pressable onPress={action.onPress} disabled={action.disabled} style={[st.inBtn, action.disabled && { opacity: 0.55 }]}>
             <Text style={st.inBtnText}>{action.label}</Text>
@@ -64,9 +64,10 @@ export function AuthField({ label, error, action, ...props }: TextInputProps & {
 /** "처음이신가요? 회원가입" 같은 한 줄 링크 */
 export function AuthLink({ text, link, onPress }: { text: string; link: string; onPress: () => void }) {
   return (
-    <Text style={st.linkRow}>
-      {text} <Text style={st.link} onPress={onPress}>{link}</Text>
-    </Text>
+    <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 4 }}>
+      <Text style={st.linkRow}>{text}</Text>
+      <Pressable onPress={onPress}><Text style={st.link}>{link}</Text></Pressable>
+    </View>
   );
 }
 
@@ -86,5 +87,5 @@ const st = StyleSheet.create({
   inBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
   error: { color: color.red, fontSize: 13, fontWeight: '700' },
   linkRow: { textAlign: 'center', fontSize: 15, color: '#4D5A55' },
-  link: { color: '#13774A', fontWeight: '900', textDecorationLine: 'underline' },
+  link: { fontSize: 15, color: '#13774A', fontWeight: '900', textDecorationLine: 'underline' },
 });

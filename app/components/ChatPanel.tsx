@@ -6,9 +6,9 @@
 import { Feather } from '@expo/vector-icons';
 import { router, type Href } from 'expo-router';
 import { useRef, useState, type ComponentRef } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 
-import { Text, TextInput } from './Text';
+import { Pressable, Text, TextInput } from './Text';
 import { Character, InfoCard, openLink, showAlert, Sources, TypingDots } from './ui';
 import { api, ApiError } from '../lib/api';
 import { closeChatSheet, sendChat, useChat } from '../lib/chatStore';
@@ -105,7 +105,7 @@ export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) 
               <View style={st.startBubble}><Text style={st.startBubbleText}>무엇이든{'\n'}물어보세요!</Text></View>
             </View>
             <Text style={st.startTitle}>무엇을 도와드릴까요?</Text>
-            <Text style={st.startSub}>수업, 장학금, 졸업, 캠퍼스 생활까지{'\n'}프리비가 학교 문서를 근거로 도와드려요.</Text>
+            <Text style={st.startSub}>수업, 장학금, 졸업, 캠퍼스 생활까지{'\n'}프리비가 학교 문서를 근거로 도와드려요.{'\n'}AI 답변은 틀릴 수 있으니 중요한 내용은 학교 공지로 확인해 주세요.</Text>
             <View style={{ alignSelf: 'stretch', gap: 8, marginTop: 8 }}>
               {STARTERS.map((s) => (
                 <Pressable key={s.q} style={st.starter} onPress={() => send(s.q)}>
