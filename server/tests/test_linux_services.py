@@ -20,8 +20,8 @@ def test_services_use_project_venv_and_shared_nonblocking_job_lock():
 def test_schedules_are_explicit_korean_time_and_do_not_catch_up_unexpectedly():
     units = render_units('/srv/previ')
     collect = units['previ-collect.timer']
-    for time in ['09:00:00','13:00:00','18:00:00']:
-        assert f'OnCalendar=*-*-* {time} Asia/Seoul' in collect
+    times = [line for line in collect.splitlines() if line.startswith('OnCalendar=')]
+    assert times == [f'OnCalendar=*-*-* {hour:02d}:00:00 Asia/Seoul' for hour in range(9, 19)]
     assert '08:50:00 Asia/Seoul' in units['previ-daily.timer']
     assert '*:0/5:00 Asia/Seoul' in units['previ-reminders.timer']
     for name, value in units.items():

@@ -17,7 +17,7 @@ def render_units(project_root):
         'Restart=on-failure\nRestartSec=5\nTimeoutStopSec=30\n\n[Install]\nWantedBy=default.target\n'}
     jobs = {
         'collect': ('server.jobs.collect_notices --save --pages 3 --max-posts 150',
-                    ['*-*-* 09:00:00 Asia/Seoul','*-*-* 13:00:00 Asia/Seoul','*-*-* 18:00:00 Asia/Seoul']),
+                    [f'*-*-* {hour:02d}:00:00 Asia/Seoul' for hour in range(9, 19)]),
         'daily': ('server.jobs.daily_check --extract', ['*-*-* 08:50:00 Asia/Seoul']),
         'reminders': ('server.jobs.daily_check --reminders-only', ['*-*-* *:0/5:00 Asia/Seoul']),
     }
