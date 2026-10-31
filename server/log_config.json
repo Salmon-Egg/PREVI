@@ -6,10 +6,12 @@
   },
   "handlers": {
     "file": {
-      "class": "logging.handlers.TimedRotatingFileHandler",
+      "class": "server.log_retention.RetentionFileHandler",
       "filename": "logs/api.log",
       "when": "midnight",
       "backupCount": 29,
+      "max_age_days": 29,
+      "sweep_interval": 60,
       "encoding": "utf-8",
       "formatter": "plain"
     }

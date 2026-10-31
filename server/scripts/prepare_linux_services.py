@@ -12,7 +12,7 @@ def render_units(project_root):
     python = root + '/.venv/bin/python'
     common = f'WorkingDirectory={root}\nEnvironment=PYTHONUTF8=1\n'
     units = {'previ-api.service':
-        '[Unit]\nDescription=PREVI API\n\n[Service]\nType=simple\n' + common +
+        '[Unit]\nDescription=PREVI API\n\n[Service]\nType=simple\nUMask=0077\n' + common +
         f'ExecStartPre=/usr/bin/mkdir -p {root}/logs\n'
         # 접속 기록은 공용 journald가 아니라 30일만 남는 파일로 (처리방침 3조)
         f'ExecStart={python} -m uvicorn server.main:app --host 127.0.0.1 --port 8000 --log-config server/log_config.json\n'

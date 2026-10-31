@@ -49,6 +49,11 @@ def test_gpa_and_credits_only_when_stated_for_last_term(monkeypatch, stored, bod
     ([1, 2], "미래융합학부1,2: 전공 배정 후 1개 학기 이상 이수한 재학생", []),  # 38
     ([2, 3], "국내 4년제 대학 2학년 2학기 이상 재학생", [2, 3, 4]),  # 57
     ([1, 2], "1학년 2학기 재학 중. 2학년~졸업 시까지 등록금 전액", [1]),  # 71
+    ([2, 3, 4], "26년 2학기 기준 국내 4년제 대학교 1학년 2학기 재학 중인 여자 대학생\n2학년~졸업 시까지 등록금 전액", [1]),
+    ([], "국내 4년제 대학교 1학년 2학기 재학 중인 여자 대학생", [1]),
+    ([], "고등학교 1학년 2학기 재학 중", []),
+    ([], "1학년 2학기 재학 중인 자는 제외", []),
+    ([1, 2], "1학년 2학기 재학 중 또는 2학년 대상", [1, 2]),
     ([2, 3, 4], "중학교 3학년 2학기 내신 성적 환산", []),  # 63
     ([1, 2], "2026학년도 입학자", []),
     ([3], "3학년 대상", [3]), ([1, 2], "1·2학년 대상", [1, 2]), ([2, 3], "2~3학년", [2, 3]),
@@ -57,7 +62,7 @@ def test_target_grades_must_be_stated(monkeypatch, stored, body, grades):
     monkeypatch.setattr(tasks, "_ask", lambda *_: {"category": "학사", "target": {"grades": stored}})
     out = tasks.summarize_notice("안내", body)
     assert out["target"]["grades"] == grades
-    assert ("대상 학년은 원문 확인 필요" in out["conditions"].get("unknown", [])) == (not grades)
+    assert ("대상 학년은 원문 확인 필요" in out["conditions"].get("unknown", [])) == (bool(stored) and not grades)
 
 
 def test_conditions_drop_zero_and_procedure_text():

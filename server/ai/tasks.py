@@ -48,6 +48,15 @@ def _last_term_stated(number: str, text: str) -> bool:
 
 def _checked_grades(grades: list[int], text: str) -> list[int]:
     """원문에 대상으로 적힌 학년만 둠. "미래융합학부1,2"(공지 38)와 "2학년~졸업" 지급 기간(공지 71)은 대상이 아니고, "2학년 2학기 이상"(공지 57)은 위 학년까지."""
+    # 지원 시점의 재학 학년은 지급 기간보다 우선한다. 모델이 지급 기간만
+    # 반환하거나 학년을 비워도 "1학년 2학기 재학 중"을 누락하지 않는다.
+    enrolled = set()
+    for match in re.finditer(r"(?<!\d)([1-4])\s*학년\s*[12]\s*학기\s*(?:에\s*)?재학\s*중", text):
+        line_start = text.rfind("\n", 0, match.start()) + 1
+        line_end = text.find("\n", match.end())
+        line = text[line_start:line_end if line_end >= 0 else len(text)]
+        if not re.search(r"(?:중|고등)학교", line) and not re.search(r"제외|아닌|아니한", line):
+            enrolled.add(int(match.group(1)))
     stated, above = set(), set()
     for m in re.finditer(r"(?<![\d.])((?:[1-4]\s*[,·~]\s*)*[1-4])\s*학\s*년(?!도)(\s*(?:[12]\s*학기\s*)?이상)?(\s*~|\s*부터)?", text):
         if m.group(3) or re.search(r"(?:중|고등)학교\s*$", text[:m.start()]):  # "중학교 3학년 2학기 내신"(공지 63)
@@ -56,6 +65,8 @@ def _checked_grades(grades: list[int], text: str) -> list[int]:
         stated.update(range(digits[0], digits[-1] + 1) if "~" in m.group(1) else digits)
         if m.group(2):
             above.update(range(digits[0], 5))
+    if len(enrolled) == 1 and stated <= enrolled and not above:
+        return sorted(enrolled)
     kept = {g for g in grades if g in stated}
     return sorted(kept | above) if kept else []
 
@@ -92,8 +103,8 @@ def summarize_notice(title: str, body: str, *, strict=False) -> dict:
         if key in conditions and (tiers or not _last_term_stated(numbers[key], source)):
             del conditions[key]
             conditions["unknown"] = [message] + conditions.get("unknown", [])
-    if target["grades"]:
-        checked = _checked_grades(target["grades"], source)
+    checked = _checked_grades(target["grades"], source)
+    if target["grades"] or checked:
         if not checked:
             conditions["unknown"] = ["대상 학년은 원문 확인 필요"] + conditions.get("unknown", [])
         target["grades"] = [] if set(checked) == {1, 2, 3, 4} else checked

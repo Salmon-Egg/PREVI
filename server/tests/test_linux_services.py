@@ -19,12 +19,16 @@ def test_services_use_project_venv_and_shared_nonblocking_job_lock():
     assert '--host 127.0.0.1' in units['previ-api.service']
     assert 'Restart=on-failure' in units['previ-api.service']
     assert '--log-config server/log_config.json' in units['previ-api.service']
+    assert 'UMask=0077\n' in units['previ-api.service']
 
 
 def test_api_log_keeps_30_days_and_no_chat_text():
     config = json.loads((Path(__file__).parents[1]/'log_config.json').read_text(encoding='utf-8'))
     assert config['handlers']['file']['when'] == 'midnight'
     assert config['handlers']['file']['backupCount'] == 29  # 오늘 파일 + 지난 29일
+    assert config['handlers']['file']['class'] == 'server.log_retention.RetentionFileHandler'
+    assert config['handlers']['file']['max_age_days'] == 29
+    assert config['handlers']['file']['sweep_interval'] == 60
     assert config['root']['level'] == 'WARNING'  # chat의 INFO 로그에는 질문 앞부분이 있음
 
 
