@@ -49,6 +49,7 @@ WHEN = re.compile("언제|며칠|날짜|일정|기간")
 WEEK = re.compile(r"(이번|다음)\s*주")
 WEEK_TOPIC = re.compile("일정|학사|행사")
 KST = timezone(timedelta(hours=9))
+NO_DEADLINE = "마감일 확인 필요"
 CONV_COLS = "id,title,pinned,updated_at"
 # 주제 낱말만 있는 질문("휴학 알려줘")은 걸리는 문단이 많아 답이 길고 흐려짐 → AI 없이 무엇이 궁금한지 버튼으로 되물음
 CLARIFY = {
@@ -159,6 +160,19 @@ def _today() -> date:
     return datetime.now(KST).date()
 
 
+def _kst(iso: str) -> datetime:
+    """DB의 마감은 UTC로 옴: 앞 글자를 그대로 쓰면 23:59 마감이 14:59로 보임."""
+    return datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(KST)
+
+
+def _deadline_note(iso: str | None) -> str:
+    """마감 상태는 코드가 정함: 빈 칸은 대개 '마감이 첨부에 있어 못 읽음'이지 '마감이 없음'이 아님."""
+    if not iso:
+        return NO_DEADLINE
+    d = _kst(iso)
+    return f"마감 {_ko_date(d.date().isoformat())} {d:%H:%M}, " + ("이미 지남" if d < datetime.now(KST) else "아직 안 지남")
+
+
 async def _week_events(request: Request, p: dict, label: str) -> dict:
     """이번·다음 주(월~일, 한국 시간)와 겹치는 일정 전부. 비슷한 제목 한 건을 고르는 _calendar_event와 달리 AI 없이 코드가 답함."""
     today = _today()
@@ -200,7 +214,7 @@ REGIONAL = re.compile(r"(?<![가-힣])(?!수시|정시|임시|교시|즉시|동�
 
 def _pick_scholarships(rows: list[dict], today: str, residence: str | None = None) -> tuple[list[dict], int]:
     """채팅 카드 후보: 안 지난·미신청·미충족 아닌 것을 신청 가능 먼저, 마감 순으로. 내 지역이 아닌 지역 공지는 빼고 개수만 돌려줌."""
-    live = [r for r in rows if r["verdict"] != "ineligible" and not r["applied"] and (not r["deadline"] or r["deadline"][:10] >= today)]
+    live = [r for r in rows if r["verdict"] != "ineligible" and not r["applied"] and (not r["deadline"] or _kst(r["deadline"]).date().isoformat() >= today)]
     picked = [r for r in live if not (m := REGIONAL.search(r["title"])) or m.group(0) in (residence or "")]
     picked.sort(key=lambda r: (r["verdict"] != "eligible", r["deadline"] or "9999"))
     return picked, len(live) - len(picked)
@@ -222,9 +236,10 @@ def _confirm_save(updates: dict) -> dict:
             "actions": [{"type": "save_profile", "label": "저장하기", "payload": updates}]}
 
 
-async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: str | None, question: str) -> dict:
-    """⑫ 내 상황 답변: 서버가 계산한 결과로 카드와 버튼을 만들고, 졸업 외 문장은 AI가 다듬음."""
-    cards, more = [], None
+async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: str | None) -> dict:
+    """⑫ 내 상황 답변: 서버가 계산한 결과로 문장·카드·버튼·출처를 코드가 만듦.
+    AI에게 다듬게 하면 '마감 없음'을 "마감일이 지나지 않았으니"로, '확인 필요'를 "신청 가능"으로 바꿈(10/31 실측)."""
+    cards = []
     if topic == "graduation":
         try:
             g = await graduation_result(request, user)
@@ -246,6 +261,7 @@ async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: st
             lines.append(f"· 학점 외에 확인할 요건 {len(pending)}가지가 더 있어요")
         lines.append("· 최종 졸업 여부는 서경포탈과 학과에서 확인해 주세요")
         return {"text": "\n".join(lines), "cards": cards,
+                "sources": [{"title": f"{p['department']} 졸업요건", "url": None}, {"title": "내 성적·시간표", "url": None}],
                 "actions": [{"type": "open_screen", "label": "졸업 요건 자세히", "payload": {"screen": "L-2"}}]}
     if topic == "scholarship":
         rows, regional = _pick_scholarships(await scholarship_rows(request, user), _today().isoformat(), p.get("residence"))
@@ -255,26 +271,75 @@ async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: st
         if regional:
             summary += f" 특정 지역 대상 장학금 {regional}개는 '나에게 맞는 장학금'에서 볼 수 있어요."
         cards = [{"image_url": None, "title": r["title"],
-                  "lines": [VERDICT_KO[r["verdict"]], f"마감 {r['deadline'][:10]}" if r["deadline"] else "마감 없음"],
-                  "link": None} for r in rows[:MAX_CARDS]]
+                  "lines": [VERDICT_KO[r["verdict"]], f"마감 {_kst(r['deadline']).date()}" if r["deadline"] else NO_DEADLINE],
+                  "link": r["url"]} for r in rows[:MAX_CARDS]]
         actions = [{"type": "open_screen", "label": "나에게 맞는 장학금", "payload": {"screen": "S-1"}}]
         more = _ask_back(p, rows, regional)
         if any("성적 미입력" in s for r in rows for s in r["reasons"]):
             actions.append({"type": "open_screen", "label": "직전 학기 성적 입력", "payload": {"screen": "L-8"}})
-    else:
-        rows = await database_rows(request, "GET", "todos", params={
-            "user_id": f"eq.{user.id}", "done": "eq.false", "select": "title,due_date", "order": "priority.desc,due_date.asc.nullslast", "limit": 3})
-        summary = "챙길 일: " + ", ".join(f"{r['title']}({r['due_date'] or '마감 없음'})" for r in rows) if rows else "지금 챙길 일이 없어요."
-        actions = [{"type": "open_screen", "label": "할 일 전체 보기", "payload": {"screen": "T-1"}}]
-    text = await run_in_threadpool(tasks.answer_my_info, question, {"summary": summary, "grade": p["grade"]})  # 이름은 첫인사에서만 부르니 안 넘김
-    # 되묻는 문장은 코드가 붙임: 다음 답이 무엇에 대한 것인지 이 문장으로 알아봄(asked_field)
-    return {"text": f"{text}\n\n{more}" if more else text, "cards": cards, "actions": actions}
+        # 되묻는 문장은 코드가 붙임: 다음 답이 무엇에 대한 것인지 이 문장으로 알아봄(asked_field)
+        return {"text": f"{summary}\n\n{more}" if more else summary, "cards": cards, "actions": actions,
+                "sources": [{"title": r["title"], "url": r["url"]} for r in rows[:MAX_CARDS]]}
+    rows = await database_rows(request, "GET", "todos", params={
+        "user_id": f"eq.{user.id}", "done": "eq.false", "or": f"(due_date.gte.{_today().isoformat()},due_date.is.null)",
+        "select": "title,due_date,source_id", "order": "priority.desc,due_date.asc.nullslast", "limit": 3})
+    ids = ",".join(str(r["source_id"]) for r in rows if r["source_id"])
+    notices = await database_rows(request, "GET", "notices", params={"id": f"in.({ids})", "select": "title,url"}) if ids else []
+    def due(r):  # 직접 만든 할 일은 정말 마감이 없을 수 있지만, 공지에서 온 것은 마감을 못 읽은 것
+        return f"{_ko_date(r['due_date'])}까지" if r["due_date"] else NO_DEADLINE if r["source_id"] else "마감 없음"
+    text = "\n".join(["챙길 일이에요."] + [f"· {r['title']}: {due(r)}" for r in rows]) if rows else "지금 챙길 일이 없어요."
+    return {"text": text, "cards": cards, "sources": [{"title": n["title"], "url": n["url"]} for n in notices],
+            "actions": [{"type": "open_screen", "label": "할 일 전체 보기", "payload": {"screen": "T-1"}}]}
 
 
 def _notice_chunk(n: dict) -> dict:
     """공지·공지에서 온 할 일에서 넘어온 질문은 그 공지 원문을 첫 근거로 (학교 문서에는 공지 내용이 없음)."""
-    head = f"[공지] {n['title']}" + (f" (마감 {n['deadline'][:16].replace('T', ' ')})" if n["deadline"] else "")
-    return {"content": f"{head}\n{(n['body'] or '')[:1500]}", "title": n["title"], "url": n["url"]}
+    head = f"[공지] {n['title']} ({_deadline_note(n['deadline'])})"
+    return {"content": f"{head}\n{(n['body'] or '')[:1500]}", "title": n["title"], "url": n["url"],
+            "expired": bool(n["deadline"]) and _kst(n["deadline"]) < datetime.now(KST)}
+
+
+# 공지 제목을 찾을 때 뺄 말: 어느 공지인지 가르지 못함. 앞부분만 봐서 조사·어미는 따로 안 뗌
+NOTICE_STOP = re.compile(r"장학|공지|안내|신청|접수|마감|기한|기간|언제|며칠|날짜|일정|조건|자격|대상|서류|방법|절차|어떻게|알려|설명|궁금|"
+                         r"이번|다음|올해|지났|끝났|남았|받을|지원|선발|모집")
+# 통째로 이 말일 때만 뺌: "학점포기", "국가장학금"처럼 공지 이름의 일부일 수 있음
+NOTICE_STOP_WORD = re.compile(r"(휴학|복학|졸업|수강|수강신청|계절학기|성적|학점|등록금?|학기|학년|학교|서경대|서경대학교|우리|있어|있나|있나요|돼|되나|되나요|해야|하면|그거|이거|저거|어디)(은|는|이|가|을|를|의|에)?")
+NOTICE_LIST = re.compile(r"공지.{0,10}(뭐|있|알려|보여)|(최근|요즘|새로운?|오늘)\s*(올라온\s*)?공지|마감\s*(임박|가까|곧)|곧\s*마감")
+NOTICE_MATCH = 0.6  # 질문의 이름 낱말 중 이만큼이 제목에 있어야 함: "아직", "내야" 같은 말이 섞여도 찾게
+
+
+def _pick_notice(rows: list[dict], text: str) -> dict | None:
+    """제목이 질문의 이름 낱말("대산농촌재단")과 가장 많이 겹치는 공지. 공지에는 임베딩이 없어 글자로 찾음. 같으면 앞(최신) 공지."""
+    q = set().union(*(_bigrams(w) for w in re.findall("[가-힣A-Za-z]+", text) if not NOTICE_STOP.match(w) and not NOTICE_STOP_WORD.fullmatch(w)))
+    if not q:
+        return None
+    best = max(rows, key=lambda r: len(q & _bigrams(r["title"])), default=None)
+    hit = len(q & _bigrams(best["title"])) if best else 0
+    return best if hit >= 2 and hit / len(q) >= NOTICE_MATCH else None  # 2개 이상: "전과" 하나로 "전과 발표 안내"가 걸리지 않게
+
+
+async def _named_notice(request: Request, question: str) -> dict | None:
+    """대화에서 이름으로 물은 공지의 근거 문단. 이번 질문으로 못 찾으면 "그럼 서류는?"처럼 앞 질문의 공지."""
+    rows = await database_rows(request, "GET", "notices", params={
+        "select": "id,title", "extraction_status": "eq.ready", "order": "posted_at.desc,id.desc", "limit": 500})
+    prev = re.search(r"\[이전 질문\] (.+)", question)
+    hit = _pick_notice(rows, question.rsplit("질문:", 1)[-1]) or (prev and _pick_notice(rows, prev[1]))
+    if not hit:
+        return None
+    return _notice_chunk((await database_rows(request, "GET", "notices", params={"id": f"eq.{hit['id']}", "select": NOTICE_COLS}))[0])
+
+
+async def _open_notices(request: Request) -> dict:
+    """"공지 뭐 있어?": 마감이 남은 공지를 가까운 순으로. 마감을 모르는 공지는 지났을 수 있어 뺌. AI 없이 코드가 답함."""
+    rows = await database_rows(request, "GET", "notices", params={
+        "select": "title,url,deadline,target", "extraction_status": "eq.ready", "deadline": f"gte.{datetime.now(KST).isoformat()}",
+        "order": "deadline.asc", "limit": 50})
+    rows = [r for r in rows if "staff" not in ((r["target"] or {}).get("statuses") or [])][:5]  # 교직원 대상 공지 제외
+    if not rows:
+        return {"text": "마감이 남은 공지가 지금은 없어요.", "cards": [], "actions": []}
+    lines = [f"· {r['title']}: {_ko_date(_kst(r['deadline']).date().isoformat())}까지" for r in rows]
+    return {"text": "\n".join(["마감이 남은 공지를 가까운 순으로 보여 드릴게요."] + lines), "cards": [], "actions": [],
+            "sources": [{"title": r["title"], "url": r["url"]} for r in rows]}
 
 
 def _used(answer: str, chunks: list[dict]) -> list[dict]:
@@ -291,7 +356,8 @@ async def _from_docs(request: Request, question: str, p: dict, extra: list[dict]
     event = await _calendar_event(request, asked)
     if event and WHEN.search(asked):  # "수강신청 언제야?": 요람엔 날짜가 없어서 학사일정 표의 실제 날짜를 근거로
         extra = extra + [_event_chunk(event)]
-    chunks = extra + (await search_chunks(request, asked, p=p) or (asked != question and await search_chunks(request, question, p=p)) or [])
+    k = 1 if any(c.get("url") for c in extra) else 3  # 공지 원문이 길어 모델 컨텍스트(4096)에 문서 3개까지 못 들어감
+    chunks = extra + (await search_chunks(request, asked, k, p) or (asked != question and await search_chunks(request, question, k, p)) or [])
     if not chunks:  # '질문 대상이 문서에 없어 버림'과 구분
         log.info("검색 결과 없음: %s", asked[:30])
     student = {"학적": STATUS_KO.get(p["status"], p["status"])} if PERSONAL.search(asked) else {}
@@ -301,7 +367,10 @@ async def _from_docs(request: Request, question: str, p: dict, extra: list[dict]
     if not answer:
         school = SCHOOL.search(asked)
         return {"text": UNKNOWN if school else OFF_TOPIC, "cards": [], "sources": [], "actions": [], "unknown": bool(school)}
-    sources = list({c["title"]: {"title": c["title"], "url": c["url"]} for c in _used(answer, chunks)}.values())
+    used = _used(answer, chunks)
+    sources = list({c["title"]: {"title": c["title"], "url": c["url"]} for c in used}.values())
+    if any(c.get("expired") for c in used):  # 지난 공지를 AI가 신청하라고 안내해도 학생이 먼저 보게 코드가 붙임
+        answer = f"이 공지는 마감이 지났어요.\n{answer}"
     # ⑬ 다음 행동 버튼 (규칙): 질문과 비슷한 학사일정이 앞으로 있으면 '마감 알림 받기'
     actions = [{"type": "add_todo", "label": "마감 알림 받기",
                 "payload": {"title": event["title"], "due_date": event["end_date"]}}] if event else []
@@ -337,8 +406,13 @@ async def _answer(request: Request, user: AuthenticatedUser, p: dict, question: 
     asked = question.rsplit("질문:", 1)[-1]
     if (week := WEEK.search(asked)) and WEEK_TOPIC.search(asked):
         return await _week_events(request, p, week[1])
+    # 내 정보보다 먼저: "나 대산농촌재단 장학금 받을 수 있어?"에 장학금 전체 목록으로 답하지 않게
+    if not extra and (named := await _named_notice(request, question)):
+        return await _from_docs(request, question, p, [named])
+    if not extra and NOTICE_LIST.search(asked):
+        return await _open_notices(request)
     if route["intent"] == "my_info":
-        return await _my_info(request, user, p, route["topic"], question)
+        return await _my_info(request, user, p, route["topic"])
     return await _from_docs(request, question, p, extra)
 
 

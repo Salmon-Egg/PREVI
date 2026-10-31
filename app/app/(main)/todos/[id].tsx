@@ -44,7 +44,7 @@ export default function TodoDetailScreen() {
             <ScrollView contentContainerStyle={st.body}>
               <View style={st.article}>
                 <Text style={st.title}>{t.type !== 'deadline' ? `[${TODO_TYPE_KO[t.type]}] ` : ''}{t.title}</Text>
-                <Row><DdayBadge dDay={t.d_day} />{t.due_date && <Text style={st.meta}>마감 {t.due_date}</Text>}</Row>
+                <Row><DdayBadge dDay={t.d_day} type={t.type} />{t.due_date && <Text style={st.meta}>마감 {t.due_date}</Text>}</Row>
                 <View style={st.rule} />
                 <View style={st.ai}>
                   <Text style={st.aiHead}>✨ 왜 나에게 해당하나요?</Text>

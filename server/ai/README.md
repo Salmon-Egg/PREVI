@@ -24,6 +24,5 @@ server/ai/
 | `reason.txt` | ⑥ 왜 나에게 해당하는지 |
 | `chat_router.txt` | ⑩ 의도 파악 |
 | `chat_answer.txt` | ⑪ 문서 근거 답변 |
-| `my_info_answer.txt` | ⑫ 내 상황 답변 |
 
 모델 파일(.gguf 등)은 깃허브에 올리지 않습니다.

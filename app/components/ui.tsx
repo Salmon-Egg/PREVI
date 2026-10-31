@@ -8,6 +8,7 @@ import { ActivityIndicator, Alert, Animated, Image, Linking, Modal, Platform, Sc
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ApiError } from '../lib/api';
+import { noDueText } from '../lib/format';
 import { color, gradient, gradientBg, webBlur } from '../lib/theme';
 import type { ChatCard } from '../lib/types';
 import { Pressable, Text } from './Text';
@@ -210,8 +211,8 @@ export function Badge({ label, tone = 'soft' }: { label: string; tone?: 'strong'
   );
 }
 
-export function DdayBadge({ dDay }: { dDay: number | null }) {
-  if (dDay === null) return <Badge label="마감 없음" />;
+export function DdayBadge({ dDay, type }: { dDay: number | null; type?: string }) {
+  if (dDay === null) return <Badge label={noDueText(type)} />;
   if (dDay < 0) return <Badge label="마감 지남" tone="bad" />;
   return <Badge label={dDay === 0 ? 'D-DAY' : `D-${dDay}`} tone={dDay <= 1 ? 'strong' : 'soft'} />;
 }

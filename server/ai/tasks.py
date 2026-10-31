@@ -3,6 +3,7 @@ AI가 실패해도 서비스가 멈추지 않게, 함수마다 문장 틀(템플
 import json
 import logging
 import re
+from datetime import datetime, timedelta, timezone
 
 from server.ai.client import ask_json
 from server.logic.schedule import DEFAULT_SEVERITY
@@ -213,16 +214,25 @@ def _amounts(text: str) -> set[str]:
     return {re.sub(r"\s", "", m) for m in re.findall(r"(?<![\d.])\d{1,3}\s*(?:년|학기|학점|개월)", text)}
 
 
+STILL_OPEN = re.compile(r"(마감|기한|기간)[^.\n]{0,10}(지나지\s*않|안\s*지났|남아|남았)|아직\s*(신청|마감)|마감\S{0,2}\s*없")
+
+
 def answer_from_docs(question: str, chunks: list[dict], student: dict | None = None) -> str | None:
     """⑪ 문서 근거 답변. 근거로 답할 수 없으면 None → '모른다' 처리."""
     if not chunks:
         return None
     docs = [c["content"] for c in chunks]
-    out = _ask("chat_answer", {"question": question, "student": student or {}, "documents": docs}) or {}
+    now = datetime.now(timezone(timedelta(hours=9)))
+    today = f"{now.year}년 {now.month}월 {now.day}일"
+    out = _ask("chat_answer", {"question": question, "today": today, "student": student or {}, "documents": docs}) or {}
     # 결론 + 요점 목록이라 문장 수는 넉넉히. 지시문을 어겨 "-"·"•"로 쓴 목록은 앱이 그리는 "· "로
     raw = out.get("answer")
     answer = _short(re.sub(r"(?m)^\s*[-•*]\s+", "· ", raw) if isinstance(raw, str) else raw, 220, sentences=4)
     if answer and NO_ANSWER.search(answer):  # 지시문으로 막아도 "문서에 명시되어 있지 않아요"를 씀: 코드의 '모른다' 문장으로
+        return None
+    # 마감을 모르는 공지에 "마감일이 없어서"라고 단정함(10/30 실측): 코드가 안 지났다고 표시한 근거가 있을 때만 허용
+    if answer and STILL_OPEN.search(answer) and not any("아직 안 지남" in d or d.startswith("[학사일정]") for d in docs):
+        log.warning("마감 단정이라 버림: %s", answer)
         return None
     # 없는 제도를 물어도 비슷한 문단으로 절차를 지어냄(10/31 실측): 숫자 검사로는 못 막아서 대상 이름을 대조
     if answer and not _subject_in_docs(out.get("subject"), docs):
@@ -234,7 +244,7 @@ def answer_from_docs(question: str, chunks: list[dict], student: dict | None = N
         log.warning("없다는 단정이라 버림: %s", answer)
         return None
     # 문서·질문·학생 정보에 없는 숫자가 답에 있으면 지어낸 것으로 보고 '모른다'로
-    if answer and not set(re.findall(r"\d+", answer)) <= set(re.findall(r"\d+", f"{question} {student} {' '.join(docs)}")):
+    if answer and not set(re.findall(r"\d+", answer)) <= set(re.findall(r"\d+", f"{question} {today} {student} {' '.join(docs)}")):
         log.warning("근거에 없는 숫자라 버림: %s", answer)
         return None
     # "통산 5년"을 "5학기"로 바꿔 답함(10/31 실측): 숫자만 보면 통과하므로 기간·학점은 단위까지 대조
@@ -242,12 +252,6 @@ def answer_from_docs(question: str, chunks: list[dict], student: dict | None = N
         log.warning("근거에 없는 단위라 버림: %s", answer)
         return None
     return answer or None
-
-
-def answer_my_info(question: str, facts: dict) -> str:
-    """⑫ 내 상황 답변. facts는 아침에 계산해 둔 결과."""
-    out = _ask("my_info_answer", {"question": question, "facts": facts}) or {}
-    return _short(out.get("answer"), 100) or facts.get("summary") or "내 정보를 정리했어요."
 
 
 # 지시문으로 "~요"만 쓰라고 해도 Kanana가 "~합니다"를 섞음(10/30 실측): 흔한 끝말만 코드로 바꿈
