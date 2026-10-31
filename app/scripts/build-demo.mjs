@@ -1,7 +1,7 @@
 // ▶ FE 6번에 해당하는 부분: 웹 내보내기 → 서버 없이 열리는 시연 사이트 (HTML 한 장)
 // 사용법 (app 폴더에서):  npm run build:demo
 // 결과: ../demo/index.html — 예시 데이터 모드라 서버 없이 모든 화면이 돌아감.
-//   · 더블클릭으로는 안 열리고(브라우저가 file:// 주소의 화면 이동을 막음) ../demo/시연_사이트_열기.bat 으로 열기
+//   · 더블클릭으로는 안 열림(브라우저가 file:// 주소의 화면 이동을 막음). 정적 서버로 열기
 //   · 정적 호스팅(Vercel, GitHub Pages, Netlify 등)에 index.html 하나만 올려도 됨
 import { execSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
