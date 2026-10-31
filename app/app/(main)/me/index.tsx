@@ -12,7 +12,7 @@ import { Pressable, Text } from '../../../components/Text';
 import { Button, confirmAsk, Screen, showAlert, StateView } from '../../../components/ui';
 import { api, attempt, ApiError, useApi, useSubmit } from '../../../lib/api';
 import { changePassword, PASSWORD_MIN } from '../../../lib/auth';
-import { BRIEF_TIMES, HALF_HOURS, QUIET_CUSTOM } from '../../../lib/constants';
+import { HALF_HOURS, QUIET_CUSTOM } from '../../../lib/constants';
 import { setDisplay, useDisplay } from '../../../lib/display';
 import { logout } from '../../../lib/session';
 import { color, gradient, gradientBg } from '../../../lib/theme';
@@ -111,8 +111,9 @@ export default function MyPage() {
               <Item title="현재 앱 버전" right={<Text style={st.value}>v{Constants.expoConfig?.version ?? '1.0.0'}</Text>} />
             </Section>
 
-            <OptionSheet visible={picker === 'time'} onClose={() => setPicker(null)} title="마감 임박 및 브리핑 알림"
-              value={me.notify.time} items={BRIEF_TIMES} label={timeLabel} onChange={(time) => setNotify({ time })} />
+            {picker === 'time' && (
+              <TimeSheet value={me.notify.time} onClose={() => setPicker(null)} onSave={(time) => setNotify({ time })} />
+            )}
             {/* '직접 입력'을 고르면 목록 창이 닫히면서 시각 고르는 창이 열림 (닫기가 그 창을 닫지 않게 'quiet'일 때만 닫음) */}
             <OptionSheet visible={picker === 'quiet'} onClose={() => setPicker((p) => (p === 'quiet' ? null : p))} title="방해 금지 시간"
               value={me.notify.quiet ?? ''} items={['', QUIET_CUSTOM]} label={quietLabel}
@@ -126,6 +127,19 @@ export default function MyPage() {
       <PasswordSheet visible={picker === 'password'} onClose={() => setPicker(null)} />
       <LegalSheet doc={picker === 'terms' || picker === 'privacy' ? picker : null} onClose={() => setPicker(null)} />
     </Screen>
+  );
+}
+
+/** 마감 임박 및 브리핑 알림 시각 직접 입력 */
+function TimeSheet({ value, onClose, onSave }: { value: string; onClose: () => void; onSave: (time: string) => void }) {
+  const [time, setTime] = useState(value);
+  return (
+    <Sheet visible onClose={onClose} title="마감 임박 및 브리핑 알림 직접 입력" sub="이 시각부터 알림을 보내요">
+      <Label>시각</Label>
+      <Select value={time} items={HALF_HOURS} label={timeLabel} onChange={setTime} title="시각" />
+      <View style={{ height: 4 }} />
+      <Button label="저장하기" onPress={() => { onSave(time); onClose(); }} />
+    </Sheet>
   );
 }
 

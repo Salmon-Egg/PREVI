@@ -11,8 +11,6 @@ export const STATUSES: Status[] = ['enrolled', 'leave', 'returned'];
 /** 입학연도 고르기: 2015년부터 올해까지 (해가 바뀌면 자동으로 늘어남) */
 export const ADMISSION_YEARS = Array.from({ length: new Date().getFullYear() - 2015 + 1 }, (_, i) => 2015 + i);
 
-/** 브리핑 받을 시각 (마이, 비서 설정) */
-export const BRIEF_TIMES = ['07:00', '08:00', '09:00', '12:00', '18:00', '21:00'];
-/** 방해 금지 시간 (마이페이지): '' = 끔, 아니면 '직접 입력'으로 시작·끝 시각을 30분 단위로 고름 */
+/** 방해 금지 시간 (마이페이지): '' = 끔, 아니면 '직접 입력'으로 시작·끝 시각을 30분 단위로 고름. 브리핑 시각도 HALF_HOURS에서 고름 */
 export const QUIET_CUSTOM = '직접 입력';
 export const HALF_HOURS = Array.from({ length: 48 }, (_, i) => `${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`);
