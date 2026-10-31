@@ -1,6 +1,8 @@
 """POST /chat: 가짜 AI + 가짜 Supabase로 흐름 확인 (문서 근거 답 / 근거 없으면 '모른다' + 기록)."""
+import asyncio
 import json
 from datetime import date
+from types import SimpleNamespace
 from uuid import uuid4
 
 import httpx
@@ -211,6 +213,93 @@ def test_many_questions_answered_one_by_one(monkeypatch):
     text = res.json()["message"]["text"]
     assert text.startswith("① 휴학 기간은 최대 몇 학기야") and "② 복학 신청은 언제 해" in text and "③ 학식 메뉴는" in text
     assert "나머지 1개 질문" in text
+
+
+def test_deadline_note_uses_kst_and_never_says_no_deadline():
+    note = chat_route._deadline_note
+    assert note("2099-11-10T14:59:00+00:00") == "마감 2099년 11월 10일 23:59, 아직 안 지남"
+    assert note("2020-11-16T09:00:00+00:00") == "마감 2020년 11월 16일 18:00, 이미 지남"
+    assert note(None) == "마감일 확인 필요"
+
+
+def test_expired_notice_is_told_first(monkeypatch):
+    notice = {"title": "두을장학생 선발", "summary": [], "body": "두을장학생 선발 신청", "url": "https://example.com/n/2", "deadline": "2020-09-30T14:59:00+00:00"}
+    res, _ = run_chat(monkeypatch, "이거 신청 방법 알려줘", [], {"kind": "notice", "id": 2}, notices=[notice])
+    msg = res.json()["message"]
+    assert msg["text"].startswith("이 공지는 마감이 지났어요.")
+    assert msg["sources"] == [{"title": "두을장학생 선발", "url": "https://example.com/n/2"}]
+
+
+def test_undated_notice_cannot_be_called_open(monkeypatch):
+    monkeypatch.setattr(tasks, "_ask", lambda *a, **k: {"subject": None, "answer": "마감일이 지나지 않았으니 신청하세요."})
+    assert tasks.answer_from_docs("신청돼?", [{"content": "[공지] 인재육성 장학생 (마감일 확인 필요)\n선발 안내"}]) is None
+    assert tasks.answer_from_docs("신청돼?", [{"content": "[공지] 인재육성 장학생 (마감 2099년 1월 1일 23:59, 아직 안 지남)"}])
+
+
+TITLES = [{"id": 57, "title": "2027년도 대산농촌재단 장학생 선발 안내"}, {"id": 47, "title": "2026년도 통영시 저소득 대학생 장학금 지원대상자 선발 안내"},
+          {"id": 3, "title": "2026학년도 2학기 학점포기 신청 안내"}, {"id": 17, "title": "2026학년도 동계계절학기 학점교류대학 수강신청 안내"},
+          {"id": 29, "title": "2026학년도 2학기 전과, 재입학 발표안내"}]
+
+
+@pytest.mark.parametrize("q, found", [
+    ("대산농촌재단 장학금 마감 언제야?", 57), ("대산농촌재단 아직 신청할 수 있어?", 57), ("통영시 장학금 서류 뭐 내야 돼?", 47), ("학점포기 언제까지야?", 3),
+    ("수강신청 언제야?", None), ("계절학기 몇 학점까지 들어?", None), ("전과 조건 알려줘", None), ("휴학 신청 언제야?", None), ("나 장학금 받을 수 있어?", None), ("성적우수 장학금 조건이 뭐야?", None)])
+def test_pick_notice_by_name_only(q, found):
+    hit = chat_route._pick_notice(TITLES, q)
+    assert (hit and hit["id"]) == found
+
+
+def test_chat_finds_named_notice_without_context(monkeypatch):
+    notice = {"id": 57, "title": TITLES[0]["title"], "summary": [], "body": "대산농촌재단 장학생 선발. 접수 기간 2099-11-11까지", "url": "https://example.com/57", "deadline": "2099-11-11T14:59:00+00:00"}
+    res, saved = run_chat(monkeypatch, "대산농촌재단 장학금 마감 언제야?", [], notices=[notice])
+    msg = res.json()["message"]
+    assert "2099" in msg["text"] and msg["sources"] == [{"title": notice["title"], "url": notice["url"]}]
+    assert not any(t == "unanswered_questions" for _, t, _ in saved)
+
+
+def test_follow_up_keeps_named_notice(monkeypatch):
+    notice = {"id": 57, "title": TITLES[0]["title"], "summary": [], "body": "대산농촌재단 장학생 선발. 제출서류 신청서", "url": "https://example.com/57", "deadline": None}
+    res, _ = run_chat(monkeypatch, "그럼 서류는?", [], notices=[notice], history=[{"text": "대산농촌재단 장학금 언제까지야?", "id": 1}])
+    assert res.json()["message"]["sources"][0]["url"] == "https://example.com/57"
+
+
+def test_notice_list_shows_open_notices_with_sources(monkeypatch):
+    rows = [{"title": "강의평가 안내", "url": "https://example.com/4", "deadline": "2099-11-02T14:59:00+00:00", "target": {}},
+            {"title": "교원 초빙", "url": "https://example.com/9", "deadline": "2099-11-03T14:59:00+00:00", "target": {"statuses": ["staff"]}}]
+    res, _ = run_chat(monkeypatch, "최근 공지 뭐 있어?", [], notices=rows)
+    msg = res.json()["message"]
+    assert "강의평가 안내: 2099년 11월 2일까지" in msg["text"] and "교원 초빙" not in msg["text"]
+    assert msg["sources"] == [{"title": "강의평가 안내", "url": "https://example.com/4"}]
+
+
+def _my_info(monkeypatch, topic, tables):
+    calls = []
+    async def fake_rows(request, method, table, **kw):
+        calls.append((table, kw["params"]))
+        return tables.get(table, [])
+    monkeypatch.setattr(chat_route, "database_rows", fake_rows)
+    monkeypatch.setattr(tasks, "_ask", lambda *a, **k: pytest.fail("내 정보 답변은 AI를 안 부름"))
+    return asyncio.run(chat_route._my_info(None, SimpleNamespace(id=USER_ID), {"department": "소프트웨어학과"}, topic)), calls
+
+
+def test_my_todos_have_sources_and_skip_overdue(monkeypatch):
+    todos = [{"title": "인재육성 장학생", "due_date": None, "source_id": 66}, {"title": "책 반납", "due_date": None, "source_id": None},
+             {"title": "강의평가", "due_date": "2099-11-02", "source_id": 4}]
+    notices = [{"title": "인재육성 장학생", "url": "https://example.com/66"}, {"title": "강의평가", "url": "https://example.com/4"}]
+    reply, calls = _my_info(monkeypatch, "todo", {"todos": todos, "notices": notices})
+    assert "인재육성 장학생: 마감일 확인 필요" in reply["text"] and "책 반납: 마감 없음" in reply["text"] and "2099년 11월 2일까지" in reply["text"]
+    assert reply["sources"] == notices
+    params = dict(calls)
+    assert params["todos"]["or"].startswith("(due_date.gte.") and params["notices"]["id"] == "in.(66,4)"
+
+
+def test_my_scholarships_have_sources_and_links(monkeypatch):
+    async def fake_scholarships(request, user):
+        return [{"title": "인재육성 장학생", "verdict": "check", "deadline": None, "url": "https://example.com/66", "applied": False, "reasons": []}]
+    monkeypatch.setattr(chat_route, "scholarship_rows", fake_scholarships)
+    reply, _ = _my_info(monkeypatch, "scholarship", {})
+    assert reply["sources"] == [{"title": "인재육성 장학생", "url": "https://example.com/66"}]
+    assert reply["cards"][0]["lines"] == ["확인 필요", "마감일 확인 필요"] and reply["cards"][0]["link"] == "https://example.com/66"
 
 
 def test_chat_scholarship_cards_skip_regional_and_put_eligible_first():

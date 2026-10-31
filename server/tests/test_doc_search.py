@@ -109,7 +109,8 @@ def test_graduation_answer_written_by_code(monkeypatch):
                 "requirements": [{"name": "아주 긴 요건 이름 " * 20, "done": None}, {"name": "캡스톤", "done": True}]}
     monkeypatch.setattr(chat, "graduation_result", result)
     monkeypatch.setattr(tasks, "_ask", lambda *a, **k: pytest.fail("AI를 부르면 안 됨"))
-    out = asyncio.run(chat._my_info(None, None, {"grade": 4}, "graduation", "졸업 요건이 뭐야?"))
+    out = asyncio.run(chat._my_info(None, None, {"department": "소프트웨어학과"}, "graduation"))
+    assert out["sources"][0]["title"] == "소프트웨어학과 졸업요건"
     assert out["text"].split("\n") == ["졸업에 필요한 총 학점은 다 채웠어요.", "· 지금 120학점 / 필요 120학점",
                                        "· 학점 외에 확인할 요건 1가지가 더 있어요", "· 최종 졸업 여부는 서경포탈과 학과에서 확인해 주세요"]
     assert out["actions"][0]["label"] == "졸업 요건 자세히"

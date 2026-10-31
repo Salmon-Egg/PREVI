@@ -65,13 +65,16 @@ export const oneLine = (s: string) => s.replace(/\s+/g, ' ').trim();
 /** "2026.09.15" */
 export const dotDate = (iso: string) => iso.slice(0, 10).replaceAll('-', '.');
 
+/** 마감일이 빈 할 일: 장학은 공지에서 온 것이라 마감을 못 읽은 것 (대개 첨부에 있음). 지난 건지 모르니 '없음'이라 하지 않음 */
+export const noDueText = (type?: string) => (type === 'scholarship' ? '마감일 확인 필요' : '마감 없음');
+
 /** 마감 문구: "오늘 18:00 마감!" / "D-12 (11/04까지)" */
 export function deadlineText(iso: string | null) {
-  if (!iso) return '마감 없음';
+  if (!iso) return '확인 필요';
   const due = new Date(iso);
   const today = new Date();
   const days = Math.round((new Date(due.toDateString()).getTime() - new Date(today.toDateString()).getTime()) / 864e5);
-  const hhmm = iso.slice(11, 16);
+  const hhmm = due.toTimeString().slice(0, 5); // 서버는 UTC로 줌: 글자를 그대로 자르면 23:59가 14:59로 보임
   if (days === 0) return `오늘 ${hhmm} 마감!`;
   if (days < 0) return `마감 지남 (${due.getMonth() + 1}/${due.getDate()}(${WEEKDAYS[due.getDay()]}))`; // 'D--30'처럼 나오지 않게
   return `D-${days} (${due.getMonth() + 1}/${due.getDate()}(${WEEKDAYS[due.getDay()]})까지)`;

@@ -25,7 +25,7 @@ export default function TodoList() {
         {list.map((t) => (
           <Card key={t.id} onPress={() => router.push(`/todos/${t.id}`)}>
             <Row>
-              <DdayBadge dDay={t.d_day} />
+              <DdayBadge dDay={t.d_day} type={t.type} />
               {t.type !== 'deadline' && <Badge label={TODO_TYPE_KO[t.type]} tone="soft" />}
               <View style={{ flex: 1 }} />
               <Feather name="chevron-right" size={18} color={color.inkSub} />

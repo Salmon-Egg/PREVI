@@ -12,7 +12,7 @@ import { Pressable, Text } from '../../components/Text';
 import { StateView } from '../../components/ui';
 import { useApi } from '../../lib/api';
 import { WEEKDAYS } from '../../lib/constants';
-import { oneLine } from '../../lib/format';
+import { noDueText, oneLine } from '../../lib/format';
 import { onPushReceived } from '../../lib/push';
 import { color } from '../../lib/theme';
 import type { Home as HomeData, Me, Notification, Todo } from '../../lib/types';
@@ -47,7 +47,7 @@ const MASCOT = { ratio: 241 / 400, h: 0.55, centerX: 0.73, bookBottom: 292 / 400
 /** "오늘 마감" 또는 "10/15(목)까지" */
 function dueText(t: Todo) {
   if (t.d_day === 0) return '오늘 마감';
-  if (!t.due_date) return '마감 없음';
+  if (!t.due_date) return noDueText(t.type);
   const d = new Date(t.due_date + 'T00:00:00');
   return `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})까지`;
 }

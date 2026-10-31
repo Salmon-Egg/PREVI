@@ -68,7 +68,7 @@ def client_for(grade=2, records=None, db_failure=False, with_data=False):
             if request.url.params["select"] == "id": return httpx.Response(200, json=[{"id":1}] if with_data else [])
             assert request.url.params["notice.category"] == "eq.장학"
             if request.url.params["offset"] != "0": return httpx.Response(200, json=[])
-            return httpx.Response(200, json=[{"verdict":"eligible","reasons":["조건 확인"],"notice":{"id":7,"title":"장학","deadline":None}}] if with_data else [])
+            return httpx.Response(200, json=[{"verdict":"eligible","reasons":["조건 확인"],"notice":{"id":7,"title":"장학","deadline":None,"url":None}}] if with_data else [])
         if table == "scholarship_applications":
             assert request.url.params["user_id"] == "eq." + USER_ID
             return httpx.Response(200, json=[])

@@ -10,7 +10,7 @@ async def scholarship_rows(request: Request, user: AuthenticatedUser):
     matches = []
     while True:
         page = await database_rows(request, "GET", "eligibility", params={"user_id": f"eq.{user.id}",
-            "select": "verdict,reasons,notice:notices!inner(id,title,deadline)", "notice.category": "eq.장학",
+            "select": "verdict,reasons,notice:notices!inner(id,title,deadline,url)", "notice.category": "eq.장학",
             "order": "notice(deadline).asc.nullslast,id.asc", "limit": 100, "offset": len(matches)})
         matches.extend(page)
         if not page:
@@ -23,7 +23,7 @@ async def scholarship_rows(request: Request, user: AuthenticatedUser):
         if not page:
             break
     applied = {row["notice_id"] for row in applications}
-    return [{"notice_id": row["notice"]["id"], "title": row["notice"]["title"], "deadline": row["notice"]["deadline"],
+    return [{"notice_id": row["notice"]["id"], "title": row["notice"]["title"], "deadline": row["notice"]["deadline"], "url": row["notice"]["url"],
              "verdict": row["verdict"], "reasons": row["reasons"], "applied": row["notice"]["id"] in applied} for row in matches]
 
 

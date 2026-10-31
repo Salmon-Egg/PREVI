@@ -48,7 +48,7 @@ export default function GraduationDetail() {
             {deadlines.data?.length ? deadlines.data.map((t) => (
               <Card key={t.id} onPress={() => router.push(`/todos/${t.id}`)}>
                 <Row>
-                  <DdayBadge dDay={t.d_day} />
+                  <DdayBadge dDay={t.d_day} type={t.type} />
                   <Body style={{ flex: 1, fontWeight: '700' }}>{t.title}</Body>
                 </Row>
                 {t.due_date && <Sub>마감 {t.due_date}</Sub>}
