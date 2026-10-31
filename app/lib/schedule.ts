@@ -1,15 +1,10 @@
 // ▶ FE 22번에 해당하는 부분: L-7 시간 중복·학점 초과 검사 (앱에서 먼저 막고, 저장할 때 서버가 한 번 더 확인)
 // 서버 server/logic/schedule.py와 같은 규칙으로 맞춰야 함
-import { periodsOf } from './format';
+import { periodsOf, toMin } from './format';
 import type { ClassTime, TimetableEntry } from './types';
 
 /** 한 학기 최대 신청 학점. ⚠️ 학칙 기준(학년·직전 평점에 따라 다를 수 있음)은 BE와 확인 필요 */
 export const CREDIT_LIMIT = 21;
-
-const toMin = (hhmm: string) => {
-  const [h, m] = hhmm.split(':').map(Number);
-  return h * 60 + m;
-};
 
 /** 두 수업 시간이 겹치는 부분. 안 겹치면 null */
 function overlap(a: ClassTime, b: ClassTime): ClassTime | null {

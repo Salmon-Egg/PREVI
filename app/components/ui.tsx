@@ -9,7 +9,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { ApiError } from '../lib/api';
 import { color, gradient, gradientBg, webBlur } from '../lib/theme';
-import type { ChatCard, Verdict } from '../lib/types';
+import type { ChatCard } from '../lib/types';
 import { Pressable, Text } from './Text';
 
 const web = Platform.OS === 'web';
@@ -214,13 +214,6 @@ export function DdayBadge({ dDay }: { dDay: number | null }) {
   if (dDay === null) return <Badge label="마감 없음" />;
   if (dDay < 0) return <Badge label="마감 지남" tone="bad" />;
   return <Badge label={dDay === 0 ? 'D-DAY' : `D-${dDay}`} tone={dDay <= 1 ? 'strong' : 'soft'} />;
-}
-
-export const VERDICT_KO: Record<Verdict, string> = { eligible: '신청 가능', check: '확인 필요', ineligible: '조건 미충족' };
-
-export function VerdictBadge({ verdict }: { verdict: Verdict }) {
-  const tone = verdict === 'eligible' ? 'strong' : verdict === 'check' ? 'warn' : 'bad';
-  return <Badge label={VERDICT_KO[verdict]} tone={tone} />;
 }
 
 export function Sources({ items }: { items: { title: string; url: string | null }[] }) {

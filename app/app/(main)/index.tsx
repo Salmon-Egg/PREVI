@@ -12,6 +12,7 @@ import { Pressable, Text } from '../../components/Text';
 import { StateView } from '../../components/ui';
 import { useApi } from '../../lib/api';
 import { WEEKDAYS } from '../../lib/constants';
+import { oneLine } from '../../lib/format';
 import { onPushReceived } from '../../lib/push';
 import { color } from '../../lib/theme';
 import type { Home as HomeData, Me, Notification, Todo } from '../../lib/types';
@@ -276,7 +277,7 @@ function EventCard({ e, open }: { e: NonNullable<HomeData['next_event']>; open: 
       <View style={[st.eventIcon, { backgroundColor: EVENT_TONE.tint }]}><MaterialCommunityIcons name="calendar-star" size={34} color={EVENT_TONE.tone} /></View>
       <View style={{ flex: 1, gap: 3 }}>
         <Text style={st.eventLabel}>다음 일정 · {e.d_day === 0 ? '오늘' : `D-${e.d_day}`}</Text>
-        <Text style={st.eventTitle} numberOfLines={1}>{e.title}</Text>
+        <Text style={st.eventTitle} numberOfLines={1}>{oneLine(e.title)}</Text>
         <Text style={st.eventDate}>{d.getMonth() + 1}/{d.getDate()}({WEEKDAYS[d.getDay()]})</Text>
         <Text style={st.eventSub}>다가오는 학사 일정이에요.</Text>
       </View>
@@ -355,10 +356,11 @@ function TodoRow({ t, open }: { t: Todo; open: (href: Href) => void }) {
           {t.d_day === null ? '-' : t.d_day === 0 ? 'D-DAY' : `D-${t.d_day}`}
         </Text>
       </View>
-      <View style={{ flex: 1, gap: 4 }}>
+      {/* minWidth 0: 긴 제목이 줄어들 수 있게 → 오른쪽 › 가 밀려나지 않음 */}
+      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
         <View style={st.row}>
           <MaterialCommunityIcons name="calendar-check-outline" size={15} color={HOME_INK.muted} />
-          <Text style={[st.todoTitle, { flex: 1 }]} numberOfLines={1}>{t.title}</Text>
+          <Text style={[st.todoTitle, { flex: 1 }]} numberOfLines={1}>{oneLine(t.title)}</Text>
         </View>
         <Text style={st.todoDue}>{dueText(t)}</Text>
       </View>

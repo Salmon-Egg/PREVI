@@ -3,7 +3,8 @@ import type { ClassTime, GradeTerm } from './types';
 import { WEEKDAYS } from './constants';
 
 
-const toMin = (hhmm: string) => {
+/** 'HH:MM' → 0시부터 지난 분 */
+export const toMin = (hhmm: string) => {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
 };
@@ -56,6 +57,10 @@ export function ddayOf(date: string) {
   const today = new Date();
   return Math.round((new Date(date + 'T00:00:00').getTime() - new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime()) / 864e5);
 }
+
+/** 한 줄로 보일 제목: 줄바꿈·탭·특수 공백(수집한 공지 제목에 섞여 옴)을 띄어쓰기 하나로.
+ *  안드로이드는 줄바꿈이 섞인 글자를 한 줄 말줄임(…)하지 못하고 옆 칸(›)까지 밀어냄 (10/31 실기기) */
+export const oneLine = (s: string) => s.replace(/\s+/g, ' ').trim();
 
 /** "2026.09.15" */
 export const dotDate = (iso: string) => iso.slice(0, 10).replaceAll('-', '.');

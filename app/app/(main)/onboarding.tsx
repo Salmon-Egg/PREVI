@@ -11,12 +11,11 @@ import { Body, Button, Card, Character, Screen, Sub, Title } from '../../compone
 import { api, ApiError } from '../../lib/api';
 import { signupName } from '../../lib/auth';
 import { registerPush } from '../../lib/push';
-import { STATUSES } from '../../lib/constants';
+import { ADMISSION_YEARS, STATUSES } from '../../lib/constants';
 import { color, gradient, gradientBg } from '../../lib/theme';
 import { STATUS_KO, type Status } from '../../lib/types';
 
 // 옛 학과 이름(2017~2024 입학)도 고를 수 있게 넉넉히. 입학연도는 학과 목록의 추천 정렬에 씀
-const YEARS = [2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026];
 const STEPS = 3;
 
 function Choice<T extends string | number>({ items, value, onChange, label = (v: T) => String(v) }: {
@@ -82,7 +81,7 @@ export default function Onboarding() {
           <Sub>비서가 나에게 해당하는 공지·장학금·졸업 요건을 고르는 데 써요.</Sub>
           {/* 학과가 많아서 버튼 대신 목록에서 고름 */}
           {/* 입학연도를 먼저 받아서 학과 목록에서 그 학번에 맞는 학과를 위로 올림 */}
-          <Body>입학년도</Body><Choice items={YEARS} value={year} onChange={setYear} />
+          <Body>입학년도</Body><Choice items={ADMISSION_YEARS} value={year} onChange={setYear} />
           <Body>학과</Body><DeptPicker value={dept} year={year} onChange={setDept} title="학과" />
           <Body>복수 / 부전공</Body><MinorPicker value={minor} year={year} onChange={setMinor} />
           <Body>학년</Body><Choice items={[1, 2, 3, 4]} value={grade} onChange={setGrade} label={(v) => `${v}학년`} />
