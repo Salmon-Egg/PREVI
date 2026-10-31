@@ -1,3 +1,6 @@
+import json
+from pathlib import Path
+
 import pytest
 
 from server.scripts.prepare_linux_services import render_units, write_units
@@ -15,6 +18,14 @@ def test_services_use_project_venv_and_shared_nonblocking_job_lock():
             assert '/usr/bin/flock -n -E 0 %t/previ-jobs.lock ' in value
     assert '--host 127.0.0.1' in units['previ-api.service']
     assert 'Restart=on-failure' in units['previ-api.service']
+    assert '--log-config server/log_config.json' in units['previ-api.service']
+
+
+def test_api_log_keeps_30_days_and_no_chat_text():
+    config = json.loads((Path(__file__).parents[1]/'log_config.json').read_text(encoding='utf-8'))
+    assert config['handlers']['file']['when'] == 'midnight'
+    assert config['handlers']['file']['backupCount'] == 29  # 오늘 파일 + 지난 29일
+    assert config['root']['level'] == 'WARNING'  # chat의 INFO 로그에는 질문 앞부분이 있음
 
 
 def test_schedules_are_explicit_korean_time_and_do_not_catch_up_unexpectedly():
