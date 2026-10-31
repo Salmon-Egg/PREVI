@@ -96,7 +96,7 @@ systemctl status ollama      # 설치 스크립트가 자동 실행 서비스로
 |---|---|---|---|---|
 | 대화 (공지 정리·분류·답변) | `kanana` | Kanana 1.5 8B Instruct 2505, Q4_K_M 양자화 GGUF `hf.co/mradermacher/kanana-1.5-8b-instruct-2505-GGUF:Q4_K_M` + 대화 형식 Modelfile | 4.9GB | `kanana:latest` = `4aa77ba74048` (원본 GGUF `5b8e04e58d79`) |
 | 임베딩 (문서 검색) | `embeddinggemma-cpu` (8GB GPU) / `embeddinggemma:300m` (12GB 이상) | EmbeddingGemma 300M, 768차원 | 621MB | `embeddinggemma:300m` = `85462619ee72`, `embeddinggemma-cpu` = `f3655cae28a9` |
-| 이미지 | `gemma3:4b` (`.env`에만 있음) | **현재 사용 안 함.** 분실물 기능이 FE mvp3에서 빠져 코드가 이 값을 읽지 않음. 받지 않아도 됨 | — | — |
+| 이미지 | `gemma3:4b` | **제출 전 중단(10/31): `VISION_MODEL`·`NOTICE_OCR_DIR` 비움. 다시 켜지 말 것.** 숫자·날짜 오독이 남음. [공지 사진 OCR](공지_사진_OCR_20261031.md) | — | — |
 
 - 원본: 카카오 공식 `kakaocorp/kanana-1.5-8b-instruct-2505` (Apache-2.0). 받은 GGUF는 mradermacher가 변환한 비공식 파일.
 - EmbeddingGemma는 Gemma 이용약관 적용. 라이선스 기록은 [03_기술_구조.md](03_기술_구조.md).
@@ -164,7 +164,8 @@ watch -n 1 nvidia-smi            # 질문을 보내는 동안 GPU-Util이 올라
 | `AI_BASE_URL` | Ollama 주소 (OpenAI 형식 `/v1`) | — |
 | `CHAT_MODEL` | 대화 모델 이름 | — |
 | `EMBED_MODEL` | 임베딩 모델 이름. 비우면 벡터 검색 대신 글자 검색 | — |
-| `VISION_MODEL` | 이미지 모델. 지금 코드는 안 씀 | — |
+| `VISION_MODEL` | 공지 사진·성적증명서 사진 읽기. 비우면 사진은 안 읽음. 제출 전 비워 둠 | 비움 |
+| `NOTICE_OCR_DIR` | 공지 사진 CPU OCR 경로. 제출 전 비워 둠 | 비움 |
 | `DOC_MAX_DISTANCE` | 문서 검색 거리 기준. 질문과 문단의 거리가 이보다 크면 근거로 안 쓰고 "모른다". 비우면 거르지 않음 | — |
 | `PUSH_ENABLED` | `true`일 때만 실제 휴대폰 푸시(Expo) 전송. 기본 `false` = 앱 안 알림만 | — |
 | `EXPO_ACCESS_TOKEN` | Expo 푸시 접근 토큰 (선택) | **예** |
@@ -191,7 +192,8 @@ AI_FAKE=0
 AI_BASE_URL=http://127.0.0.1:11434/v1
 CHAT_MODEL=kanana
 EMBED_MODEL=embeddinggemma-cpu      # 학교 서버가 12GB 이상이면 embeddinggemma:300m
-VISION_MODEL=gemma3:4b              # 안 씀
+VISION_MODEL=                       # 제출 전 비움. 사진 오독이 남아 켜지 말 것
+NOTICE_OCR_DIR=                     # 제출 전 비움
 DOC_MAX_DISTANCE=0.62
 PUSH_ENABLED=false
 EXPO_PUBLIC_API_URL=http://localhost:8000

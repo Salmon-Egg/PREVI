@@ -4,6 +4,7 @@ import base64
 import httpx
 from fastapi.testclient import TestClient
 
+from server.ai import tasks
 from server.config import Settings
 from server.jobs import attachments
 from server.logic.eligibility import judge
@@ -118,6 +119,20 @@ def test_transcript_upload_previews_without_saving(monkeypatch):
     with client_for([{"admission_year": 2024}]) as client:
         res = client.post("/grades/from-file", headers=HEADERS, json={"content_base64": PNG})
     assert res.status_code == 200 and res.json()["items"][0]["term"] == "1-1"
+
+
+def test_photo_transcript_says_unavailable_when_reader_off(monkeypatch):
+    monkeypatch.setattr(grades_route.ai_client, "AI_FAKE", False)
+    monkeypatch.setattr(grades_route.ai_client, "VISION_MODEL", "")
+    with client_for([{"admission_year": 2024}]) as client:
+        res = client.post("/grades/from-file", headers=HEADERS, json={"content_base64": PNG})
+    assert res.status_code == 503 and res.json()["error"]["code"] == "IMAGE_READER_UNAVAILABLE"
+
+
+def test_condition_out_of_range_needs_check():
+    out = tasks.clean_conditions({"min_gpa": 90, "income_max": 468, "min_credits": 12, "unknown": ["국적"]})
+    assert out == {"min_credits": 12, "unknown": ["성적 기준은 원문 확인 필요", "소득 구간 기준은 원문 확인 필요", "국적"]}
+    assert tasks.clean_conditions({"min_gpa": 4.5, "income_max": 8}) == {"min_gpa": 4.5, "income_max": 8}
 
 
 def test_transcript_upload_errors(monkeypatch):

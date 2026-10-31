@@ -28,6 +28,7 @@ PROCEDURE_WORDS = ("이중수혜", "문의", "접수", "제출", "면접", "방�
 # 학생이 신청할 게 아닌 공지. "교원자격"·"교직이수"는 학생 공지라 '교원'·'교직' 낱말 하나로는 거르지 않음
 NOT_FOR_STUDENTS = re.compile(r"폐강|교직원|(교수|교원|강사|직원)\s*(초빙|채용|모집|대상|공모)")
 STATUS = {"enrolled": "enrolled", "leave": "leave", "returned": "returned", "재학생": "enrolled", "휴학생": "leave", "복학생": "returned"}
+CONDITION_MAX = {"min_gpa": (4.5, "성적 기준은 원문 확인 필요"), "income_max": (10, "소득 구간 기준은 원문 확인 필요")}
 
 
 def summarize_notice(title: str, body: str, *, strict=False) -> dict:
@@ -79,17 +80,21 @@ def clean_target(t) -> dict:
 def clean_conditions(c) -> dict:
     """숫자가 아니면 버림. 글자("3.0")가 그대로 가면 대조 코드의 >= 비교에서 서버가 멈춤."""
     c = c if isinstance(c, dict) else {}
-    out = {}
+    out, odd = {}, []
     for key, cast in (("min_gpa", float), ("min_credits", int), ("income_max", int)):
         try:
             if c.get(key) is not None and float(c[key]) > 0:  # 0은 AI가 '없음' 대신 쓴 값
-                out[key] = cast(float(c[key]))
+                # 백분위 90을 평점으로 읽으면(10/31 공지 51) 모든 학생이 조건 미충족이 됨 → 확인 필요로
+                if key in CONDITION_MAX and float(c[key]) > CONDITION_MAX[key][0]:
+                    odd.append(CONDITION_MAX[key][1])
+                else:
+                    out[key] = cast(float(c[key]))
         except (TypeError, ValueError):
             log.warning("공지 조건 %s 무시: %r", key, c[key])
     # 칸에 못 넣은 조건: 판정 코드가 보고 '확인 필요'로 돌림 (조용히 버리면 '신청 가능'으로 잘못 뜸)
     # shortcut: 신청 절차 문장은 낱말로 거름. 진짜 자격 조건이 걸러지는 일이 보이면 지시문 쪽에서 고치기
-    unknown = [s for s in (str(u).strip() for u in c.get("unknown") or [] if u)
-               if s and not any(w in s for w in PROCEDURE_WORDS)]
+    unknown = odd + [s for s in (str(u).strip() for u in c.get("unknown") or [] if u)
+                     if s and not any(w in s for w in PROCEDURE_WORDS)]
     if unknown:
         out["unknown"] = unknown
     return out

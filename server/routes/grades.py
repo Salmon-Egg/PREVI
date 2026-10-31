@@ -48,6 +48,8 @@ def _transcript_text(data: bytes) -> str:
         except (PdfReadError, ValueError, OSError):
             raise APIError(400, "INVALID_FILE", "파일을 읽을 수 없어요. PDF인지 확인해 주세요.") from None
     mime = image_type(data)  # 사진이 아니면 여기서 400
+    if not ai_client.AI_FAKE and not ai_client.VISION_MODEL:  # 빈 글자로 넘어가면 '성적을 찾지 못했어요'로 잘못 안내함
+        raise APIError(503, "IMAGE_READER_UNAVAILABLE", "지금은 사진을 읽을 수 없어요. PDF로 올려 주세요.")
     try:
         return ai_client.read_image(data, mime)
     except Exception:  # 비전 모델 꺼짐·시간 초과 등. 파일 내용이 로그에 남지 않게 종류만 묶어 안내
@@ -67,7 +69,8 @@ async def grades_from_file(body: TranscriptInput, request: Request, user: Authen
     text = await run_in_threadpool(_transcript_text, data)
     items, dropped = clean_courses(await run_in_threadpool(tasks.read_transcript, text), rows[0]["admission_year"])
     if not items:
-        raise APIError(400, "TRANSCRIPT_EMPTY", "성적을 찾지 못했어요. 글자가 선명한 파일인지 확인해 주세요. 스캔한 PDF는 사진으로 올려 주세요.")
+        scanned = " 스캔한 PDF는 사진으로 올려 주세요." if ai_client.VISION_MODEL else " 스캔한 PDF는 읽을 수 없어요."
+        raise APIError(400, "TRANSCRIPT_EMPTY", "성적을 찾지 못했어요. 글자가 선명한 파일인지 확인해 주세요." + scanned)
     return {"items": items, "dropped": dropped}
 
 
