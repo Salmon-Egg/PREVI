@@ -1,6 +1,8 @@
 """학사요람 PDF → 문단 → documents/doc_chunks → 임베딩. Supabase에 서버 키(SUPABASE_SECRET_KEY)로 넣음.
 009_chat_documents.sql 적용 후, 저장소 맨 위 폴더에서:  python -m server.scripts.load_yoram
 (다시 실행해도 됨: 지난번 요람 문단을 지우고 새로 넣음)
+요람 PDF는 저장소에 넣지 않음. 학교 사이트에서 받아 supabase/seed/에 둠:
+https://www.skuniv.ac.kr/wp-content/uploads/2026/04/48589058-f7a3-429b-a64f-9288e740ac34.pdf
 
 넣는 곳은 학칙·학칙시행세칙·교육과정(공통)만. 연혁·교직원·학과별 과목표는 검색을 흐려서 뺌.
 학칙·세칙은 조(제 N 조) 하나가 문단 하나, 교육과정은 800자 안팎으로 자름."""
