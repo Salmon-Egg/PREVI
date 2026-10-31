@@ -1,7 +1,5 @@
 # server/ai/ — 자체 AI
 
-담당: BE B
-
 ```
 server/ai/
 ├─ client.py   AI를 부르는 유일한 곳. ask_json(지시문 이름, 입력) / embed(문장들)

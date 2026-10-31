@@ -8,7 +8,7 @@ import { api, attempt, useApi } from '../../../lib/api';
 import { color } from '../../../lib/theme';
 import { DEFAULT_SCOPE, type AssistantScope, type Me } from '../../../lib/types';
 
-// 비서가 볼 정보 (assistant_scope). 끄면 서버가 판정·브리핑·챗봇 답변에 그 정보를 쓰지 않음 → API 명세 추가 필요(조장 확인)
+// 비서가 볼 정보 (assistant_scope). 끄면 서버가 판정·브리핑·챗봇 답변에 그 정보를 쓰지 않음
 const SCOPES: { key: keyof AssistantScope; label: string; desc: string }[] = [
   { key: 'status', label: '학적 정보', desc: '학과·학년·학적 상태로 나에게 해당하는 공지를 골라요' },
   { key: 'grades', label: '성적', desc: '졸업 학점 계산, 평점 조건이 있는 장학금 판정에 써요' },

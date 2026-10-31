@@ -1,7 +1,5 @@
 # supabase/ — 데이터 표와 시드 데이터
 
-담당: BE A
-
 ## 첫 실행
 
 `migrations/001_profiles.sql` 전체를 Supabase SQL Editor에 붙여넣고 Run을 누릅니다.
