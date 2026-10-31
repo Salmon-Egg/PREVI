@@ -31,6 +31,8 @@ function screenFor(type: Exclude<NotifyType, 'chat'>, targetId: number | null): 
       return targetId == null ? '/todos' : `/todos/${targetId}`;
     case 'calendar':
       return '/office/calendar';
+    case 'support':
+      return '/me/support';
   }
 }
 

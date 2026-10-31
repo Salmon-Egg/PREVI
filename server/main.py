@@ -21,6 +21,7 @@ from server.routes.notifications import router as notifications_router
 from server.routes.chat import router as chat_router
 from server.routes.admin import router as admin_router
 from server.routes.lost_items import router as lost_items_router
+from server.routes.support import router as support_router
 
 
 def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTransport | None = None):
@@ -50,6 +51,7 @@ def create_app(settings: Settings | None = None, transport: httpx.AsyncBaseTrans
     app.include_router(chat_router)
     app.include_router(admin_router)
     app.include_router(lost_items_router)
+    app.include_router(support_router)
 
     @app.get("/health", tags=["운영"])
     async def health():

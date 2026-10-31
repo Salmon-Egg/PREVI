@@ -41,7 +41,7 @@ class NotificationSender:
             response.raise_for_status()
 
     async def send(self, user_id: UUID, kind: str, title: str, target_id: int, event_key="once"):
-        if kind not in {"notice","deadline","calendar","chat"} or not title.strip() or len(title)>200 or target_id<=0 or not event_key or len(event_key)>100:
+        if kind not in {"notice","deadline","calendar","chat","support"} or not title.strip() or len(title)>200 or target_id<=0 or not event_key or len(event_key)>100:
             raise ValueError("알림 입력을 확인하세요.")
         response = await self.database.post("/rest/v1/rpc/reserve_notification", json={"p_user_id":str(user_id),"p_type":kind,"p_title":title,
             "p_target_id":target_id,"p_event_key":event_key})

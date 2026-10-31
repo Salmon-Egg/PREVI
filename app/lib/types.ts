@@ -5,7 +5,7 @@ export type TodoType = 'deadline' | 'scholarship' | 'graduation' | 'status';
 // deadline(일반 할 일: 학사 공지·직접·채팅 등록)은 배지·필터 없이 '전체'에서만 보임
 export const TODO_TYPE_KO: Record<Exclude<TodoType, 'deadline'>, string> = { scholarship: '장학', graduation: '졸업', status: '학적' };
 export type Verdict = 'eligible' | 'ineligible' | 'check';
-export type NotifyType = 'notice' | 'deadline' | 'calendar' | 'chat';
+export type NotifyType = 'notice' | 'deadline' | 'calendar' | 'chat' | 'support';
 
 export type Status = 'enrolled' | 'leave' | 'returned';
 export const STATUS_KO: Record<Status, string> = { enrolled: '재학', leave: '휴학', returned: '복학' };
@@ -158,6 +158,19 @@ export type Notification = {
   target_id: number | null;
   read: boolean;
   sent_at: string;
+};
+
+// 고객센터 문의. answer가 null이면 답변 대기
+export const SUPPORT_CATEGORIES = ['앱 오류', '계정', '기타'] as const;
+export type SupportCategory = (typeof SUPPORT_CATEGORIES)[number];
+export type SupportTicket = {
+  id: number;
+  created_at: string;
+  category: SupportCategory;
+  title: string;
+  body: string;
+  answer: string | null;
+  answered_at: string | null;
 };
 
 // 분실물(습득물). place = 주운 곳, 보관 장소는 상세(LostItemDetail)에서 답을 맞혔거나 내 글일 때만 옴

@@ -7,6 +7,7 @@ import Chatbot from './Chatbot.jsx';
 import LostItems from './LostItems.jsx';
 import Notices from './Notices.jsx';
 import SchoolData from './SchoolData.jsx';
+import Support from './Support.jsx';
 import { Icon, Loaded } from './ui.jsx';
 import Users from './Users.jsx';
 
@@ -17,9 +18,10 @@ const MENU = [
   ['data', '학교 자료', 'data'],
   ['notices', '공지 수집', 'inbox'],
   ['lost', '분실물', 'search'],
+  ['support', '고객센터', 'help'],
   ['users', '계정 관리', 'users'],
 ];
-const PAGES = { chatbot: Chatbot, broadcast: Broadcast, data: SchoolData, notices: Notices, lost: LostItems, users: Users };
+const PAGES = { chatbot: Chatbot, broadcast: Broadcast, data: SchoolData, notices: Notices, lost: LostItems, support: Support, users: Users };
 
 function useHash() {
   const read = () => location.hash.replace(/^#\/?/, '').split('?')[0] || 'home';
@@ -120,6 +122,7 @@ function Home() {
     <Loaded load={load}>
       {(s) => {
         const todo = [
+          ['support', s.support_open, '답변하지 않은 학생 문의', '학생이 답변을 기다려요', '처리 대기'],
           ['chatbot', s.unanswered_open, 'AI가 답하지 못한 질문', '문서 추가나 답변 작성이 필요해요', '처리 대기'],
           ['chatbot?feedback', s.feedback_down_week, "학생이 '아쉬워요'를 누른 답", '이번 주', '이번 주'],
           ['notices', s.notice_failed, '공지 AI 정리 실패', '다시 정리를 눌러 주세요', '긴급'],

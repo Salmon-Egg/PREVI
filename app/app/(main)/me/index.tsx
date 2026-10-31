@@ -105,6 +105,7 @@ export default function MyPage() {
             </Section>
 
             <Section title="서비스 정보">
+              <Item title="고객센터" sub="관리자에게 문의하고 답변 확인" onPress={() => router.push('/me/support')} />
               <Item title="이용약관" onPress={() => setPicker('terms')} />
               <Item title="개인정보 처리방침" onPress={() => setPicker('privacy')} />
               <Item title="현재 앱 버전" right={<Text style={st.value}>v{Constants.expoConfig?.version ?? '1.0.0'}</Text>} />
