@@ -1,5 +1,6 @@
 """POST /chat: 가짜 AI + 가짜 Supabase로 흐름 확인 (문서 근거 답 / 근거 없으면 '모른다' + 기록)."""
 import json
+from datetime import date
 from uuid import uuid4
 
 import httpx
@@ -10,6 +11,7 @@ from server.ai import client as ai_client
 from server.ai import tasks
 from server.config import Settings
 from server.main import create_app
+from server.routes import chat as chat_route
 
 USER_ID = str(uuid4())
 HEADERS = {"Authorization": "Bearer user-token"}
@@ -138,6 +140,50 @@ def test_smalltalk_without_ai(monkeypatch, q, want):
 def test_off_topic_is_not_recorded(monkeypatch):
     res, saved = run_chat(monkeypatch, "근처 맛집 추천해줘", [])
     assert "도와드리기 어려운" in res.json()["message"]["text"]
+    assert not any(t == "unanswered_questions" for _, t, _ in saved)
+
+
+@pytest.mark.parametrize("subject, ok", [("휴학", True), ("휴학의", True), ("휴학 제도", True), (None, True), ("미래인재 마일리지", False)])
+def test_subject_must_be_in_documents(subject, ok):
+    assert tasks._subject_in_docs(subject, ["[학칙] 휴학 기간은 통산 6학기"]) is ok
+
+
+def test_answer_on_unknown_subject_is_recorded(monkeypatch):
+    monkeypatch.setattr(ai_client, "AI_FAKE", True)
+    monkeypatch.setattr(tasks, "_ask", lambda name, _: {"subject": "미래인재 마일리지", "answer": "수강신청서를 내면 돼요."}
+                        if name == "chat_answer" else {"intent": "document"})
+    q = "미래인재 마일리지 제도 신청 절차 알려줘"
+    monkeypatch.setattr(ai_client, "embed", lambda _: None)
+    chunk = {"content": "[학칙] 수강 신청 절차 제도 안내", "document": CHUNK["document"]}  # 글자 검색에 걸려 AI까지 가야 함
+    res, saved = run_chat(monkeypatch, q, [chunk])
+    assert "학교 자료에 없어서" in res.json()["message"]["text"]
+    assert res.json()["message"]["sources"] == []
+    assert any(t == "unanswered_questions" and b["question"] == q for _, t, b in saved)
+
+
+def test_system_word_is_not_me():
+    assert tasks._route_by_rule("학점 제도 알려줘") is None  # "제도"의 '제'를 나로 읽어 내 졸업 정보로 답하던 문제
+
+
+def test_week_calendar_lists_overlapping_events(monkeypatch):
+    monkeypatch.setattr(chat_route, "_today", lambda: date(2026, 10, 31))  # 토요일 → 10/26(월)~11/1(일)
+    calendar = [{"title": "걸친 일정", "start_date": "2026-10-20", "end_date": "2026-10-26"},
+                {"title": "주 안 일정", "start_date": "2026-11-01", "end_date": "2026-11-01"},
+                {"title": "지난 일정", "start_date": "2026-10-01", "end_date": "2026-10-25"},
+                {"title": "다음 주 일정", "start_date": "2026-11-02", "end_date": "2026-11-03"},
+                {"title": "1학년 일정", "start_date": "2026-10-27", "end_date": "2026-10-27", "target_grades": [1]}]
+    msg = run_chat(monkeypatch, "이번 주 학사일정 알려줘", [], calendar=calendar)[0].json()["message"]
+    assert "2026년 10월 26일 월요일 ~ 2026년 11월 1일 일요일" in msg["text"]
+    assert "걸친 일정" in msg["text"] and "주 안 일정" in msg["text"]
+    assert not any(t in msg["text"] for t in ("지난 일정", "다음 주 일정", "1학년 일정"))  # 프로필은 4학년
+    msg = run_chat(monkeypatch, "다음 주 일정 뭐 있어?", [], calendar=calendar)[0].json()["message"]
+    assert "2026년 11월 2일 월요일" in msg["text"] and "다음 주 일정" in msg["text"]
+
+
+def test_empty_week_does_not_claim_no_school_events(monkeypatch):
+    monkeypatch.setattr(chat_route, "_today", lambda: date(2026, 10, 31))
+    res, saved = run_chat(monkeypatch, "이번 주 학사일정 알려줘", [])
+    assert "2026년 10월 26일" in res.json()["message"]["text"] and "확인되지 않았어요" in res.json()["message"]["text"]
     assert not any(t == "unanswered_questions" for _, t, _ in saved)
 
 

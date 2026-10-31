@@ -457,6 +457,7 @@ cloudflared tunnel --no-autoupdate --url http://127.0.0.1:8095
 ```
 
 1)과 2) 사이에는 벡터 검색이 아무것도 못 찾아 챗봇이 "모른다"로 답함. 시연 시간을 피해서 할 것.
+임베딩 모델·768차원이 그대로면 위 대신 `python -m server.scripts.reembed_docs --apply`: 백업 후 덮어써서 검색이 안 끊김.
 참고: GPU PC에서 268개 임베딩에 46초 걸렸음 (10/28).
 
 ---

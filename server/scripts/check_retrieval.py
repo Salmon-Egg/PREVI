@@ -3,8 +3,18 @@ import json
 import math
 
 from server.ai import client as ai
-from server.routes.chat import _title_asked
+from server.routes.chat import rank_chunks
 from server.scripts.load_yoram import _db
+
+QUESTIONS = [('relevant', q) for q in (
+    '졸업 총 학점', '전과', '전과 조건 알려줘', '휴학은 최대 몇 학기까지 할 수 있어?', '휴학 신청 방법 알려줘',
+    '복학 신청은 언제 해?', '복학 신청 방법 알려줘', '졸업 요건이 뭐야?', '한 학기 최대 몇 학점까지 들을 수 있어?',
+    '계절학기는 몇 학점까지 들을 수 있어?', '성적우수 장학금 조건이 뭐야?', '수강신청 절차 알려줘',
+    '부전공은 어떻게 신청해?', '학사경고 기준이 뭐야?',
+)] + [('unrelated', q) for q in (
+    '오늘 학식 메뉴 뭐야?', '근처 맛집 추천해줘', '내일 날씨 어때?', '셔틀버스 시간표 알려줘', '기숙사 통금 시간 언제야?',
+    '도서관 몇 시까지 열어?', '주차 등록은 어디서 해?', '미래인재 마일리지 제도 신청 절차 알려줘',
+)]
 
 
 def similarity(left, right):
@@ -43,19 +53,22 @@ def main():
             print(json.dumps({'sample': heading, 'chunk_id': chunk['id'],
                 'cosine_with_heading': round(current, 8), 'cosine_without_heading': round(previous, 8),
                 'matches_current_format': abs(1 - current) < 0.00001}, ensure_ascii=False), flush=True)
-        for question in ('졸업 총 학점', '전과'):
+        top_distances = {}
+        for group, question in QUESTIONS:
             vectors = ai.embed([ai.QUERY_FMT.format(question)])
             if not vectors:
                 raise SystemExit('검색 임베딩 응답이 없습니다.')
             rows = db.post('/rpc/match_doc_chunks', json={'query_embedding': str(vectors[0]),
                 'match_count': 10}).raise_for_status().json()
-            filtered = [r for r in rows if r['distance'] <= ai.DOC_MAX_DISTANCE]
-            hit = next((r for r in filtered if _title_asked(ai.article_title(r['content']), question)), None)
-            ranked = ([hit] + [r for r in filtered if r is not hit] if hit else filtered)[:3]
-            print(json.dumps({'question': question,
+            ranked = rank_chunks(rows, question)
+            top_distances.setdefault(group, []).append(rows[0]['distance'])
+            print(json.dumps({'group': group, 'question': question,
                 'raw_top3': [{'article': ai.article_title(r['content']), 'distance': round(r['distance'], 5)} for r in rows[:3]],
                 'production_top3': [{'article': ai.article_title(r['content']), 'distance': round(r['distance'], 5)} for r in ranked]},
                 ensure_ascii=False), flush=True)
+        # DOC_MAX_DISTANCE는 관련 최대와 무관 최소 사이에서 고름 (둘이 겹치면 숫자만으로 못 가름)
+        print(json.dumps({'relevant_top1_max': round(max(top_distances['relevant']), 5),
+                          'unrelated_top1_min': round(min(top_distances['unrelated']), 5)}), flush=True)
 
 
 if __name__ == '__main__':

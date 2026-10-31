@@ -116,7 +116,7 @@ def explain_reason(title: str, verdict: str, reasons: list[str]) -> str:
     return _REASONS[key]
 
 
-MINE = re.compile(r"(?<![가-힣])(나|내|저|제(?!\s*\d+\s*조))(가|는|도|의|한테)?(?![가-힣])|남았|남은")  # "제 30조"의 제는 내가 아님
+MINE = re.compile(r"(?<![가-힣])(나|내|저|제(?!\s*\d+\s*조)(?!도))(가|는|도|의|한테)?(?![가-힣])|남았|남은")  # "제 30조"·"제도"의 제는 내가 아님
 TOPICS = (("graduation", re.compile("졸업|학점")), ("scholarship", re.compile("장학")), ("todo", re.compile("할 일|마감")))
 RULE_WORDS = re.compile("조건|방법|어떻게|언제|기간|절차|서류|최대|몇 학점까지")
 
@@ -174,6 +174,16 @@ def split_questions(text: str) -> list[str]:
 
 
 NO_ANSWER = re.compile(r"명시되어\s*있지\s*않|나와\s*있지\s*않|적혀\s*있지\s*않|문서에\s*(없|는\s*없)|확인할\s*수\s*없|알\s*수\s*없")
+SUBJECT_GENERIC = {"제도", "신청", "절차", "방법", "기준", "조건", "기간", "규정", "안내", "서경대", "서경대학교", "학교", "우리"}
+
+
+def _subject_in_docs(subject, docs: list[str]) -> bool:
+    """질문이 콕 집은 대상의 낱말이 문서에 모두 있는지. 대상을 안 집었으면(null) 통과. 띄어쓰기는 무시("성적 우수"="성적우수")."""
+    if not isinstance(subject, str):
+        return True
+    text = re.sub(r"\s", "", " ".join(docs))
+    words = [re.sub("(의|은|는|을|를)$", "", w) for w in subject.split()]
+    return all(w in text for w in words if w and w not in SUBJECT_GENERIC)
 
 
 def answer_from_docs(question: str, chunks: list[dict], student: dict | None = None) -> str | None:
@@ -184,6 +194,10 @@ def answer_from_docs(question: str, chunks: list[dict], student: dict | None = N
     out = _ask("chat_answer", {"question": question, "student": student or {}, "documents": docs}) or {}
     answer = _short(out.get("answer"), 150)
     if answer and NO_ANSWER.search(answer):  # 지시문으로 막아도 "문서에 명시되어 있지 않아요"를 씀: 코드의 '모른다' 문장으로
+        return None
+    # 없는 제도를 물어도 비슷한 문단으로 절차를 지어냄(10/31 실측): 숫자 검사로는 못 막아서 대상 이름을 대조
+    if answer and not _subject_in_docs(out.get("subject"), docs):
+        log.warning("질문 대상이 문서에 없어 버림: %s", out.get("subject"))
         return None
     # 문서·질문·학생 정보에 없는 숫자가 답에 있으면 지어낸 것으로 보고 '모른다'로
     if answer and not set(re.findall(r"\d+", answer)) <= set(re.findall(r"\d+", f"{question} {student} {' '.join(docs)}")):

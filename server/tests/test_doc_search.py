@@ -30,6 +30,13 @@ def test_named_article_goes_first(monkeypatch):
     assert _search(monkeypatch, "전과 조건 알려줘", [MINOR, CREDIT, CATALOG, TRANSFER]) == [TRANSFER, MINOR, CREDIT]
 
 
+def test_named_article_survives_distance_limit(monkeypatch):
+    monkeypatch.setattr(ai_client, "DOC_MAX_DISTANCE", 0.62)
+    rows = [{"content": MINOR, "distance": 0.70}, {"content": TRANSFER, "distance": 0.72}, {"content": CATALOG, "distance": 0.5}]
+    assert [r["content"] for r in chat.rank_chunks(rows, "전과")] == [TRANSFER, CATALOG]
+    assert chat.rank_chunks(rows[:1], "학식 메뉴") == []
+
+
 def test_only_one_named_article_moves_up(monkeypatch):
     # "졸업의 취소"는 '취소'가 질문에 없어 안 올라감. "학점" 조 하나만 1위로, 원래 1위(졸업 자료)는 2위로 남음
     cancel = "[학칙] 제 57 조(졸업의 취소) 부정한 방법으로"

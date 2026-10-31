@@ -3,7 +3,7 @@
 AI 호출은 동기 함수라 run_in_threadpool로 돌려 서버가 멈추지 않게 함."""
 import logging
 import re
-from datetime import date
+from datetime import date, datetime, timedelta, timezone
 from typing import Literal
 
 from fastapi import APIRouter, Depends, Request
@@ -15,6 +15,7 @@ from server.ai import tasks
 from server.auth import AuthenticatedUser, require_user
 from server.database import database_rows
 from server.errors import APIError
+from server.logic.student_context import calendar_applies
 from server.routes.graduation import graduation_result
 from server.routes.scholarships import scholarship_rows
 
@@ -30,7 +31,7 @@ CRISIS = ("많이 힘드셨겠어요. 혼자 견디지 마시고, 지금 바로 
           "· 서경대 학생상담센터 02-940-7607 (청운관 5층)\n· 자살예방 상담전화 109 (24시간)")
 # 학교 생활 질문인데 자료가 없는 것만 기록 (학교와 무관한 질문까지 쌓이면 자료 보강 목록으로 못 씀)
 SCHOOL = re.compile("학교|서경|캠퍼스|학식|식당|도서관|열람실|셔틀|기숙사|생활관|주차|동아리|강의실|교수|수업|시험|등록금|"
-                    "학생증|학과|학사|성적|수강|휴학|복학|졸업|장학|학점|교양|전공|학기|과목")
+                    "학생증|학과|학사|성적|수강|휴학|복학|졸업|장학|학점|교양|전공|학기|과목|제도|신청|절차")
 # 학생마다 답이 다른 질문에만 학생 정보를 넘김. 넘기면 묻지 않아도 "소프트웨어학과 2023입학생 기준"을 붙여서(10/29 실측),
 # 학과·입학년도는 학과별로 규정이 다른 졸업·학점 질문에만
 PERSONAL = re.compile("휴학|복학|졸업|학점|장학|학년|전공|수강|등록")
@@ -42,6 +43,9 @@ FOLLOW_UP = re.compile("그럼|그러면|그건|그거|그게|그때|거기|이�
 # 학사일정 제목 어디에나 있는 말: 이것만 겹치면 엉뚱한 일정에 '마감 알림 받기'가 붙음
 COMMON = re.compile("신청|기간|학기|마감|안내|언제|일정")
 WHEN = re.compile("언제|며칠|날짜|일정|기간")
+WEEK = re.compile(r"(이번|다음)\s*주")
+WEEK_TOPIC = re.compile("일정|학사|행사")
+KST = timezone(timedelta(hours=9))
 CONV_COLS = "id,title,pinned,updated_at"
 # 주제 낱말만 있는 질문("휴학 알려줘")은 걸리는 문단이 많아 답이 길고 흐려짐 → AI 없이 무엇이 궁금한지 버튼으로 되물음
 CLARIFY = {
@@ -71,6 +75,14 @@ def _title_asked(title: str, question: str) -> bool:
     return bool(words) and all(w in asked for w in words)
 
 
+def rank_chunks(rows: list[dict], question: str, k: int = 3) -> list[dict]:
+    """거리 기준 통과 문단 위주로. 질문이 조 제목을 직접 말한 문단은 거리와 상관없이 1위로:
+    "전과"처럼 짧은 질문은 맞는 조도 거리가 멀어(10/31 실측 0.72) 기준에 걸림."""
+    hit = next((r for r in rows if _title_asked(ai_client.article_title(r["content"]), question)), None)
+    rows = [r for r in rows if r["distance"] <= ai_client.DOC_MAX_DISTANCE and r is not hit]
+    return ([hit] + rows if hit else rows)[:k]
+
+
 async def search_chunks(request: Request, question: str, k: int = 3) -> list[dict]:
     """문서 검색. 임베딩이 있으면 벡터 검색(match_doc_chunks), 없으면(가짜 AI 모드) 두 글자 묶음이 많이 겹치는 문단."""
     vec = await run_in_threadpool(ai_client.embed, [ai_client.QUERY_FMT.format(question)])
@@ -80,9 +92,7 @@ async def search_chunks(request: Request, question: str, k: int = 3) -> list[dic
         rows = await database_rows(request, "POST", "rpc/match_doc_chunks",
                                    json={"query_embedding": str(vec[0]), "match_count": 10})
         log.info("문서 거리 %s: %s", question[:30], [round(r["distance"], 3) for r in rows])  # 기준 숫자 정할 때 봄
-        rows = [r for r in rows if r["distance"] <= ai_client.DOC_MAX_DISTANCE]
-        hit = next((r for r in rows if _title_asked(ai_client.article_title(r["content"]), question)), None)
-        return ([hit] + [r for r in rows if r is not hit] if hit else rows)[:k]
+        return rank_chunks(rows, question, k)
     # shortcut: 문단을 전부 받아 비교함. 문단이 수천 개가 되면 느려지니 그때는 임베딩(벡터 검색)을 켜기
     rows = await database_rows(request, "GET", "doc_chunks", params={"select": "content,document:documents(title,url)", "limit": 2000})
     q = _bigrams(question)
@@ -98,7 +108,7 @@ async def search_chunks(request: Request, question: str, k: int = 3) -> list[dic
 async def _calendar_event(request: Request, asked: str) -> dict | None:
     """질문과 비슷한 앞으로의 학사일정. "언제" 질문은 낱말 하나("수강신청 언제야?" → 수강)만 겹쳐도 찾음."""
     events = await database_rows(request, "GET", "academic_calendar", params={
-        "select": "title,start_date,end_date", "end_date": f"gte.{date.today().isoformat()}", "limit": 200})
+        "select": "title,start_date,end_date", "end_date": f"gte.{_today().isoformat()}", "limit": 200})
     def grams(s):
         return _bigrams(COMMON.sub(" ", s))
     q = grams(asked)  # 맥락 제목이 아니라 학생이 실제로 물은 말로
@@ -110,6 +120,27 @@ async def _calendar_event(request: Request, asked: str) -> dict | None:
 def _ko_date(iso: str) -> str:
     y, m, d = iso[:10].split("-")
     return f"{int(y)}년 {int(m)}월 {int(d)}일"
+
+
+def _today() -> date:
+    return datetime.now(KST).date()
+
+
+async def _week_events(request: Request, p: dict, label: str) -> dict:
+    """이번·다음 주(월~일, 한국 시간)와 겹치는 일정 전부. 비슷한 제목 한 건을 고르는 _calendar_event와 달리 AI 없이 코드가 답함."""
+    today = _today()
+    monday = today - timedelta(days=today.weekday()) + timedelta(weeks=label == "다음")
+    sunday = (monday + timedelta(days=6)).isoformat()
+    rows = await database_rows(request, "GET", "academic_calendar", params={
+        "select": "title,start_date,end_date,target_grades", "end_date": f"gte.{monday.isoformat()}",
+        "start_date": f"lte.{sunday}", "order": "start_date.asc", "limit": 200})
+    rows = [r for r in rows if r["end_date"] >= monday.isoformat() and r["start_date"] <= sunday and calendar_applies(r, p)]
+    span = f"{label} 주({_ko_date(monday.isoformat())} 월요일 ~ {_ko_date(sunday)} 일요일)"
+    if not rows:  # 저장 자료 범위의 문제일 수 있어 "일정이 없다"고 단정하지 않음
+        return {"text": f"{span} 학사일정은 제가 가진 자료에서 확인되지 않았어요. 학교 일정이 아예 없다는 뜻은 아니에요.", "cards": [], "actions": []}
+    lines = [_event_chunk(r)["content"].removeprefix("[학사일정] ") for r in rows]
+    return {"text": f"{span} 학사일정이에요.\n" + "\n".join(f"· {line}" for line in lines),
+            "cards": [], "sources": [{"title": "학사일정", "url": None}], "actions": []}
 
 
 def _event_chunk(e: dict) -> dict:
@@ -163,7 +194,7 @@ async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: st
             summary += f" 남은 요건 {len(pending)}가지: " + ", ".join(pending)
         actions = [{"type": "open_screen", "label": "졸업 요건 자세히", "payload": {"screen": "L-2"}}]
     elif topic == "scholarship":
-        rows, regional = _pick_scholarships(await scholarship_rows(request, user), date.today().isoformat())
+        rows, regional = _pick_scholarships(await scholarship_rows(request, user), _today().isoformat())
         summary = f"신청할 수 있거나 확인이 필요한 장학금이 {len(rows)}개 있어요." if rows else "지금 바로 추천할 장학금이 없어요."
         if len(rows) > MAX_CARDS:
             summary += f" 신청 가능한 것과 마감이 가까운 것부터 {MAX_CARDS}개만 보여 드릴게요."
@@ -243,6 +274,9 @@ async def _answer(request: Request, user: AuthenticatedUser, p: dict, question: 
         text = ("도움이 됐다니 다행이에요. 또 궁금한 게 있으면 언제든 물어봐 주세요." if route["topic"] == "thanks"
                 else f"안녕하세요, {p['nickname']}님! 저는 PREVI예요. {CAN_DO}")  # 이름은 첫인사에서만 부름
         return {"text": text, "cards": [], "actions": []}
+    asked = question.rsplit("질문:", 1)[-1]
+    if (week := WEEK.search(asked)) and WEEK_TOPIC.search(asked):
+        return await _week_events(request, p, week[1])
     if route["intent"] == "my_info":
         return await _my_info(request, user, p, route["topic"], question)
     return await _from_docs(request, question, p, extra)
