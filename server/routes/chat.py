@@ -32,7 +32,8 @@ CRISIS = ("많이 힘드셨겠어요. 혼자 견디지 마시고, 지금 바로 
           "· 서경대 학생상담센터 02-940-7607 (청운관 5층)\n· 자살예방 상담전화 109 (24시간)")
 # 학교 생활 질문인데 자료가 없는 것만 기록 (학교와 무관한 질문까지 쌓이면 자료 보강 목록으로 못 씀)
 SCHOOL = re.compile("학교|서경|캠퍼스|학식|식당|도서관|열람실|셔틀|기숙사|생활관|주차|동아리|강의실|교수|수업|시험|등록금|"
-                    "학생증|학과|학사|성적|수강|휴학|복학|졸업|장학|학점|교양|전공|학기|과목|제도|신청|절차")
+                    "학생증|학과|학사|성적|수강|휴학|복학|졸업|장학|학점|교양|전공|학기|과목|제도|신청|절차|"
+                    "전과|편입|재입학|자퇴|제적|학칙")
 # 학생마다 답이 다른 질문에만 학생 정보를 넘김. 넘기면 묻지 않아도 "소프트웨어학과 2023입학생 기준"을 붙여서(10/29 실측),
 # 학과·입학년도는 학과별로 규정이 다른 졸업·학점 질문에만
 PERSONAL = re.compile("휴학|복학|졸업|학점|장학|학년|전공|수강|등록")
@@ -84,18 +85,48 @@ def rank_chunks(rows: list[dict], question: str, k: int = 3) -> list[dict]:
     return ([hit] + rows if hit else rows)[:k]
 
 
-async def search_chunks(request: Request, question: str, k: int = 3) -> list[dict]:
+GRAD_DOC = re.compile(r"\[졸업요건 정리\(\d+\) · ([^\]]+)\]")
+
+
+def _for_student(rows: list[dict], p: dict, question: str) -> list[dict]:
+    """다른 학과 졸업요건 문단은 뺌: 내용이 진짜여도 이 학생에겐 틀린 답(소프트웨어학과에 파이낸스앤테크전공 요건, 10/31 실측).
+    질문이 그 학과를 직접 말하면 둠."""
+    asked = re.sub(r"\s", "", question)
+    def applies(r):
+        m = GRAD_DOC.match(r["content"])
+        if not m or m[1] == p["department"] or m[1].replace(" ", "") in asked:
+            return True
+        return m[1] == "2017~2024학번 공통" and (p["admission_year"] or 9999) <= 2024
+    return [r for r in rows if applies(r)]
+
+
+async def _titled_chunks(request: Request, question: str) -> list[dict]:
+    """조 제목이 질문 낱말로 시작하는 문단을 글자로 찾음: "전과 조건 알려줘"는 전과 조가 벡터 후보 밖이라 검색이 비었음(10/31 실측)."""
+    words = {w[:2] for w in re.findall("[가-힣]{2,}", question)}  # 앞 두 글자: "전과는"의 조사를 떼려고. 맞는지는 rank_chunks가 다시 봄
+    if not words:
+        return []
+    rows = await database_rows(request, "GET", "doc_chunks", params={
+        "select": "content,document:documents(title,url)", "limit": 100,
+        "or": "(" + ",".join(f'content.like."[*조*({w}*"' for w in words) + ")"})
+    return [{"content": r["content"], **r["document"], "distance": float("inf")} for r in rows]
+
+
+async def search_chunks(request: Request, question: str, k: int = 3, p: dict | None = None) -> list[dict]:
     """문서 검색. 임베딩이 있으면 벡터 검색(match_doc_chunks), 없으면(가짜 AI 모드) 두 글자 묶음이 많이 겹치는 문단."""
     vec = await run_in_threadpool(ai_client.embed, [ai_client.QUERY_FMT.format(question)])
     if vec:
         # 후보를 넉넉히 받아, 조 제목 낱말("전과의 허가" → 전과)이 질문에 모두 있는 가장 가까운 문단 1개를 1위로
         # ("전과" 질문에 부전공 조가 1위로 오던 문제, G8). 1개만: 원래 1위는 2위로 밀릴 뿐 AI에 같이 감
+        # 30개: 학과별 졸업요건 문단이 후보를 채워서, 다른 학과를 뺀 뒤에도 남게
         rows = await database_rows(request, "POST", "rpc/match_doc_chunks",
-                                   json={"query_embedding": str(vec[0]), "match_count": 10})
-        log.info("문서 거리 %s: %s", question[:30], [round(r["distance"], 3) for r in rows])  # 기준 숫자 정할 때 봄
-        return rank_chunks(rows, question, k)
+                                   json={"query_embedding": str(vec[0]), "match_count": 30})
+        log.info("문서 거리 %s: %s", question[:30], [round(r["distance"], 3) for r in rows[:10]])  # 기준 숫자 정할 때 봄
+        rows += await _titled_chunks(request, question)  # 뒤에 붙임: 벡터 후보에 제목 일치가 있으면 그게 먼저
+        return rank_chunks(_for_student(rows, p, question) if p else rows, question, k)
     # shortcut: 문단을 전부 받아 비교함. 문단이 수천 개가 되면 느려지니 그때는 임베딩(벡터 검색)을 켜기
     rows = await database_rows(request, "GET", "doc_chunks", params={"select": "content,document:documents(title,url)", "limit": 2000})
+    if p:
+        rows = _for_student(rows, p, question)
     q = _bigrams(question)
     scored = []
     for r in rows:
@@ -234,7 +265,9 @@ async def _from_docs(request: Request, question: str, p: dict, extra: list[dict]
     event = await _calendar_event(request, asked)
     if event and WHEN.search(asked):  # "수강신청 언제야?": 요람엔 날짜가 없어서 학사일정 표의 실제 날짜를 근거로
         extra = extra + [_event_chunk(event)]
-    chunks = extra + (await search_chunks(request, asked) or (asked != question and await search_chunks(request, question)) or [])
+    chunks = extra + (await search_chunks(request, asked, p=p) or (asked != question and await search_chunks(request, question, p=p)) or [])
+    if not chunks:  # '질문 대상이 문서에 없어 버림'과 구분
+        log.info("검색 결과 없음: %s", asked[:30])
     student = {"학적": STATUS_KO.get(p["status"], p["status"])} if PERSONAL.search(asked) else {}
     if BY_DEPT.search(asked):
         student |= {"학과": p["department"], "입학년도": p["admission_year"], "학년": p["grade"]}

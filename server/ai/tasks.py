@@ -119,10 +119,15 @@ def explain_reason(title: str, verdict: str, reasons: list[str]) -> str:
 MINE = re.compile(r"(?<![가-힣])(나|내|저|제(?!\s*\d+\s*조)(?!도))(가|는|도|의|한테)?(?![가-힣])|남았|남은")  # "제 30조"·"제도"의 제는 내가 아님
 TOPICS = (("graduation", re.compile("졸업|학점")), ("scholarship", re.compile("장학")), ("todo", re.compile("할 일|마감")))
 RULE_WORDS = re.compile("조건|방법|어떻게|언제|기간|절차|서류|최대|몇 학점까지")
+# 학과를 안 말한 졸업 요건·학점은 학과마다 답이 달라 학생 기준으로 계산한 결과로 답함 (문서로 가면 다른 전공 요건을 답함, 10/31 실측)
+GRAD_OWN = re.compile(r"졸업\s*(요건|(총\s*)?학점)(이|은|는|을|좀)?\s*(뭐|몇|어떻게|알려|얼마|$)")
+NAMED_MAJOR = re.compile("학과|학부|전공")
 
 
 def _route_by_rule(q: str) -> dict | None:
     """뻔한 질문은 AI 없이 분류 (AI 분류 약 5초 절약). 애매하면 None → AI가 분류."""
+    if GRAD_OWN.search(q) and not NAMED_MAJOR.search(q):
+        return {"intent": "my_info", "topic": "graduation"}
     mine, rule = MINE.search(q), RULE_WORDS.search(q)
     topic = next((t for t, p in TOPICS if p.search(q)), None)
     if mine and topic and not rule:
