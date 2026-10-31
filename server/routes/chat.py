@@ -206,7 +206,7 @@ def _pick_scholarships(rows: list[dict], today: str) -> tuple[list[dict], int]:
 
 
 async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: str | None, question: str) -> dict:
-    """⑫ 내 상황 답변: 서버가 계산한 결과로 카드와 버튼을 만들고, 문장은 AI가 다듬음."""
+    """⑫ 내 상황 답변: 서버가 계산한 결과로 카드와 버튼을 만들고, 졸업 외 문장은 AI가 다듬음."""
     cards = []
     if topic == "graduation":
         try:
@@ -214,18 +214,20 @@ async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: st
         except APIError as e:  # 학과 기준 없음·부전공 등: 이유를 그대로 안내하고, 답 못 한 질문으로 기록
             return {"text": e.message, "cards": [], "actions": [], "unknown": True}
         pending = [r["name"] for r in g["requirements"] if r["done"] is not True]
+        # AI 없이 코드가 씀: AI에게 맡기면 요건 목록에서 문장이 잘리고 "남은 학점을 이수하면 졸업할 수 있어요"로 단정함(10/31 실측)
         if g["remaining_total"] is None:
-            summary = "적용 졸업 기준이나 학점 인정에 확인할 사항이 있어 남은 학점을 확정할 수 없어요."
+            lines = ["적용 졸업 기준이나 학점 인정에 확인할 사항이 있어 남은 학점을 확정할 수 없어요."]
         else:
-            # AI가 "120학점에서 뺀 값"처럼 계산하려 들지 않게, 남은 학점을 완성된 숫자로 줌
-            summary = (f"앞으로 {g['remaining_total']:g}학점 더 들으면 돼요 "
-                       f"(지금 {g['earned_total']:g}학점 / 필요 {g['required_total']:g}학점).")
+            lines = [f"졸업까지 {g['remaining_total']:g}학점 더 들어야 해요." if g["remaining_total"] else "졸업에 필요한 총 학점은 다 채웠어요.",
+                     f"· 지금 {g['earned_total']:g}학점 / 필요 {g['required_total']:g}학점"]
             cards = [{"image_url": None, "title": "졸업까지 남은 학점",
                       "lines": [f"{g['remaining_total']:g}학점", f"{g['earned_total']:g} / {g['required_total']:g}"], "link": None}]
         if pending:
-            summary += f" 남은 요건 {len(pending)}가지: " + ", ".join(pending)
-        actions = [{"type": "open_screen", "label": "졸업 요건 자세히", "payload": {"screen": "L-2"}}]
-    elif topic == "scholarship":
+            lines.append(f"· 학점 외에 확인할 요건 {len(pending)}가지가 더 있어요")
+        lines.append("· 최종 졸업 여부는 서경포탈과 학과에서 확인해 주세요")
+        return {"text": "\n".join(lines), "cards": cards,
+                "actions": [{"type": "open_screen", "label": "졸업 요건 자세히", "payload": {"screen": "L-2"}}]}
+    if topic == "scholarship":
         rows, regional = _pick_scholarships(await scholarship_rows(request, user), _today().isoformat())
         summary = f"신청할 수 있거나 확인이 필요한 장학금이 {len(rows)}개 있어요." if rows else "지금 바로 추천할 장학금이 없어요."
         if len(rows) > MAX_CARDS:

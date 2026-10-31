@@ -180,6 +180,8 @@ def split_questions(text: str) -> list[str]:
 
 NO_ANSWER = re.compile(r"명시되어\s*있지\s*않|나와\s*있지\s*않|적혀\s*있지\s*않|문서에\s*(없|는\s*없)|확인할\s*수\s*없|알\s*수\s*없")
 SUBJECT_GENERIC = {"제도", "신청", "절차", "방법", "기준", "조건", "기간", "규정", "안내", "서경대", "서경대학교", "학교", "우리"}
+EXISTS = re.compile(r"있(어|나요|니|습니까|을까|는지)")
+DENIED = re.compile(r"(?<!수 )없|않아도|안\s*봐도")  # "넘을 수 없어요"는 규정이지 '없다'는 답이 아님
 
 
 def _subject_in_docs(subject, docs: list[str]) -> bool:
@@ -205,6 +207,11 @@ def answer_from_docs(question: str, chunks: list[dict], student: dict | None = N
     # 없는 제도를 물어도 비슷한 문단으로 절차를 지어냄(10/31 실측): 숫자 검사로는 못 막아서 대상 이름을 대조
     if answer and not _subject_in_docs(out.get("subject"), docs):
         log.warning("질문 대상이 문서에 없어 버림: %s", out.get("subject"))
+        return None
+    # "졸업 시험 있어?"에 시험 조문·폐지 공지만 보고 "없어요"로 단정함(10/31 실측): 언급이 없는 것은 없다는 근거가 아님
+    # shortcut: 문서가 정말 없다고 적은 경우도 '모른다'가 됨. 그런 질문이 미응답에 쌓이면 문서 문장과 대조하기
+    if answer and EXISTS.search(question.rsplit("질문:", 1)[-1]) and DENIED.search(answer.split("\n")[0]):
+        log.warning("없다는 단정이라 버림: %s", answer)
         return None
     # 문서·질문·학생 정보에 없는 숫자가 답에 있으면 지어낸 것으로 보고 '모른다'로
     if answer and not set(re.findall(r"\d+", answer)) <= set(re.findall(r"\d+", f"{question} {student} {' '.join(docs)}")):
