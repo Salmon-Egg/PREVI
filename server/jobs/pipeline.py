@@ -10,6 +10,7 @@ from starlette.concurrency import run_in_threadpool
 
 from server.ai import tasks
 from server.config import Settings
+from server.jobs.attachments import MARK, attachment_text
 from server.logic.eligibility import judge
 from server.logic.grades import semester_gpa
 from server.logic.schedule import d_day, priority
@@ -117,8 +118,11 @@ class Pipeline:
         rows.sort(key=lambda n: (n['extraction_status'] != 'pending', n['id']))
         for notice in rows[:limit]:
             try:
-                result = await run_in_threadpool(tasks.summarize_notice, notice['title'], notice['body'], strict=True)
-                values = extraction_values(result)
+                body = notice['body'] or ''
+                if MARK not in body and (extra := await run_in_threadpool(attachment_text, notice.get('attachments'))):
+                    body += MARK + extra
+                result = await run_in_threadpool(tasks.summarize_notice, notice['title'], body, strict=True)
+                values = {**extraction_values(result), 'body': body}  # 챗봇·판정도 첨부 내용을 근거로 쓰게
                 await self.write('PATCH', 'notices', params={'id':f"eq.{notice['id']}"}, json={**values, 'extraction_status':'ready'})
                 stats['ready'] += 1
             except Exception as exc:

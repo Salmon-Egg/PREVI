@@ -15,6 +15,7 @@ from server.ai import tasks
 from server.auth import AuthenticatedUser, require_user
 from server.database import database_rows
 from server.errors import APIError
+from server.logic.profile_chat import ASKS, asked_field, describe, profile_updates
 from server.logic.student_context import calendar_applies
 from server.routes.graduation import graduation_result
 from server.routes.scholarships import scholarship_rows
@@ -197,21 +198,40 @@ REGIONAL = re.compile(r"(?<![가-힣])(?!수시|정시|임시|교시|즉시|동�
                       r"|경기도|강원|충청|전라|전북|전남|경상|경북|경남|제주|지역\s*(?:출신|인재)")
 
 
-def _pick_scholarships(rows: list[dict], today: str) -> tuple[list[dict], int]:
-    """채팅 카드 후보: 안 지난·미신청·미충족 아닌 것을 신청 가능 먼저, 마감 순으로. 지역 공지는 빼고 개수만 돌려줌."""
+def _pick_scholarships(rows: list[dict], today: str, residence: str | None = None) -> tuple[list[dict], int]:
+    """채팅 카드 후보: 안 지난·미신청·미충족 아닌 것을 신청 가능 먼저, 마감 순으로. 내 지역이 아닌 지역 공지는 빼고 개수만 돌려줌."""
     live = [r for r in rows if r["verdict"] != "ineligible" and not r["applied"] and (not r["deadline"] or r["deadline"][:10] >= today)]
-    picked = [r for r in live if not REGIONAL.search(r["title"])]
+    picked = [r for r in live if not (m := REGIONAL.search(r["title"])) or m.group(0) in (residence or "")]
     picked.sort(key=lambda r: (r["verdict"] != "eligible", r["deadline"] or "9999"))
     return picked, len(live) - len(picked)
 
 
+def _ask_back(p: dict, rows: list[dict], regional: int) -> str | None:
+    """장학금 판정을 더 정확히 할 수 있는 정보 하나를 되묻는 문장. 한 번에 하나만."""
+    reasons = " ".join(s for r in rows for s in r["reasons"])
+    if "소득분위" in reasons and p.get("income_bracket") is None:
+        return ASKS["income_bracket"]
+    if re.search("토익|TOEIC", reasons, re.I) and p.get("toeic_score") is None:
+        return ASKS["toeic_score"]
+    return ASKS["residence"] if regional and not p.get("residence") else None
+
+
+def _confirm_save(updates: dict) -> dict:
+    """학생 말에서 찾은 값은 바로 저장하지 않고 버튼으로 확인 (잘못 알아들으면 판정·알림이 조용히 바뀜)."""
+    return {"text": f"{describe(updates)}(으)로 저장할까요? 저장하면 장학금과 할 일을 다시 계산해요.", "cards": [],
+            "actions": [{"type": "save_profile", "label": "저장하기", "payload": updates}]}
+
+
 async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: str | None, question: str) -> dict:
     """⑫ 내 상황 답변: 서버가 계산한 결과로 카드와 버튼을 만들고, 졸업 외 문장은 AI가 다듬음."""
-    cards = []
+    cards, more = [], None
     if topic == "graduation":
         try:
             g = await graduation_result(request, user)
         except APIError as e:  # 학과 기준 없음·부전공 등: 이유를 그대로 안내하고, 답 못 한 질문으로 기록
+            if e.code == "PROFILE_INCOMPLETE":  # 학생이 채우면 답할 수 있으니 되묻기
+                return {"text": f"{e.message} 지금 입력해 주시면 바로 계산해 드릴게요.", "cards": [],
+                        "actions": [{"type": "open_screen", "label": "학적 정보 입력", "payload": {"screen": "M-4"}}]}
             return {"text": e.message, "cards": [], "actions": [], "unknown": True}
         pending = [r["name"] for r in g["requirements"] if r["done"] is not True]
         # AI 없이 코드가 씀: AI에게 맡기면 요건 목록에서 문장이 잘리고 "남은 학점을 이수하면 졸업할 수 있어요"로 단정함(10/31 실측)
@@ -228,7 +248,7 @@ async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: st
         return {"text": "\n".join(lines), "cards": cards,
                 "actions": [{"type": "open_screen", "label": "졸업 요건 자세히", "payload": {"screen": "L-2"}}]}
     if topic == "scholarship":
-        rows, regional = _pick_scholarships(await scholarship_rows(request, user), _today().isoformat())
+        rows, regional = _pick_scholarships(await scholarship_rows(request, user), _today().isoformat(), p.get("residence"))
         summary = f"신청할 수 있거나 확인이 필요한 장학금이 {len(rows)}개 있어요." if rows else "지금 바로 추천할 장학금이 없어요."
         if len(rows) > MAX_CARDS:
             summary += f" 신청 가능한 것과 마감이 가까운 것부터 {MAX_CARDS}개만 보여 드릴게요."
@@ -238,13 +258,17 @@ async def _my_info(request: Request, user: AuthenticatedUser, p: dict, topic: st
                   "lines": [VERDICT_KO[r["verdict"]], f"마감 {r['deadline'][:10]}" if r["deadline"] else "마감 없음"],
                   "link": None} for r in rows[:MAX_CARDS]]
         actions = [{"type": "open_screen", "label": "나에게 맞는 장학금", "payload": {"screen": "S-1"}}]
+        more = _ask_back(p, rows, regional)
+        if any("성적 미입력" in s for r in rows for s in r["reasons"]):
+            actions.append({"type": "open_screen", "label": "직전 학기 성적 입력", "payload": {"screen": "L-8"}})
     else:
         rows = await database_rows(request, "GET", "todos", params={
             "user_id": f"eq.{user.id}", "done": "eq.false", "select": "title,due_date", "order": "priority.desc,due_date.asc.nullslast", "limit": 3})
         summary = "챙길 일: " + ", ".join(f"{r['title']}({r['due_date'] or '마감 없음'})" for r in rows) if rows else "지금 챙길 일이 없어요."
         actions = [{"type": "open_screen", "label": "할 일 전체 보기", "payload": {"screen": "T-1"}}]
     text = await run_in_threadpool(tasks.answer_my_info, question, {"summary": summary, "grade": p["grade"]})  # 이름은 첫인사에서만 부르니 안 넘김
-    return {"text": text, "cards": cards, "actions": actions}
+    # 되묻는 문장은 코드가 붙임: 다음 답이 무엇에 대한 것인지 이 문장으로 알아봄(asked_field)
+    return {"text": f"{text}\n\n{more}" if more else text, "cards": cards, "actions": actions}
 
 
 def _notice_chunk(n: dict) -> dict:
@@ -325,11 +349,11 @@ async def _one(request: Request, table: str, **params) -> dict | None:
 
 @router.post("/chat")
 async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends(require_user)):
-    p = await _one(request, "profiles", user_id=f"eq.{user.id}", select="nickname,grade,semester,status,department,admission_year")
+    p = await _one(request, "profiles", user_id=f"eq.{user.id}", select="*")
     if not p:
         raise APIError(404, "PROFILE_NOT_FOUND", "처음 설정이 필요해요.")
     ret = {"Prefer": "return=representation"}
-    last = None
+    last = asked = None
     if body.conversation_id:
         conv = await _one(request, "conversations", id=f"eq.{body.conversation_id}", user_id=f"eq.{user.id}", select="id")
         if not conv:
@@ -337,6 +361,8 @@ async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends
         # 직전 질문: "그럼 복학은?"처럼 앞 말을 생략한 질문을 이해하게.
         # 앞 답은 넘기지 않음: 넘기면 주제가 바뀐 질문에도 AI가 앞 답을 그대로 베낌(10/29 실측)
         last = await _one(request, "messages", conversation_id=f"eq.{conv['id']}", role="eq.user", select="text", order="id.desc")
+        before = await _one(request, "messages", conversation_id=f"eq.{conv['id']}", role="eq.assistant", select="text", order="id.desc")
+        asked = asked_field(before and before["text"])
     else:
         conv = (await database_rows(request, "POST", "conversations", headers=ret,
                                     params={"select": "id"}, json={"user_id": str(user.id), "title": body.text[:30]}))[0]
@@ -366,8 +392,11 @@ async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends
     extra = [_notice_chunk(notice)] if notice else []
 
     # 여러 가지를 한 번에 물으면 하나씩 따로 찾고 답함: 통째로 찾으면 첫 주제 문단만 걸렸음(10/29)
-    parts = await run_in_threadpool(tasks.split_questions, body.text)
-    if len(parts) == 1:  # 할 일·공지·앞 질문 맥락이 있으면 주제가 정해져 있어 되묻지 않음
+    updates = profile_updates(body.text, asked)
+    parts = [] if updates else await run_in_threadpool(tasks.split_questions, body.text)
+    if updates:
+        reply = _confirm_save(updates)
+    elif len(parts) == 1:  # 할 일·공지·앞 질문 맥락이 있으면 주제가 정해져 있어 되묻지 않음
         reply = (not lines and _clarify(body.text)) or await _answer(request, user, p, ask(body.text), extra)
     else:
         replies = [await _answer(request, user, p, ask(q), extra) for q in parts[:MAX_PARTS]]

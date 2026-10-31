@@ -3,6 +3,8 @@
 // 수정 모드: '성적 편집 중' 안내, 과목 옆 −(바로 삭제), 학기마다 '+ 과목 추가하기'(창), 과목을 누르면 고치기(창), '수정 완료하기'
 // 저장하면 서버가 졸업 요건·장학 판정을 다시 계산해서 알려 줌
 import { Feather } from '@expo/vector-icons';
+import * as DocumentPicker from 'expo-document-picker';
+import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -10,10 +12,10 @@ import { StyleSheet, View } from 'react-native';
 import { api, ApiError, useApi, useSubmit } from '../lib/api';
 import { overall, termLabel } from '../lib/format';
 import { color, gradient, gradientBg } from '../lib/theme';
-import type { GradeItem, GradeTerm, Graduation } from '../lib/types';
+import type { GradeItem, GradeTerm, Graduation, TranscriptItem } from '../lib/types';
 import { Input, Label, Select, Sheet } from './form';
 import { Pressable, Text } from './Text';
-import { Button, PicText, Screen, showAlert, StateView, Sub } from './ui';
+import { Button, confirmAsk, PicText, Screen, showAlert, StateView, Sub } from './ui';
 
 const TERMS = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2', '4-1', '4-2'];
 const GRADES = ['A+', 'A0', 'B+', 'B0', 'C+', 'C0', 'D+', 'D0', 'F', 'P'];
@@ -31,6 +33,7 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
   const { data, error, loading, reload, setData } = useApi<GradeTerm[]>('/grades');
   const [open, setOpen] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null); // 추가·수정 창에 띄운 과목
+  const [picking, setPicking] = useState(false); // 성적증명서 고르는 창
   const terms = [...(data ?? [])].reverse(); // 최근 학기가 위로
   const sum = overall(terms);
   const openTerm = open ?? terms[0]?.term; // 처음에는 가장 최근 학기를 펼침
@@ -76,6 +79,7 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
           <View style={st.editBanner}>
             <Text style={st.editTitle}>성적 편집 중</Text>
             <Sub>과목 삭제 또는 항목 추가 후 완료 버튼을 눌러주세요.</Sub>
+            <Button compact kind="ghost" label="📄 성적증명서로 한 번에 입력" onPress={() => confirmAsk('성적증명서 올리기 전 확인', TRANSCRIPT_WARNING, '동의하고 계속', () => setPicking(true))} />
             {(added > 0 || removed > 0) && (
               <Text style={st.changed}>이번에 바뀐 것: {[added && `추가 ${added}`, removed && `삭제 ${removed}`].filter(Boolean).join(' · ')} (총 {sum.earned}학점)</Text>
             )}
@@ -127,11 +131,93 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
         {editing && terms.length === 0 && <Button label="+ 과목 추가하기" kind="ghost" onPress={() => setDraft({ term: '1-1' })} />}
       </StateView>
       {draft && <GradeSheet draft={draft} onClose={() => setDraft(null)} onSaved={reload} />}
+      <TranscriptSheets picking={picking} onClose={() => setPicking(false)} onSaved={reload} />
     </Screen>
   );
 }
 
 type Recalc = { recalculated: { remaining_total: number | null; new_eligible_scholarships: number } };
+
+const TRANSCRIPT_WARNING = '성적증명서에는 이름·학번·생년월일 같은 개인정보가 들어 있어요.\n\n'
+  + '· 본인 증명서만 올려 주세요.\n· 학교 서버의 AI가 글자만 읽고, 파일과 읽은 글자는 저장하지 않아요.\n'
+  + '· AI가 잘못 읽을 수 있어요. 특히 사진은 오류가 더 많으니 저장 전에 과목·학점·성적을 꼭 확인해 주세요.\n'
+  + '· 잘못 저장하면 졸업 요건과 장학금 판정이 틀어질 수 있어요.';
+
+/** uri의 파일 → base64 (expo-document-picker는 base64를 직접 주지 않음) */
+async function fileBase64(uri: string) {
+  const blob = await (await fetch(uri)).blob();
+  return new Promise<string>((ok, fail) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(',')[1]);
+    r.onerror = () => fail(new Error('파일을 읽지 못했어요'));
+    r.readAsDataURL(blob);
+  });
+}
+
+/** 성적증명서 → 서버가 읽은 과목 미리보기 → 학생이 확인한 것만 저장 */
+function TranscriptSheets({ picking, onClose, onSaved }: { picking: boolean; onClose: () => void; onSaved: () => void }) {
+  const [items, setItems] = useState<TranscriptItem[] | null>(null);
+  const [dropped, setDropped] = useState(0);
+  const { busy, run } = useSubmit();
+
+  const read = (pick: () => Promise<string | null>) => run(async () => {
+    try {
+      const content = await pick();
+      if (!content) return;
+      const res = await api.post<{ items: TranscriptItem[]; dropped: number }>('/grades/from-file', { content_base64: content });
+      setItems(res.items);
+      setDropped(res.dropped);
+      onClose();
+    } catch (e) {
+      showAlert('성적을 읽지 못했어요', (e as ApiError).message);
+    }
+  });
+  const fromPdf = () => read(async () => {
+    const res = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+    return res.canceled ? null : fileBase64(res.assets[0].uri);
+  });
+  const fromPhoto = () => read(async () => {
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.8, base64: true });
+    return res.canceled ? null : res.assets[0]?.base64 ?? null;
+  });
+
+  const save = () => run(async () => {
+    let saved = 0;
+    const failed: string[] = [];
+    for (const item of items ?? []) {
+      try {
+        await api.post('/grades', item);
+        saved += 1;
+      } catch {
+        failed.push(item.course_name); // 이미 있는 과목 등
+      }
+    }
+    setItems(null);
+    onSaved();
+    showAlert('성적을 저장했어요', `${saved}과목을 넣었어요.${failed.length ? `\n이미 있거나 넣지 못한 과목 ${failed.length}개: ${failed.slice(0, 8).join(', ')}` : ''}`);
+  });
+
+  return (
+    <>
+      <Sheet visible={picking} onClose={onClose} title="성적증명서 올리기" sub="글자가 선명할수록 정확해요. PDF를 권장해요.">
+        <Button label={busy ? '읽는 중… (1분쯤 걸릴 수 있어요)' : 'PDF 파일 고르기'} disabled={busy} onPress={fromPdf} />
+        <Button kind="ghost" label="사진 고르기" disabled={busy} onPress={fromPhoto} />
+      </Sheet>
+      <Sheet visible={!!items} onClose={() => setItems(null)} title="읽은 성적 확인" sub="틀린 줄은 빼고 저장한 뒤 직접 고쳐 주세요. 학기는 입학년도로 계산해서 휴학한 적이 있으면 다를 수 있어요.">
+        {dropped > 0 && <Text style={st.tipText}>⚠️ 읽지 못한 줄 {dropped}개는 빠졌어요 (계절학기 포함). 직접 추가해 주세요.</Text>}
+        {items?.map((g, i) => (
+          <View key={`${g.term}-${g.course_name}`} style={st.item}>
+            <Text style={st.itemName}>{termLabel(g.term)} · {g.course_name} ({g.credits}학점) · {g.area} · {g.grade}</Text>
+            <Pressable accessibilityLabel={`${g.course_name} 빼기`} hitSlop={6} onPress={() => setItems(items.filter((_, k) => k !== i))} style={st.minus}>
+              <View style={st.minusBar} />
+            </Pressable>
+          </View>
+        ))}
+        <Button label={busy ? '저장하는 중…' : `${items?.length ?? 0}과목 저장하기`} disabled={busy || !items?.length} onPress={save} />
+      </Sheet>
+    </>
+  );
+}
 
 /** ▶ FE 23번에 해당하는 부분: L-10 성적 항목 추가/수정 창 → 저장 후 졸업 요건·장학 판정 재계산 결과 표시 */
 function GradeSheet({ draft, onClose, onSaved }: { draft: Draft; onClose: () => void; onSaved: () => void }) {

@@ -44,6 +44,21 @@ def matches_target(target: dict, profile: dict) -> bool:
     return True
 
 
+def _compare_text(text: str, profile: dict) -> tuple[bool | None, str] | None:
+    """글로만 있는 조건을 학생이 알려 준 값과 비교. (통과 여부, 근거) 또는 판단 못 하면 None."""
+    toeic = re.search(r"(?:TOEIC|토익)\D{0,30}?(\d{3})\s*점?", text, re.I)
+    # "토플·오픽도 인정"이면 토익만 보고 탈락시키면 안 됨
+    if toeic and profile.get("toeic_score") is not None and not re.search(r"또는|토플|TOEFL|오픽|OPIC|텝스|TEPS|이하|미만", text, re.I):
+        need, mine = int(toeic.group(1)), profile["toeic_score"]
+        return mine >= need, f"토익 {mine}점 (기준 {need}점 이상) {'✓' if mine >= need else '✗'}"
+    home = profile.get("residence")
+    places = re.findall(r"[가-힣]{1,6}(?:시|군|구)(?=\s|에|$)", text)
+    # 다른 지역 거주 조건만 탈락으로. 부모 주소·출신 조건은 학생 거주지로 알 수 없음. 같은 지역이어도 기간 조건이 있어 '확인 필요'로 둠
+    if home and places and re.search(r"거주|주민|주소", text) and not re.search(r"부모|보호자|가족|출신|졸업", text) and not any(p in home for p in places):
+        return False, f"거주지 {home} (대상 {'·'.join(places)}) ✗"
+    return None
+
+
 def judge(target: dict, conditions: dict, profile: dict, last_gpa: float | None, last_credits: int, *, source_text: str = "") -> tuple[str, list[str]]:
     conditions = reviewed_conditions(conditions, source_text)
     reasons, failed, unknown = [], False, False
@@ -76,9 +91,19 @@ def judge(target: dict, conditions: dict, profile: dict, last_gpa: float | None,
         failed |= not ok
         reasons.append(f"직전 학기 {last_credits}학점 이수 (기준 {need}학점 이상) {'✓' if ok else '✗'}")
     if conditions.get("income_max") is not None:
-        unknown = True  # 소득분위는 앱이 모름
-        reasons.append(f"소득분위 {conditions['income_max']}구간 이하 — 앱이 알 수 없어 직접 확인이 필요해요")
+        need, mine = conditions["income_max"], profile.get("income_bracket")
+        if mine is None:
+            unknown = True  # 학생이 알려 주지 않음
+            reasons.append(f"소득분위 {need}구간 이하 — 앱이 알 수 없어 직접 확인이 필요해요")
+        else:
+            failed |= mine > need
+            reasons.append(f"소득분위 {mine}구간 (기준 {need}구간 이하) {'✗' if mine > need else '✓'}")
     for text in conditions.get("unknown") or []:  # AI가 칸에 못 넣은 조건 (토익, 학사경고 등)
+        checked = _compare_text(text, profile)
+        if checked and checked[0] is not None:
+            failed |= not checked[0]
+            reasons.append(checked[1])
+            continue
         unknown = True
         reasons.append(f"{text} — 직접 확인이 필요해요")
 
