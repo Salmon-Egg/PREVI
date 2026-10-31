@@ -1,6 +1,6 @@
 // ▶ FE 23번에 해당하는 부분: L-8 성적 조회 / L-9 수정 모드 / L-10 성적 항목 추가·수정 창 (새 시안)
 // 조회: 초록 요약 카드(전체 평점·총 취득학점) + 학기별 접기 카드 + '✏️ 성적 수정하기'
-// 수정 모드: '성적 편집 중' 안내, 과목 옆 −(바로 삭제), 학기마다 '+ 과목 추가하기'(창), 과목을 누르면 고치기(창), '수정 완료하기'
+// 수정 모드: '성적 편집 중' 안내, 과목 옆 −(바로 삭제), 증명서 입력 밑 '+ 과목 추가하기'(창), 과목을 누르면 고치기(창), '수정 완료하기'
 // 저장하면 서버가 졸업 요건·장학 판정을 다시 계산해서 알려 줌
 import { Feather } from '@expo/vector-icons';
 import * as DocumentPicker from 'expo-document-picker';
@@ -46,6 +46,9 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
   const now = new Set(ids);
   const added = startIds ? ids.filter((i) => !before.has(i)).length : 0;
   const removed = startIds ? startIds.filter((i) => !now.has(i)).length : 0;
+  const [editedIds, setEditedIds] = useState<number[]>([]); // 창에서 고친 과목 → 지웠거나 이번에 추가한 과목은 '수정'으로 안 셈
+  const edited = new Set(editedIds.filter((i) => before.has(i) && now.has(i))).size;
+  const changedText = [added && `${added}과목 추가`, removed && `${removed}과목 삭제`, edited && `${edited}과목 수정`].filter(Boolean).join(', ');
 
   /** 누르는 즉시 목록에서 빼고 서버에서도 지움 (실패하면 다시 불러옴) */
   async function remove(id: number) {
@@ -60,11 +63,10 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
 
   /** 다시 계산한 졸업 학점을 알려 주고 돌아감 */
   async function finish() {
-    const changed = [added && `${added}과목 추가`, removed && `${removed}과목 삭제`].filter(Boolean).join(', ');
     try {
       const g = await api.get<Graduation>('/graduation');
-      showAlert(changed ? '성적을 반영했어요' : '바뀐 성적이 없어요',
-        `${changed ? `${changed} · ` : ''}총 ${g.earned_total}학점 이수, 졸업까지 ${g.remaining_total}학점 남았어요.\n내 학업 › 졸업 요건의 영역별 과목에도 반영됐어요.`);
+      showAlert(changedText ? '성적을 반영했어요' : '바뀐 성적이 없어요',
+        `${changedText ? `${changedText} · ` : ''}총 ${g.earned_total}학점 이수, 졸업까지 ${g.remaining_total}학점 남았어요.\n내 학업 › 졸업 요건의 영역별 과목에도 반영됐어요.`);
     } catch {}
     router.back();
   }
@@ -78,10 +80,8 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
         {editing ? (
           <View style={st.editBanner}>
             <Text style={st.editTitle}>성적 편집 중</Text>
-            <Sub>과목 삭제 또는 항목 추가 후 완료 버튼을 눌러주세요.</Sub>
-            {(added > 0 || removed > 0) && (
-              <Text style={st.changed}>이번에 바뀐 것: {[added && `추가 ${added}`, removed && `삭제 ${removed}`].filter(Boolean).join(' · ')} (총 {sum.earned}학점)</Text>
-            )}
+            <Sub>과목을 눌러 고치거나, 삭제·추가한 뒤 완료 버튼을 눌러주세요.</Sub>
+            {!!changedText && <Text style={st.changed}>이번에 바뀐 것: {changedText} (총 {sum.earned}학점)</Text>}
           </View>
         ) : (
           <View style={[st.summary, gradientBg(gradient.primary, color.primary)]}>
@@ -96,6 +96,7 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
           </View>
         )}
         <Button compact kind="ghost" label="📄 성적증명서로 한 번에 입력" onPress={() => confirmAsk('성적증명서 올리기 전 확인', TRANSCRIPT_WARNING, '동의하고 계속', () => setPicking(true))} />
+        {editing && <Button compact kind="ghost" label="+ 과목 추가하기" onPress={() => setDraft({ term: openTerm || '1-1' })} />}
         {terms.length === 0 && <Sub>입력한 성적이 없어요</Sub>}
         {terms.map((t) => {
           const isOpen = t.term === openTerm;
@@ -107,7 +108,7 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
                 <Feather name={isOpen ? 'chevron-up' : 'chevron-down'} size={20} color={color.ink} />
               </Pressable>
               {isOpen && t.items.map((g) => (
-                <Pressable key={g.id} accessibilityRole={undefined} style={st.item} disabled={!editing} onPress={() => setDraft(g)}>
+                <Pressable key={g.id} accessibilityRole={undefined} style={st.item} disabled={!editing} onPress={() => setDraft({ ...g, term: t.term })}>
                   <Text style={st.itemName}>{g.course_name} ({g.credits}학점)</Text>
                   {editing ? (
                     <Pressable accessibilityLabel={`${g.course_name} 삭제`} hitSlop={6} onPress={() => remove(g.id)} style={st.minus}>
@@ -120,17 +121,14 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
                   )}
                 </Pressable>
               ))}
-              {isOpen && editing && (
-                <Pressable style={st.addRow} onPress={() => setDraft({ term: t.term })}>
-                  <Text style={st.addText}>+ 과목 추가하기</Text>
-                </Pressable>
-              )}
             </View>
           );
         })}
-        {editing && terms.length === 0 && <Button label="+ 과목 추가하기" kind="ghost" onPress={() => setDraft({ term: '1-1' })} />}
       </StateView>
-      {draft && <GradeSheet draft={draft} onClose={() => setDraft(null)} onSaved={reload} />}
+      {draft && <GradeSheet draft={draft} onClose={() => setDraft(null)} onSaved={() => {
+        if (draft.id) setEditedIds([...editedIds, draft.id]);
+        reload();
+      }} />}
       <TranscriptSheets picking={picking} onClose={() => setPicking(false)} onSaved={reload} />
     </Screen>
   );
@@ -283,8 +281,6 @@ const st = StyleSheet.create({
   gradeText: { fontWeight: '800', fontSize: 12 },
   minus: { width: 24, height: 24, borderRadius: 12, backgroundColor: color.redSoft, alignItems: 'center', justifyContent: 'center' },
   minusBar: { width: 10, height: 2, borderRadius: 1, backgroundColor: color.red },
-  addRow: { borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#8FC7A6', borderRadius: 12, padding: 12, alignItems: 'center', marginBottom: 14, backgroundColor: '#F4FAF6' },
-  addText: { color: color.title, fontWeight: '800' },
   tip: { backgroundColor: '#E6F4EC', borderRadius: 12, padding: 12, marginVertical: 4 },
   tipText: { fontSize: 13, color: color.title },
 });

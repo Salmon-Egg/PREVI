@@ -49,7 +49,7 @@ function dueText(t: Todo) {
   if (t.d_day === 0) return '오늘 마감';
   if (!t.due_date) return noDueText(t.type);
   const d = new Date(t.due_date + 'T00:00:00');
-  return `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})까지`;
+  return `${d.getMonth() + 1}/${d.getDate()}(${WEEKDAYS[d.getDay()]})${(t.d_day ?? 0) < 0 ? ' 마감' : '까지'}`;
 }
 
 export default function Home() {
@@ -353,7 +353,7 @@ function TodoRow({ t, open, titleWidth }: { t: Todo; open: (href: Href) => void;
       <View style={[st.ddayDot, { backgroundColor: tone.dot }]} />
       <View style={[st.dday, { backgroundColor: tone.bg }]}>
         <Text style={[st.ddayText, { color: tone.text }]}>
-          {t.d_day === null ? '-' : t.d_day === 0 ? 'D-DAY' : `D-${t.d_day}`}
+          {t.d_day === null ? '-' : t.d_day < 0 ? '지남' : t.d_day === 0 ? 'D-DAY' : `D-${t.d_day}`}
         </Text>
       </View>
       {/* 제목 폭을 숫자로 정해 줌(titleWidth): 안드로이드는 줄바꿈 없는 긴 한 줄 제목을 flex로만 두면 글자 전체 길이로 폭을 잡아
