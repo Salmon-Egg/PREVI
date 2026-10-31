@@ -97,7 +97,8 @@ export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) 
   const time = (iso: string) => (iso ? new Date(iso).toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit' }) : '');
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: color.homeBg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={keyboardOffset}>
+    // 안드로이드도 padding: Expo SDK 58은 화면이 하단 바·키보드 밑까지 그려져(edge-to-edge) 창이 저절로 줄지 않음 → 키보드가 입력창을 가림
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: color.homeBg }} behavior={Platform.OS === 'web' ? undefined : 'padding'} keyboardVerticalOffset={keyboardOffset}>
       <ScrollView ref={scroll} contentContainerStyle={{ padding: 16, gap: 14, flexGrow: 1 }} onContentSizeChange={() => scroll.current?.scrollToEnd()}>
         {messages.length === 0 && !waiting && (
           // H-1 시작 화면 (시안 ①)

@@ -155,12 +155,14 @@ export default function Home() {
           {/* 머리: 로고 · 알림 · 내 정보 */}
           <View style={st.header}>
             <View>
-              <View pointerEvents="none" style={st.halo} />
-              <View style={st.row}>
+              {WEB_BLUR && <View pointerEvents="none" style={st.halo} />}
+              <View style={[st.row, !WEB_BLUR && st.plate]}>
                 <Text style={[st.logo, { fontSize: fs.logo }]}>PREVI</Text>
                 <MaterialCommunityIcons name="leaf" size={22} color={HOME_INK.leaf} />
               </View>
-              <Text style={[st.logoSub, { fontSize: fs.logoSub }]}>서경대학교 학생을 위한 스마트 비서</Text>
+              <View style={!WEB_BLUR && st.plate}>
+                <Text style={[st.logoSub, { fontSize: fs.logoSub }]}>서경대학교 학생을 위한 스마트 비서</Text>
+              </View>
             </View>
             <View style={[st.row, { gap: 20 }]}>
               <Pressable accessibilityLabel="알림" onPress={() => router.push('/notifications')}>
@@ -295,6 +297,18 @@ function BlurBlock({ text, style }: { text: string; style: StyleProp<TextStyle> 
   const longer = (i: number, j: number) => !(widths[j] > 0) || widths[i] - widths[j] > 1;
   return (
     <View>
+      {/* 휴대폰: 막을 모든 줄 글자보다 먼저(아래 층에) 그림. 줄마다 같이 그리면 아랫줄 막이 윗줄 글자 아래 끝을 덮어 하얘짐 (10/31)
+          (같은 줄을 안 보이는 글자로 한 번 더 놓아 줄 크기를 맞춤) */}
+      {!WEB_BLUR && (
+        <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+          {lines.map((line, i) => (
+            <View key={i} style={st.textBox}>
+              <View style={st.lineFog} />
+              <Text style={[style, { color: 'transparent', textShadowColor: 'transparent' }]}>{line}</Text>
+            </View>
+          ))}
+        </View>
+      )}
       {lines.map((line, i) => {
         const first = i === 0;
         const last = i === lines.length - 1;
@@ -314,7 +328,7 @@ function BlurBlock({ text, style }: { text: string; style: StyleProp<TextStyle> 
               if (first) setLineH(height);
             }}
           >
-            <View pointerEvents="none" style={[st.textBlur, { top: first ? -FADE_Y : 0, bottom: last ? -FADE_Y : 0 }, corner, lineMask(first, last)]} />
+            {WEB_BLUR && <View pointerEvents="none" style={[st.textBlur, { top: first ? -FADE_Y : 0, bottom: last ? -FADE_Y : 0 }, corner, lineMask(first, last)]} />}
             <Text style={style}>{line}</Text>
           </View>
         );
@@ -355,9 +369,11 @@ function TodoRow({ t, open }: { t: Todo; open: (href: Href) => void }) {
 
 const shadow = { shadowColor: '#0C6B3F', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 3 };
 
+// 웹만 글자 뒤 흐림(backdrop-filter)을 씀. 휴대폰은 blur가 없어서 판 대신 줄마다 글자 둘레 뿌연 흰 막(lineFog·plate) + 글자 번짐
+const WEB_BLUR = Platform.OS === 'web';
 // 사진 위 글자가 잘 읽히게 글자 둘레만 하얗게 번지게 (사진은 그대로)
-// 휴대폰은 뒤 판이 옅어서 번짐을 조금 더 크게
-const glow = { textShadowColor: '#fff', textShadowRadius: Platform.OS === 'web' ? 6 : 10, textShadowOffset: { width: 0, height: 0 } };
+// 휴대폰은 뒤 판이 없어서 번짐을 더 크게
+const glow = { textShadowColor: '#fff', textShadowRadius: WEB_BLUR ? 6 : 14, textShadowOffset: { width: 0, height: 0 } };
 
 // 새 홈 시안의 글자색 (진한 초록 제목, 회청색 설명, 남색 할 일 제목)
 // hero: 로고 'PREVI'·인사말 (제목보다 조금 밝은 초록)
@@ -369,9 +385,13 @@ const HOME_INK = { hero: '#1B7F57', title: '#0E5A42', logoSub: '#1D5456', leaf: 
 const BLUR_X = 4;
 const FADE_X = 8;
 const FADE_Y = 6;
+// 휴대폰 글자 뒤 뿌연 막: 글자 끝에서 좌우 FOG_X, 위아래 FOG_Y까지 퍼짐. 진하기는 FOG의 첫 색
+const FOG_X = 24;
+const FOG_Y = 10;
+const FOG = 'radial-gradient(closest-side, rgba(255,255,255,0.9) 70%, rgba(255,255,255,0) 100%)';
 const BLUR_RADIUS = 16; // 흐림 판 바깥 모서리 둥글기 (줄 높이의 절반을 넘지 않게)
 function lineMask(top: boolean, bottom: boolean) {
-  if (Platform.OS !== 'web') return null;
+  if (!WEB_BLUR) return null;
   const y = `linear-gradient(to bottom, ${top ? 'transparent' : '#000'}, #000 ${FADE_Y}px, #000 calc(100% - ${FADE_Y}px), ${bottom ? 'transparent' : '#000'})`;
   const mask = `linear-gradient(to right, transparent, #000 ${FADE_X}px, #000 calc(100% - ${FADE_X}px), transparent), ${y}`;
   return { maskImage: mask, WebkitMaskImage: mask, maskComposite: 'intersect', WebkitMaskComposite: 'source-in' } as object;
@@ -381,9 +401,9 @@ const st = StyleSheet.create({
   safe: { flex: 1, backgroundColor: color.homeBg, overflow: 'hidden' },
   safeInner: { flex: 1 },
   bg: { position: 'absolute', top: 0 },
-  // 맨 아래까지 내리면 '어떤 도움이 필요하신가요?' 칸 아래 끝이 대화창 바 둥근 윗부분 밑으로 16만 들어가게 (칸의 아래 여백 18 안쪽이라 내용은 안 가림, 사이 빈틈 없음)
+  // 맨 아래까지 내리면 '어떤 도움이 필요하신가요?' 칸 전체가 대화창 바 위로 16 떨어져 보이게 (10/31 실기기: 바에 메뉴 칸이 가려짐)
   // flexGrow: 내용이 화면보다 짧아도 화면 끝까지 채움 (늘어나는 곳은 hero)
-  scroll: { flexGrow: 1, padding: 16, gap: 16, paddingBottom: SHEET_BAR - 16 },
+  scroll: { flexGrow: 1, padding: 16, gap: 16, paddingBottom: SHEET_BAR + 16 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   // 로고·인사말 글자 크기는 화면 폭 비율이라 그릴 때 넣음 (fs)
@@ -396,17 +416,18 @@ const st = StyleSheet.create({
   hero: { flexGrow: 1, marginBottom: -34 },
   heroText: { gap: 8, width: '72%' }, // 커진 설명 문구가 두 줄에 들어가게
   // 글자 뒤 하얀 번짐: 배경 그림이 복잡한 곳에서도 글자가 잘 보이게 (웹은 가장자리를 흐리게, 휴대폰은 반투명 둥근 판)
-  // 휴대폰은 blur가 없어 판이 그대로 보이므로 훨씬 옅게 (10/30 실기기: 흰 상자처럼 보임)
-  halo: { position: 'absolute', top: -12, left: -14, right: -14, bottom: -12, borderRadius: 28, ...(Platform.OS === 'web' ? ({ backgroundColor: 'rgba(255,255,255,0.62)', filter: 'blur(14px)' } as object) : { backgroundColor: 'rgba(255,255,255,0.28)' }) },
+  halo: { position: 'absolute', top: -12, left: -14, right: -14, bottom: -12, borderRadius: 28, ...(WEB_BLUR ? ({ backgroundColor: 'rgba(255,255,255,0.62)', filter: 'blur(14px)' } as object) : null) },
+  // 휴대폰 로고 줄·로고 아래 줄: 인사말과 같은 뿌연 막 (막이 퍼질 자리만큼 안쪽 여백, 바깥 여백은 빼서 글자 위치는 그대로)
+  plate: { alignSelf: 'flex-start', paddingHorizontal: FOG_X, paddingVertical: FOG_Y, marginHorizontal: -FOG_X, marginVertical: -FOG_Y, backgroundImage: FOG },
   // 인사말 줄 뒤 흐림 (시안처럼 건물을 가릴 만큼 진하게, 범위는 글자 둘레만): 웹은 그 줄 뒤 배경 그림만 흐리게(backdrop-filter)
-  // + 하얀 막, 가장자리는 lineMask로 점점 투명. 휴대폰은 backdrop-filter·가장자리 페이드가 없어서 옅은 판 + 글자 번짐(glow)으로 읽히게
+  // + 하얀 막, 가장자리는 lineMask로 점점 투명. 휴대폰은 판 없이 흰 막(fog) + 글자 번짐(glow)으로 읽히게
   textBox: { alignSelf: 'flex-start' },
   textBlur: {
     position: 'absolute', left: -BLUR_X, right: -BLUR_X,
-    ...(Platform.OS === 'web'
-      ? ({ backgroundColor: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' } as object)
-      : { backgroundColor: 'rgba(255,255,255,0.32)' }),
+    ...({ backgroundColor: 'rgba(255,255,255,0.7)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' } as object),
   },
+  // 휴대폰: 줄마다 글자 둘레만 뿌연 흰 막 (가운데 진하고 바깥으로 갈수록 투명 → 판 모서리가 안 보임. 위아래 줄 막은 겹쳐 이어짐)
+  lineFog: { position: 'absolute', left: -FOG_X, right: -FOG_X, top: -FOG_Y, bottom: -FOG_Y, backgroundImage: FOG },
   hello: { fontWeight: '800', color: HOME_INK.hero, ...glow },
   helloSub: { color: HOME_INK.sub, fontWeight: '700', ...glow },
   event: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 18, paddingHorizontal: 4 },
