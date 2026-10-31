@@ -118,7 +118,7 @@ export type AreaCourse = { term: string; course_name: string; credits: number; g
 
 export type GradeItem = { id: number; term: string; course_name: string; credits: number; grade: string; area: string };
 export type TranscriptItem = Omit<GradeItem, 'id'>;
-export type GradeTerm = { term: string; gpa: number | null; items: GradeItem[] };
+export type GradeTerm = { term: string; gpa: number | null; items: Omit<GradeItem, 'term'>[] }; // 서버는 과목마다 term을 주지 않음
 
 export type ClassTime = { day: string; start: string; end: string };
 export type Course = {
