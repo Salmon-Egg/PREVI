@@ -46,9 +46,10 @@ def _text(body: bytes) -> str:
     while i + 2 <= len(body):
         c = struct.unpack_from("<H", body, i)[0]
         if c >= 32:
-            out.append(chr(c))
+            out.append(body[i:i + 2])
         i += 16 if c in LONG_CONTROLS else 2
-    return "".join(out).strip()
+    # UTF-16의 두 코드 단위로 된 이모지를 합치고, 손상된 단독 서로게이트는 대체한다.
+    return b"".join(out).decode("utf-16-le", errors="replace").strip()
 
 
 def _hwp_records(data: bytes):

@@ -28,7 +28,18 @@ def readable(attachments: list[dict]) -> list[dict]:
 def _file_text(key: str, data: bytes) -> str:
     ext = key.rsplit(".", 1)[-1].lower()
     if ext == "pdf":
-        return "\n".join(p.extract_text() or "" for p in PdfReader(io.BytesIO(data)).pages[:5])
+        parts = []
+        for page_no, page in enumerate(PdfReader(io.BytesIO(data)).pages[:5], 1):
+            text = (page.extract_text() or "").strip()
+            if len(text) < 50 and os.getenv("NOTICE_OCR_DIR", "").strip():
+                try:
+                    text = image_ocr.read_pdf_page(data, page_no)
+                except Exception as exc:
+                    log.warning("스캔 PDF 판독 실패 page=%s type=%s", page_no, type(exc).__name__)
+                    text = "PDF 판독 실패: 원문 확인 필요"
+                text = image_ocr.REVIEW + "\n" + text
+            parts.append(text)
+        return "\n".join(parts)
     if ext == "hwp":
         return read_text(data)
     if os.getenv("NOTICE_OCR_DIR", "").strip():

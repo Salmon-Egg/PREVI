@@ -4,8 +4,21 @@ import base64
 import pytest
 from test_admin import HEADERS, make
 
-from server.logic.course_file import courses_from_tables, parse_times, read_tables
+from server.logic.course_file import _text, courses_from_tables, parse_times, read_tables
 from server.routes import admin
+
+
+def test_hwp_supplementary_characters_remain_valid_utf8():
+    text = "공지 \U0001f4cc 신청 안내"
+    assert _text(text.encode("utf-16-le")) == text
+    broken = "공지 \ud83d 신청".encode("utf-16-le", errors="surrogatepass")
+    assert _text(broken) == "공지 \ufffd 신청"
+    assert _text(broken).encode("utf-8")
+
+
+def test_hwp_layout_control_payload_is_not_decoded_as_text():
+    control = b"\x02\x00" + b"\x00\xd8" * 7
+    assert _text("앞".encode("utf-16-le") + control + "뒤".encode("utf-16-le")) == "앞뒤"
 
 
 def test_parse_times_all_shapes_in_the_school_file():
