@@ -2,9 +2,24 @@
 import io
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 REVIEW = "[사진 판독: 금액·날짜·대상 조건은 원문 대조 필요]"
+
+
+def read_pdf_page(data: bytes, page: int) -> str:
+    """글자 없는 PDF 한 페이지를 제한된 크기로 렌더링한 뒤 CPU로 읽는다."""
+    with tempfile.TemporaryDirectory() as folder:
+        pdf = Path(folder) / "source.pdf"
+        prefix = Path(folder) / "page"
+        pdf.write_bytes(data)
+        subprocess.run(
+            ["pdftoppm", "-f", str(page), "-l", str(page), "-singlefile",
+             "-scale-to", "2400", "-png", str(pdf), str(prefix)],
+            check=True, capture_output=True, timeout=60,
+        )
+        return read_image(prefix.with_suffix(".png").read_bytes())
 
 
 def read_image(data: bytes) -> str:

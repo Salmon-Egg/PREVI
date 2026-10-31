@@ -7,6 +7,53 @@ from server.jobs import attachments, image_ocr
 from server.jobs.pipeline import verdict_for
 
 
+def test_mixed_pdf_keeps_text_and_reads_each_scanned_page(monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setenv("NOTICE_OCR_DIR", "/ocr")
+    text = "글자 PDF 본문 " * 20
+    pages = [SimpleNamespace(extract_text=lambda: text),
+             SimpleNamespace(extract_text=lambda: ""),
+             SimpleNamespace(extract_text=lambda: "3")]
+    monkeypatch.setattr(attachments, "PdfReader", lambda _: SimpleNamespace(pages=pages))
+    calls = []
+    def read(data, page):
+        calls.append(page)
+        return f"스캔 {page}쪽"
+    monkeypatch.setattr(image_ocr, "read_pdf_page", read)
+    result = attachments._file_text("2026/09/test.pdf", b"pdf")
+    assert calls == [2, 3]
+    assert text.strip() in result and "스캔 2쪽" in result and "스캔 3쪽" in result
+    assert image_ocr.REVIEW in result
+
+
+def test_scanned_pdf_failure_still_requires_source_check(monkeypatch):
+    from types import SimpleNamespace
+    monkeypatch.setenv("NOTICE_OCR_DIR", "/ocr")
+    monkeypatch.setattr(attachments, "PdfReader", lambda _: SimpleNamespace(
+        pages=[SimpleNamespace(extract_text=lambda: "")]))
+    def fail(*_):
+        raise FileNotFoundError("pdftoppm")
+    monkeypatch.setattr(image_ocr, "read_pdf_page", fail)
+    result = attachments._file_text("2026/09/test.pdf", b"pdf")
+    assert image_ocr.REVIEW in result and "판독 실패" in result
+
+
+def test_pdf_renderer_limits_page_and_cleans_temporary_files(monkeypatch):
+    folders = []
+    def run(command, **kwargs):
+        assert command[:5] == ["pdftoppm", "-f", "3", "-l", "3"]
+        assert kwargs["timeout"] == 60 and kwargs["check"]
+        from pathlib import Path
+        prefix = Path(command[-1])
+        assert Path(command[-2]).read_bytes() == b"pdf"
+        folders.append(prefix.parent)
+        prefix.with_suffix(".png").write_bytes(b"rendered")
+    monkeypatch.setattr(image_ocr.subprocess, "run", run)
+    monkeypatch.setattr(image_ocr, "read_image", lambda data: "결과" if data == b"rendered" else "")
+    assert image_ocr.read_pdf_page(b"pdf", 3) == "결과"
+    assert not folders[0].exists()
+
+
 @pytest.mark.parametrize("output", [b"", "800만 원".encode()])
 def test_ocr_sends_image_to_bounded_cpu_process(monkeypatch, output):
     from PIL import Image
