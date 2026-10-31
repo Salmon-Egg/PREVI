@@ -16,7 +16,7 @@ def reviewed_conditions(conditions: dict, source_text: str = "") -> dict:
     unknown = list(conditions.get("unknown") or [])
     clauses = unknown + re.split(r"[\n;；]", source_text)
     credit_exceptions = [s.strip() for s in clauses if "학점" in s and re.search(
-        r"\d+\s*학기|졸업\s*학기|마지막\s*학기|최종\s*학기|예외|다만|(?:^|[\s(,])단\s*[,：:]", s)]
+        r"\d+\s*학기|졸업\s*학기|마지막\s*학기|최종\s*학기|예외|다만|(?:^|[\s(,])단\s*[,：:]|\d\s*학년의?\s*경우", s)]
     if result.get("min_credits") is not None and credit_exceptions:
         result.pop("min_credits")
         unknown.append("이수 학점의 학기별 예외·적용 대상 확인 필요")

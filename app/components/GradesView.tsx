@@ -18,7 +18,7 @@ import { Input, Label, Select, Sheet } from './form';
 import { Pressable, Text } from './Text';
 import { Button, confirmAsk, PicText, Screen, showAlert, StateView, Sub } from './ui';
 
-const TERMS = Array.from({ length: 6 }, (_, i) => [`${i + 1}-1`, `${i + 1}-2`]).flat();
+const TERMS = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2', '4-1', '4-2'];
 const GRADES = ['A+', 'A0', 'B+', 'B0', 'C+', 'C0', 'D+', 'D0', 'F', 'P'];
 const POINT: Record<string, string> = { 'A+': '4.5', A0: '4.0', 'B+': '3.5', B0: '3.0', 'C+': '2.5', C0: '2.0', 'D+': '1.5', D0: '1.0', F: '0', P: '통과' };
 // 원문 이수구분을 보존하고 졸업 요건 계산에서 필요한 영역으로 따로 묶는다.
@@ -138,8 +138,8 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
 type Recalc = { recalculated: { remaining_total: number | null; new_eligible_scholarships: number } };
 
 const TRANSCRIPT_WARNING = '성적증명서에는 이름·학번·생년월일 같은 개인정보가 들어 있어요.\n\n'
-  + '· 본인 증명서만 올려 주세요.\n· 학교 서버의 AI가 글자만 읽고, 파일과 읽은 글자는 저장하지 않아요.\n'
-  + '· AI가 잘못 읽을 수 있어요. 특히 사진은 오류가 더 많으니 저장 전에 과목·학점·성적을 꼭 확인해 주세요.\n'
+  + '· 본인 증명서만 올려 주세요.\n· 학교 서버가 글자만 읽고, 파일과 읽은 글자는 저장하지 않아요.\n'
+  + '· 잘못 읽을 수 있어요. 특히 사진은 오류가 더 많으니 저장 전에 과목·학점·성적을 꼭 확인해 주세요.\n'
   + '· 잘못 저장하면 졸업 요건과 장학금 판정이 틀어질 수 있어요.';
 
 /** uri의 파일 → base64 (expo-document-picker는 base64를 직접 주지 않음) */
@@ -159,27 +159,37 @@ function TranscriptSheets({ picking, onClose, onSaved }: { picking: boolean; onC
   const [dropped, setDropped] = useState(0);
   const [unmatched, setUnmatched] = useState<string[]>([]);
   const [terms, setTerms] = useState<Record<string, string>>({});
-  const [confirmed, setConfirmed] = useState(false);
+  const [editing, setEditing] = useState<number | null>(null); // 펼쳐서 고치는 과목
+  const [check, setCheck] = useState<{ read: number; stated: number } | null>(null);
   const { busy, run } = useSubmit();
-  const candidates = (items ?? []).filter(g => !g.excluded);
-  const groups = [...new Map((items ?? []).flatMap((g, i) => g.excluded ? [] : [[transcriptGroup(g, i), g] as const])).entries()];
-  const payloads = (items ?? []).flatMap((g, i) => g.excluded ? [] : [transcriptPayload(g, terms[transcriptGroup(g, i)])]);
+  const rows = (items ?? []).map((g, i) => ({ g, i, key: transcriptGroup(g, i) }));
+  const candidates = rows.filter(r => !r.g.excluded);
+  const excluded = rows.filter(r => r.g.excluded);
+  const payloads = candidates.map(r => transcriptPayload(r.g, terms[r.key]));
   const invalid = payloads.some(g => g === null);
+  const earned = candidates.reduce((n, r) => n + (r.g.grade === 'F' ? 0 : r.g.credits ?? 0), 0); // 고치거나 빼면 바로 다시 비교
+  // 학기 순서로 묶어 보임 (같은 학기로 합친 묶음은 그대로 둠)
+  const groups = [...new Set(candidates.map(r => r.key))].sort((a, b) => (terms[a] ?? '9').localeCompare(terms[b] ?? '9') || a.localeCompare(b));
   function update(index: number, change: Partial<TranscriptItem>) {
     setItems(current => current?.map((g, i) => i === index ? { ...g, ...change } : g) ?? null);
-    setConfirmed(false);
+  }
+  function drop(index: number) {
+    setItems(current => current?.filter((_, i) => i !== index) ?? null);
+    setTerms(t => Object.fromEntries(Object.entries(t).filter(([key]) => !key.startsWith('row-')))); // 'row-번호' 묶음은 번호가 밀림
+    setEditing(null);
   }
 
   const read = (pick: () => Promise<string | null>) => run(async () => {
     try {
       const content = await pick();
       if (!content) return;
-      const res = await api.post<{ items: TranscriptItem[]; dropped: number; unmatched_lines?: string[] }>('/grades/from-file', { content_base64: content, preview_version: 2 });
+      const res = await api.post<{ items: TranscriptItem[]; dropped: number; unmatched_lines?: string[]; credit_check?: { read: number; stated: number } | null }>('/grades/from-file', { content_base64: content, preview_version: 2 });
       setItems(res.items);
       setDropped(res.dropped);
       setUnmatched(res.unmatched_lines ?? []);
-      setTerms({});
-      setConfirmed(false);
+      setCheck(res.credit_check ?? null);
+      setTerms(Object.fromEntries(res.items.flatMap((g, i) => g.term ? [[transcriptGroup(g, i), g.term]] : [])));
+      setEditing(null);
       onClose();
     } catch (e) {
       showAlert('성적을 읽지 못했어요', (e as ApiError).message);
@@ -195,7 +205,7 @@ function TranscriptSheets({ picking, onClose, onSaved }: { picking: boolean; onC
   });
 
   const save = () => run(async () => {
-    if (!confirmed || invalid || !payloads.length) return;
+    if (invalid || !payloads.length) return;
     let saved = 0;
     const failed: string[] = [];
     for (const item of payloads) {
@@ -218,37 +228,61 @@ function TranscriptSheets({ picking, onClose, onSaved }: { picking: boolean; onC
         <Button label={busy ? '읽는 중… 과목 수에 따라 시간이 걸려요' : 'PDF 파일 고르기'} disabled={busy} onPress={fromPdf} />
         <Button kind="ghost" label="사진 고르기" disabled={busy} onPress={fromPhoto} />
       </Sheet>
-      <Sheet visible={!!items} onClose={() => setItems(null)} title="읽은 성적 확인" sub="원문 연도는 학년이 아니에요. 저장할 학기를 직접 연결하고 과목·성적·구분을 확인해 주세요. N/A는 저장하지 않아요.">
-        {dropped > 0 && <Text style={st.tipText}>과목명을 읽지 못한 항목 {dropped}개가 있어요. AI가 아예 누락한 과목은 이 숫자에 포함되지 않을 수 있으니 원문과 대조해 주세요.</Text>}
-        {!!unmatched.length && <View style={{ gap: 6 }}><Text style={st.tipText}>누락됐을 수 있는 원문 행 {unmatched.length}개: 저장 후 과목 추가에서 직접 입력해 주세요.</Text>{unmatched.map((line, i) => <Sub key={i}>{line}</Sub>)}</View>}
-        {groups.map(([key, g]) => (
-          <View key={key} style={{ gap: 6, marginVertical: 8 }}>
-            <Label>{g.source_year ? `원문 ${g.source_year}년` : '원문 연도 확인 필요'} {g.source_semester ? `${g.source_semester}학기` : '학기 확인 필요'} → 저장할 학기</Label>
-            <Select value={terms[key] ?? ''} items={['', ...TERMS]} label={v => v ? termLabel(v) : '학년·학기를 직접 선택'} onChange={v => { setTerms(t => ({ ...t, [key]: v })); setConfirmed(false); }} />
+      <Sheet visible={!!items} onClose={() => setItems(null)} title="읽은 성적 확인" sub="증명서와 다른 과목은 눌러서 고치거나 − 로 빼 주세요.">
+        {check && (
+          <View style={[st.tip, earned !== check.stated && { backgroundColor: color.redSoft }]}>
+            <Text style={[st.tipText, { fontWeight: '800' }]}>{earned === check.stated ? `✓ ${candidates.length}과목 ${earned}학점: 증명서 취득학점과 같아요` : `⚠️ 지금 ${earned}학점 / 증명서 취득학점 ${check.stated}학점: 빠지거나 잘못 읽은 과목이 있어요`}</Text>
           </View>
-        ))}
-        {items?.map((g, i) => (
-          <View key={`${g.source_year}-${g.source_semester}-${i}`} style={{ borderTopWidth: 1, borderColor: color.line, paddingVertical: 12, gap: 8 }}>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <Text style={st.itemName}>{g.course_name} · 원문 성적 {g.raw_grade || '확인 필요'}</Text>
-              <Pressable accessibilityLabel={`${g.course_name} 빼기`} hitSlop={6} onPress={() => { setItems(items.filter((_, k) => k !== i)); setTerms(t => Object.fromEntries(Object.entries(t).filter(([key]) => !key.startsWith('row-')))); setConfirmed(false); }} style={st.minus}><View style={st.minusBar} /></Pressable>
+        )}
+        {dropped > 0 && <Text style={st.tipText}>⚠️ 과목명을 읽지 못한 항목 {dropped}개는 직접 추가해 주세요.</Text>}
+        {!!unmatched.length && <View style={{ gap: 6 }}><Text style={st.tipText}>⚠️ 빠졌을 수 있는 줄 {unmatched.length}개: 저장 후 과목 추가에서 넣어 주세요.</Text>{unmatched.map((line, i) => <Sub key={i}>{line}</Sub>)}</View>}
+        {groups.map((key) => {
+          const list = candidates.filter(r => r.key === key);
+          const { source_year: year, source_semester: semester } = list[0].g;
+          return (
+            <View key={key} style={st.previewTerm}>
+              <Label>{year && semester ? `증명서 ${year}년 ${semester}학기` : '증명서 학기를 못 읽었어요'} · {list.length}과목</Label>
+              <Select value={terms[key] ?? ''} highlight={!terms[key]} items={[...(terms[key] ? [] : ['']), ...TERMS]} label={v => v ? termLabel(v) : '저장할 학기를 골라 주세요'} onChange={v => setTerms(t => ({ ...t, [key]: v }))} title="저장할 학기" />
+              {list.map(({ g, i }) => {
+                const bad = !transcriptPayload(g, '1-1');
+                return (
+                  <View key={i} style={st.previewRow}>
+                    <View style={st.previewLine}>
+                      <Pressable accessibilityLabel={`${g.course_name} 고치기`} style={{ flex: 1 }} onPress={() => setEditing(editing === i ? null : i)}>
+                        <Text style={st.previewName}>{g.course_name}</Text>
+                        <Sub>{g.credits ?? '?'}학점 · {g.area || '구분 확인'}</Sub>
+                      </Pressable>
+                      <View style={[st.grade, { backgroundColor: g.grade ? gradeTone(g.grade).bg : color.redSoft }]}>
+                        <Text style={[st.gradeText, { color: g.grade ? gradeTone(g.grade).fg : color.red }]}>{g.grade ?? '확인'}</Text>
+                      </View>
+                      <Pressable accessibilityLabel={`${g.course_name} 빼기`} hitSlop={6} onPress={() => drop(i)} style={st.minus}><View style={st.minusBar} /></Pressable>
+                    </View>
+                    {(bad || editing === i) && (
+                      <View style={{ gap: 6 }}>
+                        {!!g.issues?.length && <Text style={st.previewIssue}>{g.issues.join(' · ')}</Text>}
+                        {!!g.source_line && <Sub>원문: {g.source_line}</Sub>}
+                        <Input value={g.course_name} onChangeText={v => update(i, { course_name: v })} placeholder="과목명" />
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                          <View style={{ flex: 1 }}><Input value={g.credits === null ? '' : String(g.credits)} keyboardType="decimal-pad" placeholder="학점" onChangeText={v => update(i, { credits: v.trim() && Number.isFinite(Number(v)) ? Number(v) : null })} /></View>
+                          <View style={{ flex: 1 }}><Select value={g.grade ?? ''} items={['', ...GRADES]} label={v => v || '성적'} onChange={v => update(i, { grade: v || null })} title="취득 성적" /></View>
+                        </View>
+                        <Select value={g.area} items={[...new Set(['', ...AREAS, ...(g.area ? [g.area] : [])])]} label={v => v || '이수구분'} onChange={v => update(i, { area: v })} title="이수구분" />
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
             </View>
-            {!!g.source_line && <Sub>원문: {g.source_line}</Sub>}
-            {!!g.issues?.length && <Sub>{g.issues.join(' · ')}</Sub>}
-            {g.excluded ? <Text style={st.tipText}>{g.exclusion_reason || '성적 미반영 항목: 저장에서 제외해요.'}</Text> : <>
-              <Input value={g.course_name} onChangeText={v => update(i, { course_name: v })} placeholder="과목명" />
-              <Label>학점</Label>
-              <Input value={g.credits === null ? '' : String(g.credits)} keyboardType="decimal-pad" onChangeText={v => update(i, { credits: v.trim() && Number.isFinite(Number(v)) ? Number(v) : null })} />
-              <Label>취득 성적</Label>
-              <Select value={g.grade ?? ''} items={['', ...GRADES]} label={v => v || '성적 직접 확인'} onChange={v => update(i, { grade: v || null })} />
-              <Label>이수구분</Label>
-              <Select value={g.area} items={[...new Set(['', ...AREAS, ...(g.area ? [g.area] : [])])]} label={v => v || '이수구분 직접 확인'} onChange={v => update(i, { area: v })} />
-            </>}
+          );
+        })}
+        {!!excluded.length && (
+          <View style={{ gap: 4 }}>
+            <Label>저장하지 않는 과목 {excluded.length}개</Label>
+            {excluded.map(({ g, i }) => <Sub key={i}>· {g.course_name}: {g.raw_grade === 'N/A' ? '재수강 전 성적(N/A)' : g.exclusion_reason}</Sub>)}
           </View>
-        ))}
-        <Button kind="ghost" label={confirmed ? '✓ 원문과 학기·성적·이수구분을 대조했어요' : '원문과 학기·성적·이수구분 대조 완료'} onPress={() => setConfirmed(v => !v)} />
-        {invalid && <Sub>저장할 학기 또는 비어 있는 항목을 확인해 주세요. 잘못 읽은 과목은 수정하거나 빼 주세요.</Sub>}
-        <Button label={busy ? '저장하는 중…' : `${candidates.length}과목 저장하기`} disabled={busy || !confirmed || invalid || !candidates.length} onPress={save} />
+        )}
+        {invalid && <Text style={st.previewIssue}>학기나 빈 칸을 채우거나 그 과목을 빼면 저장할 수 있어요.</Text>}
+        <Button label={busy ? '저장하는 중…' : `${candidates.length}과목 저장하기`} disabled={busy || invalid || !candidates.length} onPress={save} />
       </Sheet>
     </>
   );
@@ -318,6 +352,11 @@ const st = StyleSheet.create({
   gradeText: { fontWeight: '800', fontSize: 12 },
   minus: { width: 24, height: 24, borderRadius: 12, backgroundColor: color.redSoft, alignItems: 'center', justifyContent: 'center' },
   minusBar: { width: 10, height: 2, borderRadius: 1, backgroundColor: color.red },
+  previewTerm: { borderWidth: 1, borderColor: color.field, borderRadius: 14, padding: 12, gap: 8 },
+  previewRow: { borderTopWidth: 1, borderColor: color.line, paddingTop: 8, gap: 8 },
+  previewLine: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  previewName: { fontSize: 14, fontWeight: '700', color: color.ink },
+  previewIssue: { fontSize: 13, fontWeight: '700', color: color.red },
   tip: { backgroundColor: '#E6F4EC', borderRadius: 12, padding: 12, marginVertical: 4 },
   tipText: { fontSize: 13, color: color.title },
 });

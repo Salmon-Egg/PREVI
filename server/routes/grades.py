@@ -17,7 +17,7 @@ from server.auth import AuthenticatedUser, require_user
 from server.database import all_grade_rows, database_rows
 from server.errors import APIError
 from server.logic.grades import grouped_grades
-from server.logic.transcript import clean_courses, unmatched_course_lines
+from server.logic.transcript import assign_terms, clean_courses, credit_check, parse_courses, unmatched_course_lines
 from server.routes.lost_items import image_type
 from server.routes.graduation import graduation_result
 
@@ -67,6 +67,9 @@ async def grades_from_file(body: TranscriptInput, request: Request, user: Authen
     except (binascii.Error, ValueError):
         raise APIError(400, "INVALID_FILE", "파일을 읽을 수 없어요.") from None
     text = await run_in_threadpool(_transcript_text, data)
+    if parsed := parse_courses(text):
+        items, dropped = clean_courses(parsed)
+        return {"items": assign_terms(items), "dropped": dropped, "unmatched_lines": [], "credit_check": credit_check(text, items)}
     try:
         extracted = await run_in_threadpool(tasks.read_transcript, text)
     except Exception as exc:
@@ -76,13 +79,17 @@ async def grades_from_file(body: TranscriptInput, request: Request, user: Authen
     if not items:
         scanned = " 스캔한 PDF는 사진으로 올려 주세요." if ai_client.VISION_MODEL else " 스캔한 PDF는 읽을 수 없어요."
         raise APIError(400, "TRANSCRIPT_EMPTY", "성적을 찾지 못했어요. 글자가 선명한 파일인지 확인해 주세요." + scanned)
-    return {"items": items, "dropped": dropped, "unmatched_lines": unmatched_course_lines(text, items)}
+    return {"items": assign_terms(items), "dropped": dropped, "unmatched_lines": unmatched_course_lines(text, items), "credit_check": credit_check(text, items)}
 
 
 @router.get("/courses")
 async def courses(request: Request, q: str = Query(default="", max_length=100),
                   user: AuthenticatedUser = Depends(require_user)):
     params = {"select": "id,name,credits,area,times", "order": "name.asc,id.asc", "limit": 100}
+    # 지난 학기 시간이 섞이지 않게 가장 최근 정규 학기만. '____-_'은 2026-1·2026-2 (여름·겨울은 두 글자라 제외)
+    latest = await database_rows(request, "GET", "courses", params={"select": "term", "term": "like.____-_", "order": "term.desc", "limit": 1})
+    if latest:
+        params["term"] = f"eq.{latest[0]['term']}"
     if q.strip():
         # 검색어는 필터 문법이 아닌 문자열로만 사용한다.
         query = q.strip().replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_").replace("*", "\\*")

@@ -3,7 +3,7 @@ from types import SimpleNamespace
 import pytest
 
 from server.ai import tasks
-from server.logic.transcript import clean_courses, unmatched_course_lines
+from server.logic.transcript import assign_terms, clean_courses, credit_check, parse_courses, unmatched_course_lines
 from server.routes import grades
 from server.tests.test_ask_back_and_files import client_for, HEADERS, PNG
 
@@ -151,3 +151,50 @@ def test_api_parse_failure_does_not_disclose_source_and_writes_nothing(monkeypat
     assert response.status_code == 502 and response.json()['error']['code'] == 'TRANSCRIPT_PARSE_FAILED'
     assert 'private student data' not in response.text and 'private student data' not in caplog.text
     assert len(calls) == 1
+
+
+# 서경대 증명서 글자 배치를 본뜬 가짜 표: 두 칸, "Bo" 표기, 학점 없는 N/A, 담당교수 없는 행, 띄어쓴 교수 이름, 재수강 ":R"
+SKUNIV_LAYOUT = """\
+    총계      신청학점    취득학점    평점총계    평점평균       지도교수                          홍길동
+              120     14    400.0    3.00   졸업논문(시험)
+                  2021년도 1학기                                         2024년도 2학기
+ 구분             과 목 명            담당교수     학점  성적     구분            과 목 명             담당교수    학점   성적
+ 전핵    논리회로                       김교수         N/A    전심   논리회로:R                    박교수     3  B+
+ 교필    Global English 1          디온 타이어리    2  Bo     자선   생활일본어:교류                         3  Ao
+신청      취득      평점       평점                          전심   지식재산권과창업                  이교수     1  P
+학점   16 학점   16 총계  48.0 평균  3.00백분위50.00석차  10/100  교선   MZ세대 법이야기                 최교수     3  F
+                  2021년도 2학기
+ 전심    회로이론                       조교수      3  C+
+"""
+
+
+def test_skuniv_transcript_is_read_by_code_with_both_columns():
+    items, dropped = clean_courses(parse_courses(SKUNIV_LAYOUT))
+    assign_terms(items)
+    rows = {(i["term"], i["course_name"]): (i["credits"], i["grade"], i["area"], i["excluded"]) for i in items}
+    assert dropped == 0 and rows == {
+        ("1-1", "논리회로"): (None, None, "전공 핵심", True),
+        ("1-1", "Global English 1"): (2.0, "B0", "교양 필수", False),
+        ("1-2", "회로이론"): (3.0, "C+", "전공 심화", False),
+        ("2-1", "논리회로"): (3.0, "B+", "전공 심화", False),
+        ("2-1", "생활일본어:교류"): (3.0, "A0", "자유 선택", False),
+        ("2-1", "지식재산권과창업"): (1.0, "P", "전공 심화", False),
+        ("2-1", "MZ세대 법이야기"): (3.0, "F", "교양 선택", False),
+    }
+    assert not any(i["issues"] for i in items)
+    assert credit_check(SKUNIV_LAYOUT, items) == {"read": 12.0, "stated": 14.0}  # 다르면 앱이 누락 경고
+
+
+def test_other_transcript_layouts_fall_back_to_ai():
+    assert parse_courses("2024학년도 1학기\n전필 자료구조 3 A+") == []
+
+
+def test_terms_count_semesters_taken_and_stop_at_fourth_year():
+    rows = [row(year=y, semester=s, name=f"{y}-{s}") for y in range(2019, 2025) for s in (1, 2)]  # 12개 학기
+    rows.append(row(name="학기 불명", year=None))
+    items, _ = clean_courses(rows)
+    terms = {i["course_name"]: i["term"] for i in assign_terms(items)}
+    assert terms["2019-1"] == "1-1" and terms["2020-2"] == "2-2" and terms["2022-2"] == "4-2"
+    assert terms["2024-2"] == "4-2" and terms["학기 불명"] is None  # 9번째부터 묶음, 모르는 학기는 학생이 고름
+    leave = assign_terms(clean_courses([row(year=2021, semester=2), row(year=2026, semester=1, name="복학 후")])[0])
+    assert [i["term"] for i in leave] == ["1-1", "1-2"]  # 휴학한 해를 세지 않음

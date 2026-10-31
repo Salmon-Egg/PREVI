@@ -19,8 +19,9 @@ const SPECS = {
     head: ['제목', '기간', '대상'],
   },
   courses: {
-    label: '과목', blank: { name: '', credits: 3, area: '', times: [] },
+    label: '과목', blank: { term: '', name: '', credits: 3, area: '', times: [] },
     fields: [
+      ['term', '년도-학기 (예: 2026-2, 2026-여름)', 'text', (s) => s || null, (v) => v ?? ''],
       ['name', '과목명', 'text'], ['credits', '학점', 'number', Number], ['area', '이수 구분', 'text'],
       ['times', '수업 시간 (JSON, 시간표와 같은 모양)', 'json', (s) => JSON.parse(s || '[]'), (v) => JSON.stringify(v)],
     ],
@@ -35,7 +36,7 @@ export default function SchoolData() {
     <>
       <h1 className="title">학교 자료</h1>
       <Tabs value={tab} onChange={setTab} tabs={[['calendar', '학사일정'], ['courses', '과목'], ['graduation', '졸업 기준']]} />
-      {tab === 'graduation' ? <Graduation /> : <Editable key={tab} kind={tab} />}
+      {tab === 'graduation' ? <Graduation /> : tab === 'courses' ? <Courses /> : <Editable key={tab} kind={tab} />}
     </>
   );
 }
@@ -49,17 +50,21 @@ function CourseFile({ onDone }) {
     e.target.value = ''; // 같은 파일을 다시 고를 수 있게
     if (!file) return;
     if (file.size > 20 * 1024 * 1024) return alert('20MB 이하 파일만 올릴 수 있어요.');
+    const answer = window.prompt(`'${file.name}'의 년도-학기를 확인해 주세요. (예: 2026-2, 2026-여름)`, termInName(file.name));
+    if (answer === null) return;
+    const term = answer.trim();
+    if (!TERM.test(term)) return alert('년도-학기는 2026-2 모양으로 적어 주세요.');
     setBusy(true);
     run(async () => {
       try {
-        const r = await api('POST', '/admin/courses/import', { filename: file.name, content_base64: await toBase64(file) });
+        const r = await api('POST', '/admin/courses/import', { filename: file.name, term, content_base64: await toBase64(file) });
         const names = r.skipped.slice(0, 20).join(', ') + (r.skipped.length > 20 ? ' 등' : '');
-        alert(`새 과목 ${r.added}개를 넣었어요. 이미 있던 과목 ${r.duplicates}개는 그대로 뒀어요.`
+        alert(`${term}에 새 과목 ${r.added}개를 넣었어요. 이미 있던 과목 ${r.duplicates}개는 그대로 뒀어요.`
           + (r.skipped.length ? `\n\n수업 시간·학점을 읽을 수 없어 건너뛴 과목 ${r.skipped.length}개:\n${names}` : ''));
       } finally {
         setBusy(false);
       }
-    }, onDone);
+    }, () => onDone(term));
   }
   return (
     <>
@@ -69,33 +74,79 @@ function CourseFile({ onDone }) {
   );
 }
 
-function Editable({ kind }) {
+const TERM = /^\d{4}-(1|2|여름|겨울)$/;
+/** "2026-2학기 강의시간표.hwp" → 2026-2 */
+function termInName(name) {
+  const year = name.match(/20\d{2}/)?.[0];
+  const part = name.match(/([12])\s*학기/)?.[1] ?? (/여름|하계/.test(name) ? '여름' : /겨울|동계/.test(name) ? '겨울' : null);
+  return year && part ? `${year}-${part}` : '';
+}
+
+/** 과목은 7천 개가 넘어 학기별로 나눠 봄. 처음에는 가장 최근 학기 */
+function Courses() {
+  const terms = useLoad('/admin/courses/terms');
+  const [picked, setPicked] = useState(null);
+  const list = terms.data ?? [];
+  const term = picked ?? list[0]?.term ?? '';
+  function clear() {
+    const count = list.find((t) => t.term === term)?.count;
+    if (!confirm(`${term} 과목 ${count}개를 모두 지울까요?\n학생 검색에서 바로 사라지고 되돌릴 수 없어요. 학생 시간표에 넣은 과목의 이름·시간은 남아요.`)) return;
+    run(() => api('DELETE', `/admin/courses/term/${encodeURIComponent(term)}`), () => { setPicked(null); terms.reload(); });
+  }
+  return (
+    <Loaded load={terms}>
+      {() => (
+        <>
+          <section className="card">
+            <div className="row-head">
+              <label className="nowrap">년도-학기{' '}
+                <select value={term} onChange={(e) => setPicked(e.target.value)}>
+                  {list.map((t) => <option key={t.term} value={t.term}>{t.term === '미지정' ? '학기 미지정' : t.term} ({t.count.toLocaleString()}개)</option>)}
+                </select>
+              </label>
+              {!!term && <button className="ghost small" onClick={clear}>이 학기 과목 전체 삭제</button>}
+            </div>
+            <p className="note">학생 시간표 검색에는 가장 최근 정규 학기만 보여요. 학기 미지정 과목은 학생에게 안 보이니 지운 뒤 파일을 학기별로 다시 올려 주세요.</p>
+          </section>
+          <Editable key={term} kind="courses" term={term} blankTerm={term === '미지정' ? '' : term}
+            onChanged={(next) => { if (typeof next === 'string') setPicked(next); terms.reload(); }} />
+        </>
+      )}
+    </Loaded>
+  );
+}
+
+function Editable({ kind, term = '', blankTerm = '', onChanged }) {
   const spec = SPECS[kind];
   const [q, setQ] = useState('');
-  const load = useLoad(`/admin/data/${kind}?q=${encodeURIComponent(q)}`);
+  const load = useLoad(`/admin/data/${kind}?q=${encodeURIComponent(q)}&term=${encodeURIComponent(term)}`);
+  const changed = (next) => { load.reload(); onChanged?.(next); };
   const [editing, setEditing] = useState(null); // 행 또는 blank
-  const remove = (r) => confirm('지울까요? 학생 앱에서도 바로 사라져요.') && run(() => api('DELETE', `/admin/data/${kind}/${r.id}`), load.reload);
+  const remove = (r) => confirm('지울까요? 학생 앱에서도 바로 사라져요.') && run(() => api('DELETE', `/admin/data/${kind}/${r.id}`), changed);
   return (
     <section className="card">
       <div className="row-head">
         <input type="search" placeholder="검색" aria-label={spec.label + ' 검색'} value={q} onChange={(e) => setQ(e.target.value)} />
-        {kind === 'courses' && <CourseFile onDone={load.reload} />}
-        <button className="primary" onClick={() => setEditing(spec.blank)}>{spec.label} 추가</button>
+        {kind === 'courses' && <CourseFile onDone={changed} />}
+        <button className="primary" onClick={() => setEditing(kind === 'courses' ? { ...spec.blank, term: blankTerm } : spec.blank)}>{spec.label} 추가</button>
       </div>
       <Loaded load={load}>
         {(rows) => (
-          <table>
-            <thead><tr>{spec.head.map((h) => <th key={h}>{h}</th>)}<th /></tr></thead>
-            <tbody>{rows.map((r) => (
-              <tr key={r.id}>
-                {spec.show(r).map((v, i) => <td key={i}>{v}</td>)}
-                <td className="nowrap"><button className="soft small" onClick={() => setEditing(r)}>수정</button> <button className="ghost small" onClick={() => remove(r)}>삭제</button></td>
-              </tr>
-            ))}</tbody>
-          </table>
+          <>
+            <p className="note">{q ? '검색 결과' : '전체'} {rows.length.toLocaleString()}개</p>
+            <table>
+              <thead><tr>{spec.head.map((h) => <th key={h}>{h}</th>)}<th /></tr></thead>
+              <tbody>{rows.map((r) => (
+                <tr key={r.id}>
+                  {spec.show(r).map((v, i) => <td key={i}>{v}</td>)}
+                  <td className="nowrap"><button className="soft small" onClick={() => setEditing(r)}>수정</button> <button className="ghost small" onClick={() => remove(r)}>삭제</button></td>
+                </tr>
+              ))}</tbody>
+            </table>
+          </>
         )}
       </Loaded>
-      {editing && <EditModal kind={kind} row={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load.reload(); }} />}
+      {editing && <EditModal kind={kind} row={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); changed(); }} />}
     </section>
   );
 }
@@ -121,7 +172,7 @@ function EditModal({ kind, row, onClose, onSaved }) {
             {type === 'json'
               ? <textarea rows={4} className="mono" value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} />
               : <input type={type} step={type === 'number' ? '0.5' : undefined} value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })}
-                  required={k !== 'target_grades'} />}
+                  required={k !== 'target_grades' && k !== 'term'} />}
           </label>
         ))}
         <div className="actions"><button type="button" className="ghost" onClick={onClose}>취소</button><button className="primary">저장</button></div>

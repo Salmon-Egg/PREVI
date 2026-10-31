@@ -33,6 +33,7 @@ export default function GraduationDetail() {
             {data.areas.map((a) => <AreaCard key={a.name} area={a} bar />)}
 
             <Title>남은 요건</Title>
+            <Sub>대학요람 기준이에요. 학과 내규와 다를 수 있으니 최종 확인은 학과와 서경포탈에서 해 주세요.</Sub>
             {data.requirements.map((r) => (
               <Card key={r.name} onPress={r.todo_id ? () => router.push(`/todos/${r.todo_id}`) : undefined}>
                 <Row>

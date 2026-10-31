@@ -269,7 +269,7 @@ class BroadcastIn(BaseModel):
 async def _all_rows(request: Request, table: str, **params) -> list[dict]:
     rows, page = [], None
     while page is None or len(page) == 1000:
-        page = await admin_rows(request, "GET", table, params={**params, "order": "id.asc", "offset": len(rows), "limit": 1000})
+        page = await admin_rows(request, "GET", table, params={"order": "id.asc", **params, "offset": len(rows), "limit": 1000})
         rows += page
     return rows
 
@@ -377,7 +377,12 @@ class CalendarIn(BaseModel):
     source_url: str = Field(min_length=1, max_length=500)
 
 
+TERM = r"^\d{4}-(1|2|여름|겨울)$"  # '2026-2'
+NO_TERM = "미지정"
+
+
 class CourseIn(BaseModel):
+    term: str | None = Field(default=None, pattern=TERM)
     name: str = Field(min_length=1, max_length=200)
     credits: float = Field(gt=0, le=30)
     area: str = Field(min_length=1, max_length=100)
@@ -400,6 +405,7 @@ def _valid(kind: str, body: dict) -> dict:
 
 class CourseFileIn(BaseModel):
     filename: str = Field(min_length=1, max_length=200)
+    term: str = Field(pattern=TERM)
     content_base64: str = Field(min_length=1, max_length=28_000_000)  # 파일 20MB
 
 
@@ -414,34 +420,62 @@ def _courses_in_file(data: bytes) -> tuple[list[dict], list[str]]:
 
 @router.post("/courses/import", status_code=201)
 async def import_courses(body: CourseFileIn, request: Request):
-    """강의시간표 HWP → 시간표 검색 과목. 이미 있는 과목(이름+시간)은 그대로 두고 새 것만 더함."""
+    """강의시간표 HWP → 시간표 검색 과목. 같은 학기에 이미 있는 과목(이름+시간)은 그대로 두고 새 것만 더함."""
     if not body.filename.lower().endswith(".hwp"):
         raise APIError(400, "INVALID_FILE", "HWP 파일만 올릴 수 있어요. HWPX·PDF는 한글에서 HWP로 저장해 주세요.")
     courses, skipped = await run_in_threadpool(_courses_in_file, _file_bytes(body.content_base64))
     if not courses:
         raise APIError(400, "EMPTY_DOCUMENT", "파일에서 과목 표를 찾지 못했어요.")
     have, offset = set(), 0
-    while page := await admin_rows(request, "GET", "courses", params={"select": "name,times", "order": "id.asc", "limit": 1000, "offset": offset}):
+    while page := await admin_rows(request, "GET", "courses", params={"term": f"eq.{body.term}", "select": "name,times", "order": "id.asc", "limit": 1000, "offset": offset}):
         have |= {course_key(c["name"], c["times"]) for c in page}
         offset += len(page)
         if len(page) < 1000:
             break
-    new = [c for c in courses if course_key(c["name"], c["times"]) not in have]
+    new = [{**c, "term": body.term} for c in courses if course_key(c["name"], c["times"]) not in have]
     if new:
         await admin_rows(request, "POST", "courses", json=new)
     return {"added": len(new), "duplicates": len(courses) - len(new), "skipped": skipped}
 
 
+def _term_filter(term: str) -> str:
+    return "is.null" if term == NO_TERM else f"eq.{term}"
+
+
+@router.get("/courses/terms")
+async def course_terms(request: Request):
+    """학기별 과목 수. 최근 학기가 앞, 미지정은 맨 뒤."""
+    counts = Counter(row["term"] or NO_TERM for row in await _all_rows(request, "courses", select="term"))
+    season = {"1": 1, "여름": 2, "2": 3, "겨울": 4}
+
+    def newest(term):
+        year, _, part = term.partition("-")
+        return (term != NO_TERM, year, season.get(part, 0))
+    return [{"term": t, "count": counts[t]} for t in sorted(counts, key=newest, reverse=True)]
+
+
+@router.delete("/courses/term/{term}")
+async def delete_term(term: str, request: Request):
+    """그 학기 과목 전체 삭제. 학생 시간표의 과목 이름·시간은 남고 과목 연결만 끊김(on delete set null)."""
+    if term != NO_TERM and not re.fullmatch(TERM, term):
+        raise APIError(400, "INVALID_TERM", "학기는 2026-2 모양으로 적어 주세요.")
+    rows = await admin_rows(request, "DELETE", "courses", params={"term": _term_filter(term), "select": "id"},
+                            headers={"Prefer": "return=representation"})
+    return {"deleted": len(rows)}
+
+
 @router.get("/data/{kind}")
-async def data_rows(kind: Kind, request: Request, q: str = ""):
+async def data_rows(kind: Kind, request: Request, q: str = "", term: str = ""):
     table, _, cols, order = TABLES[kind]
-    params = {"select": cols, "order": order, "limit": 2000}
+    params = {"select": cols, "order": order}
+    if term and kind == "courses":
+        params["term"] = _term_filter(term)
     q = re.sub(r"[,()*]", "", q).strip()  # PostgREST 필터 문법 글자는 빼고 검색
     if q and kind == "courses":
         params["or"] = f"(name.ilike.*{q}*,area.ilike.*{q}*)"
     elif q:
         params["title"] = f"ilike.*{q}*"
-    return await admin_rows(request, "GET", table, params=params)
+    return await _all_rows(request, table, **params)  # DB가 한 번에 1000행만 줘서 나눠 받음
 
 
 @router.post("/data/{kind}", status_code=201)

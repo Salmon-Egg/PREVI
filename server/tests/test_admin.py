@@ -196,3 +196,56 @@ def test_student_feedback_on_answer():
         res = client.patch("/messages/9/feedback", headers=HEADERS, json={"feedback": "down"})
     assert res.status_code == 200
     assert saved[0][:3] == ("PATCH", "messages", {"id": "eq.9", "role": "eq.assistant", "select": "id,feedback"})
+
+
+def test_course_list_is_not_cut_at_the_database_row_limit():
+    asked = []
+
+    def handler(request):
+        if request.url.path == "/auth/v1/user":
+            return httpx.Response(200, json={"id": "00000000-0000-0000-0000-000000000009", "email": ADMIN, "email_confirmed_at": "2026-10-29T00:00:00Z"})
+        params = request.url.params
+        asked.append(params["order"])
+        offset = int(params["offset"])
+        return httpx.Response(200, json=[{"id": i} for i in range(offset, min(offset + 1000, 2500))])  # Supabase는 한 번에 1000행까지
+
+    with TestClient(create_app(Settings("https://example.supabase.co", "pk", "sk", frozenset({ADMIN})), httpx.MockTransport(handler))) as client:
+        assert len(client.get("/admin/data/courses", headers=HEADERS).json()) == 2500
+    assert set(asked) == {"name.asc,id.asc"}
+
+
+def test_course_terms_are_counted_newest_first():
+    rows = {"courses": [{"term": t} for t in ["2025-2", "2026-1", "2026-1", "2026-여름", None, "2026-2", "2026-겨울"]]}
+    client, _ = make(rows=rows)
+    with client:
+        res = client.get("/admin/courses/terms", headers=HEADERS).json()
+    assert [r["term"] for r in res] == ["2026-겨울", "2026-2", "2026-여름", "2026-1", "2025-2", "미지정"]
+    assert res[3]["count"] == 2
+
+
+def test_course_import_needs_a_term_and_compares_within_it(monkeypatch):
+    course = {"name": "자료구조", "credits": 3, "area": "전공심화", "times": []}
+    monkeypatch.setattr(admin, "_courses_in_file", lambda data: ([course], []))
+    client, saved = make(rows={"courses": []})
+    body = {"filename": "a.hwp", "content_base64": base64.b64encode(b"x").decode()}
+    with client:
+        assert client.post("/admin/courses/import", headers=HEADERS, json=body).status_code == 400
+        assert client.post("/admin/courses/import", headers=HEADERS, json={**body, "term": "2026-3"}).status_code == 400
+        assert client.post("/admin/courses/import", headers=HEADERS, json={**body, "term": "2025-1"}).status_code == 201
+    assert saved[-1][1] == "courses" and saved[-1][3] == [{**course, "term": "2025-1"}]
+
+
+def test_delete_whole_term_uses_the_right_filter():
+    asked = []
+
+    def handler(request):
+        if request.url.path == "/auth/v1/user":
+            return httpx.Response(200, json={"id": "00000000-0000-0000-0000-000000000009", "email": ADMIN, "email_confirmed_at": "2026-10-29T00:00:00Z"})
+        asked.append((request.method, request.url.params["term"]))
+        return httpx.Response(200, json=[{"id": 1}, {"id": 2}])
+
+    with TestClient(create_app(Settings("https://example.supabase.co", "pk", "sk", frozenset({ADMIN})), httpx.MockTransport(handler))) as client:
+        assert client.delete("/admin/courses/term/2026-2", headers=HEADERS).json() == {"deleted": 2}
+        assert client.delete("/admin/courses/term/미지정", headers=HEADERS).json() == {"deleted": 2}
+        assert client.delete("/admin/courses/term/전부", headers=HEADERS).status_code == 400
+    assert asked == [("DELETE", "eq.2026-2"), ("DELETE", "is.null")]
