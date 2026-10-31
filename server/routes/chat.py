@@ -366,6 +366,11 @@ async def _from_docs(request: Request, question: str, p: dict, extra: list[dict]
         student |= {"학과": p["department"], "입학년도": p["admission_year"], "학년": p["grade"]}
     answer = await run_in_threadpool(tasks.answer_from_docs, question, chunks, student)
     if not answer:
+        # 공지는 찾았는데 내용이 첨부에만 있는 경우: "자료에 없다"가 아니라 원문으로 안내. 자료 보강 대상이 아니라 기록 안 함
+        if notice := next((c for c in extra if "expired" in c), None):
+            head = notice["content"].split("\n")[0].removeprefix("[공지] ")
+            return {"text": f"{head} 공지를 찾았지만, 물어보신 내용은 공지 글에서 확인하지 못했어요. 첨부에 있을 수 있으니 원문을 확인해 주세요.",
+                    "cards": [], "sources": [{"title": notice["title"], "url": notice["url"]}], "actions": []}
         school = SCHOOL.search(asked)
         return {"text": UNKNOWN if school else OFF_TOPIC, "cards": [], "sources": [], "actions": [], "unknown": bool(school)}
     used = _used(answer, chunks)
@@ -471,8 +476,8 @@ async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends
     parts = [] if updates else await run_in_threadpool(tasks.split_questions, body.text)
     if updates:
         reply = _confirm_save(updates)
-    elif len(parts) == 1:  # 할 일·공지·앞 질문 맥락이 있으면 주제가 정해져 있어 되묻지 않음
-        reply = (not lines and _clarify(body.text)) or await _answer(request, user, p, ask(body.text), extra)
+    elif len(parts) == 1:  # 할 일·공지 맥락이 있으면 주제가 정해져 있어 되묻지 않음. 앞 질문은 안 봄: "휴학 알려줘"도 6글자라 앞 질문이 붙어 되묻기가 빠졌음(11/1 실측)
+        reply = (not body.context and _clarify(body.text)) or await _answer(request, user, p, ask(body.text), extra)
     else:
         replies = [await _answer(request, user, p, ask(q), extra) for q in parts[:MAX_PARTS]]
         text = "\n\n".join(f"{NUM[i]} {q}\n{r['text']}" for i, (q, r) in enumerate(zip(parts, replies)))

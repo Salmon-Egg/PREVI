@@ -114,6 +114,21 @@ def test_vague_question_asks_back_without_ai(monkeypatch, q):
     assert not any(t == "unanswered_questions" for _, t, _ in saved)
 
 
+def test_vague_question_asks_back_mid_conversation(monkeypatch):
+    res, _ = run_chat(monkeypatch, "휴학 알려줘", [], history=[{"text": "주차 등록은 어디서 해?"}])
+    assert res.json()["message"]["actions"][0]["type"] == "ask"
+
+
+def test_named_notice_without_answer_points_to_original(monkeypatch):
+    monkeypatch.setattr(tasks, "answer_from_docs", lambda *a: None)
+    notice = {"id": 64, "title": "고졸 후학습자 장학사업(희망사다리II유형) 연장 안내", "summary": [], "body": "첨부파일", "url": "https://example.com/64", "deadline": None}
+    res, saved = run_chat(monkeypatch, "희망사다리 장학사업 마감 언제야?", [], notices=[notice])
+    msg = res.json()["message"]
+    assert "마감일 확인 필요" in msg["text"] and "원문" in msg["text"]
+    assert msg["sources"] == [{"title": notice["title"], "url": notice["url"]}]
+    assert not any(t == "unanswered_questions" for _, t, _ in saved)
+
+
 def test_specific_question_is_not_asked_back(monkeypatch):
     res, _ = run_chat(monkeypatch, "휴학 기간은 최대 몇 학기야?", [CHUNK])
     assert "궁금하세요" not in res.json()["message"]["text"]
