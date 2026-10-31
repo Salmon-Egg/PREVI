@@ -105,7 +105,7 @@ def main():
             db.request('DELETE', f'/storage/v1/object/{BUCKET}', json={'prefixes': paths}).raise_for_status()
         for user in removed:
             db.delete('/auth/v1/admin/users/' + user['id']).raise_for_status()
-        # 제출용 계정의 처음 상태 = 빈 프로필 행 (docs/제출용_계정.md)
+        # 제출용 계정의 처음 상태 = 빈 프로필 행
         db.post('/rest/v1/profiles', json=[{'user_id': u['id']} for u in kept]).raise_for_status()
 
         left = {table: count(db, table) for table in BACKUP_TABLES if table != 'profiles'}

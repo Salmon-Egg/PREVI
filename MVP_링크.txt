@@ -21,10 +21,7 @@ API 기본 주소는 학생 화면이 아닙니다. 기본 경로의 NOT_FOUND �
 [저장소 · 현재 서비스 코드]
 https://github.com/Salmon-Egg/PREVI
 https://github.com/Salmon-Egg/PREVI/tree/%ED%86%B5%ED%95%A9%EB%B3%B8
-현재 서비스 코드는 통합본 브랜치입니다. 기본 브랜치 변경·최종 제출 브랜치 결정은 조장 확인이 필요합니다.
-
-[작업 보드]
-https://github.com/users/Salmon-Egg/projects/2/views/1
+현재 서비스 코드는 기본 브랜치인 통합본에 있습니다.
 
 [로컬 개발]
 실행 방법: app/README.md, server/README.md

@@ -77,4 +77,4 @@ app/
 - 푸시: `npx eas-cli@latest init`으로 projectId 만들기 → `npm run build:dev`로 개발 빌드에서 확인. Expo Go·웹에서는 푸시가 안 옴
 - API 명세에 없는 새 필드·주소(조장 확인 필요)는 [FE_구현_정리.md](FE_구현_정리.md) 참고
 
-Expo는 SDK마다 바뀌는 게 많습니다. 새 기능을 넣을 때는 `AGENTS.md`의 안내대로 SDK 58 문서를 먼저 확인하세요.
+Expo는 SDK마다 바뀌는 게 많습니다. 새 기능을 넣을 때는 SDK 58 공식 문서를 먼저 확인하세요.
