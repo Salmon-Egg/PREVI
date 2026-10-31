@@ -5,6 +5,9 @@
 시연 로그인 정보.txt
 *.private.json
 
+# 학교 자료 원본 (server/scripts/load_yoram.py에 받는 곳 있음)
+supabase/seed/*.pdf
+
 # 설치하면 생기는 파일 (각자 다시 설치하면 됨)
 node_modules/
 .expo/

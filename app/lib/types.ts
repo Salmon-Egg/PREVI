@@ -23,7 +23,7 @@ export type Me = {
   consent: { agreed: boolean; agreed_at: string | null };
   // ▶ FE 9번: quiet = 방해 금지 시간 '22:00-07:00' (이 시간에는 푸시를 보내지 않음). API 명세에 없는 새 필드라 BE 확인 필요
   notify: { notice: boolean; deadline: boolean; calendar: boolean; chat: boolean; time: string; quiet?: string };
-  // ▶ FE 11번에 해당하는 부분: M-5 '비서가 볼 정보'. API 명세에 없는 새 필드라 조장 확인 필요 (없으면 전부 켠 것으로 봄)
+  // ▶ FE 11번에 해당하는 부분: M-5 '비서가 볼 정보'. (없으면 전부 켠 것으로 봄)
   assistant_scope?: AssistantScope;
   // 장학 판정용 선택 정보 (챗봇이 되물어 저장하거나 학적 정보 변경에서 입력)
   toeic_score?: number | null;
@@ -107,7 +107,7 @@ export type Graduation = {
   required_total: number;
   earned_total: number | null;
   remaining_total: number | null;
-  // ▶ FE 20번·21번: courses는 그 영역에서 들은 과목과 성적 (영역 카드를 펼치면 보임). API 명세에 없는 새 필드라 조장 확인 필요
+  // ▶ FE 20번·21번: courses는 그 영역에서 들은 과목과 성적 (영역 카드를 펼치면 보임)
   // taking: 이번 학기 시간표에 넣은 과목 (성적 전이라 학점·완료에는 안 들어감)
   areas: { name: string; required: number; earned: number | null; courses?: AreaCourse[]; taking?: { course_name: string; credits: number }[] }[];
   requirements: { name: string; done: boolean | null; todo_id?: number; taking?: boolean }[];

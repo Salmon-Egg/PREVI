@@ -1,7 +1,6 @@
-# API 명세 (초안)
+# API 명세
 
-> **상태: 초안 · 조장 확인 전.** 확정되면 이 줄을 지웁니다.
-> 바꿀 때는 [작업 규칙 6번](02_작업_규칙.md)대로 이 문서부터 고칩니다.
+> 개발 때 FE와 BE가 맞춘 약속입니다. 실제 동작의 기준은 `server/routes/` 코드입니다.
 
 FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문서의 예시 응답으로 화면을 만들고, BE는 이 모양 그대로 응답하도록 만듭니다.
 서버를 실행하면 `http://서버주소/docs`에서 FastAPI가 자동으로 만든 문서도 볼 수 있습니다.
@@ -83,7 +82,7 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 
 > MVP 뼈대(10/23)에서 더한 것: `DELETE /me`, `PATCH /conversations/{id}`, `GET /conversations?q=` 검색,
 > `GET /me`의 `completed_requirements`, `GET /notices/{id}`의 `eligibility`·`todo_id`·`applied`(S-2 판정·신청 완료 체크용),
-> 처음 쓰는 학생은 `GET /me`·`/home`이 `404 NO_PROFILE` → 앱이 처음 설정(M-2)으로 보냄. (조장 확인 필요)
+> 처음 쓰는 학생은 `GET /me`·`/home`이 `404 NO_PROFILE` → 앱이 처음 설정(M-2)으로 보냄.
 
 ---
 
