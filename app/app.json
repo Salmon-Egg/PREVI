@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "서경 AI 비서",
+    "name": "PREVI",
     "slug": "seokyeong-ai-secretary",
     "scheme": "seokyeongai",
     "version": "1.0.0",
@@ -13,10 +13,9 @@
     "android": {
       "package": "kr.ac.skuniv.aisecretary",
       "adaptiveIcon": {
-        "backgroundColor": "#E9F3EE",
+        "backgroundColor": "#5CC47B",
         "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "backgroundImage": "./assets/android-icon-background.png"
       },
       "predictiveBackGestureEnabled": false
     },
