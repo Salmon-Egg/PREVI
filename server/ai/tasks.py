@@ -33,6 +33,31 @@ CONDITION_SOURCE = {  # 원문에 이 표현이 있어야 칸에 둠
     "income_max": (r"(?<![\d.]){0}\s*(?:구간|분위)\s*(?:이하|이내|까지|미만)|~\s*{0}\s*(?:구간|분위)", CONDITION_MAX["income_max"][1]),  # "8구간 이내", "1~6구간"
     "min_credits": (r"(?<![\d.]){0}\s*학점", "이수 학점 기준은 원문 확인 필요"),
 }
+LAST_TERM = r"직전|지난\s*학기|매\s*(?:정규\s*)?학기|\d{2,4}\s*(?:년도?|학년도)\s*(?:정규\s*)?[12]\s*학기"  # "26년 정규 1학기", "매 정규학기"
+CUMULATIVE = r"누계|누적|전체\s*학기|총\s*평"
+
+
+def _last_term_stated(number: str, text: str) -> bool:
+    """숫자가 직전 학기 기준으로 적혔는지. 과정 이수학점·수료 학점·누계 평점을 직전 학기 값과 비교하면 틀린 탈락이 됨(공지 18·22·38·57)."""
+    for m in re.finditer(number, text):
+        before = text[max(0, m.start() - 60):m.start()]
+        if re.search(LAST_TERM, before + text[m.start():m.end() + 30]) and not re.search(CUMULATIVE, before[-30:]):
+            return True
+    return False
+
+
+def _checked_grades(grades: list[int], text: str) -> list[int]:
+    """원문에 대상으로 적힌 학년만 둠. "미래융합학부1,2"(공지 38)와 "2학년~졸업" 지급 기간(공지 71)은 대상이 아니고, "2학년 2학기 이상"(공지 57)은 위 학년까지."""
+    stated, above = set(), set()
+    for m in re.finditer(r"(?<![\d.])((?:[1-4]\s*[,·~]\s*)*[1-4])\s*학\s*년(?!도)(\s*(?:[12]\s*학기\s*)?이상)?(\s*~|\s*부터)?", text):
+        if m.group(3) or re.search(r"(?:중|고등)학교\s*$", text[:m.start()]):  # "중학교 3학년 2학기 내신"(공지 63)
+            continue
+        digits = [int(d) for d in re.findall(r"\d", m.group(1))]
+        stated.update(range(digits[0], digits[-1] + 1) if "~" in m.group(1) else digits)
+        if m.group(2):
+            above.update(range(digits[0], 5))
+    kept = {g for g in grades if g in stated}
+    return sorted(kept | above) if kept else []
 
 
 def summarize_notice(title: str, body: str, *, strict=False) -> dict:
@@ -59,6 +84,19 @@ def summarize_notice(title: str, body: str, *, strict=False) -> dict:
         if key in conditions and not re.search(pattern.format(conditions[key]), f"{title}\n{body}"):
             del conditions[key]
             conditions["unknown"] = [message] + conditions.get("unknown", [])
+    # 평점·학점 칸은 직전 학기 값과 비교됨. "평균 C학점"을 3.0으로 바꾼 값(공지 47), 장학 종류별로 기준이 다른 공지(63)도 칸에 두지 않음
+    source = f"{title}\n{body}"
+    tiers = len(set(re.findall(r"[A-D]\s*[(（]\s*(\d\.\d)", source))) > 1  # shortcut: "B(3.0)·A(4.0)" 꼴만 봄. 숫자만 적힌 종류별 기준은 못 거름
+    numbers = {"min_gpa": rf"(?<![\d.]){conditions.get('min_gpa', 0):.1f}0*(?!\d)", "min_credits": rf"(?<![\d.]){conditions.get('min_credits', 0)}\s*학점"}
+    for key, message in (("min_credits", CONDITION_SOURCE["min_credits"][1]), ("min_gpa", CONDITION_MAX["min_gpa"][1])):
+        if key in conditions and (tiers or not _last_term_stated(numbers[key], source)):
+            del conditions[key]
+            conditions["unknown"] = [message] + conditions.get("unknown", [])
+    if target["grades"]:
+        checked = _checked_grades(target["grades"], source)
+        if not checked:
+            conditions["unknown"] = ["대상 학년은 원문 확인 필요"] + conditions.get("unknown", [])
+        target["grades"] = [] if set(checked) == {1, 2, 3, 4} else checked
     category = out.get("category") or "일반"
     # 장학인데 대상·조건이 하나도 없으면 대개 자격이 첨부에만 있는 공지 → '신청 가능'으로 띄우지 않음
     if (category == "장학" or "장학" in title) and not target["grades"] and not target["departments"] and not conditions:

@@ -70,10 +70,10 @@ def test_import_adds_only_new_courses(monkeypatch):
     monkeypatch.setattr(admin, "read_tables", lambda data: [])
     monkeypatch.setattr(admin, "courses_from_tables", lambda tables: ([new, old], ["시간 없는 과목"]))
     client, saved = make(rows={"courses": [{"name": old["name"], "times": [{"start": "09:00", "day": "화", "end": "09:50"}]}]})
-    body = {"filename": "시간표.hwp", "content_base64": base64.b64encode(b"x").decode()}
+    body = {"filename": "시간표.hwp", "term": "2026-2", "content_base64": base64.b64encode(b"x").decode()}
     with client:
         res = client.post("/admin/courses/import", headers=HEADERS, json=body)
         wrong = client.post("/admin/courses/import", headers=HEADERS, json={**body, "filename": "시간표.pdf"})
     assert res.status_code == 201 and res.json() == {"added": 1, "duplicates": 1, "skipped": ["시간 없는 과목"]}
     assert wrong.status_code == 400
-    assert [s[3] for s in saved if s[1] == "courses"] == [[new]]
+    assert [s[3] for s in saved if s[1] == "courses"] == [[{**new, "term": "2026-2"}]]

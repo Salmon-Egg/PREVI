@@ -512,9 +512,11 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
       if (!hasGradRules()) throw new ApiError(404, 'GRADUATION_RULES_NOT_FOUND', '이 학과·입학년도의 적용 졸업 기준은 확인 중이에요.');
       return graduation();
     case 'GET /grades': return gradeTerms();
-    case 'POST /grades/from-file': return { dropped: 1, items: [
-      { term: '4-1', course_name: '시험용 자료구조', credits: 3, grade: 'A0', area: '전공 필수' },
-      { term: '4-1', course_name: '시험용 심리학', credits: 2, grade: 'B+', area: '교양 선택' }] };
+    case 'POST /grades/from-file': return { dropped: 0, unmatched_lines: [], credit_check: { read: 8, stated: 8 }, items: [
+      { term: '1-1', source_year: 2023, source_semester: 1, course_name: '시험용 논리회로', credits: null, grade: null, raw_grade: 'N/A', area: '전공 핵심', issues: [], excluded: true },
+      { term: '1-1', source_year: 2023, source_semester: 1, course_name: '시험용 자료구조', credits: 3, grade: 'A0', raw_grade: 'Ao', area: '전공 심화', issues: [] },
+      { term: '1-1', source_year: 2023, source_semester: 1, course_name: '시험용 심리학', credits: 2, grade: 'B+', raw_grade: 'B+', area: '교양 선택', issues: [] },
+      { term: '1-2', source_year: 2023, source_semester: 2, course_name: '시험용 알고리즘', credits: 3, grade: null, raw_grade: '', area: '전공 심화', issues: ['성적 확인 필요'] }] };
     case 'POST /grades': case 'PUT /grades/:id': case 'DELETE /grades/:id': {
       const before = graduation().areas.filter((a) => (a.earned ?? 0) >= a.required).length;
       let item: GradeItem | null = null;

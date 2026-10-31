@@ -4,7 +4,7 @@ import re
 import unicodedata
 
 GRADES = {"A+", "A0", "B+", "B0", "C+", "C0", "D+", "D0", "F", "P"}
-ALIASES = {"A": "A0", "B": "B0", "C": "C0", "D": "D0", "PASS": "P", "합격": "P", "NP": "F"}
+ALIASES = {"A": "A0", "B": "B0", "C": "C0", "D": "D0", "AO": "A0", "BO": "B0", "CO": "C0", "DO": "D0", "PASS": "P", "합격": "P", "NP": "F"}  # 서경대 증명서는 A0를 "Ao"로 찍음
 EXCLUDED = {"N/A", "NA"}
 # 약어만 풀어 쓰고 전공심화·자유선택을 다른 영역으로 바꾸지 않는다.
 AREAS = {"전필": "전공 필수", "전공필수": "전공 필수", "전핵": "전공 핵심", "전공핵심": "전공 핵심",
@@ -13,7 +13,46 @@ AREAS = {"전필": "전공 필수", "전공필수": "전공 필수", "전핵": "
          "교필": "교양 필수", "교양필수": "교양 필수", "핵심역량교양필수": "핵심역량교양필수",
          "교선": "교양 선택", "교양선택": "교양 선택", "기초학문교양선택": "기초학문교양선택",
          "자선": "자유 선택", "자유선택": "자유 선택", "일선": "일반 선택", "일반선택": "일반 선택"}
-GRADE_TOKEN = re.compile(r"(?<![A-Za-z0-9])(?:N\s*/\s*A|NA|PASS|NP|[ABCD][+0]?|F|P)(?![A-Za-z0-9+])", re.I)
+GRADE_TOKEN = re.compile(r"(?<![A-Za-z0-9])(?:N\s*/\s*A|NA|PASS|NP|[ABCD][+0O]?|F|P)(?![A-Za-z0-9+])", re.I)
+SEMESTER_HEAD = re.compile(r"(\d{4})\s*년도\s*(?:([12])\s*학기|(\S*(?:계절|하계|동계|여름|겨울)\S*))")
+# 구분·과목명·담당교수는 두 칸 이상 띄어 있고(과목명 안은 한 칸), 재수강 전 N/A 행은 학점이 없고, 담당교수가 없는 행도 있음
+COURSE_CELL = re.compile(r"(?<![가-힣A-Za-z])(" + "|".join(sorted(AREAS, key=len, reverse=True)) + r")\s+(\S.*?)\s{2,}"
+                         r"(?:[^\d\s][^\d]*?\s{2,})?(?:(\d+(?:\.\d)?)\s+)?(N/A|NP|PASS|[ABCD][+0oO]?|F|P)(?=\s|$)")
+STATED_CREDITS = re.compile(r"^\s*\d+\s+(\d+)\s+[\d.]+\s+[\d.]+\s+졸업논문", re.M)
+RIGHT_COLUMN = 40  # 서경대 증명서는 두 칸 표: 오른쪽 칸은 50자 뒤에서 시작
+
+
+def parse_courses(text: str) -> list[dict]:
+    """서경대 성적증명서(pypdf layout 글자)를 코드로 읽음. 두 칸 표라 칸마다 학기를 따로 따라감. 이 양식이 아니면 빈 목록 → AI가 읽음."""
+    # shortcut: 과목명과 담당교수 사이가 한 칸이면 교수 이름이 과목명에 붙음. 미리보기에서 고칠 수 있어 둠
+    rows, heads = [], {}
+    for line in text.splitlines():
+        for m in SEMESTER_HEAD.finditer(line):
+            heads[m.start() >= RIGHT_COLUMN] = (int(m.group(1)), int(m.group(2)) if m.group(2) else m.group(3))
+        for m in COURSE_CELL.finditer(line):
+            year, semester = heads.get(m.start() >= RIGHT_COLUMN, (None, None))
+            rows.append({"year": year, "semester": semester, "name": re.sub(r":R$", "", m.group(2).strip()),  # ":R"은 재수강 표시
+                         "credits": m.group(3), "grade": m.group(4), "area": m.group(1)})
+    return rows
+
+
+def assign_terms(items: list[dict]) -> list[dict]:
+    """수강한 학기 순서대로 1-1, 1-2 … 4-2. 휴학한 학기는 세지 않아 6학년이 나오지 않음. 9번째 학기부터는 4-2로 묶음."""
+    order = sorted({(i["source_year"], i["source_semester"]) for i in items if i["source_year"] and i["source_semester"]})
+    for item in items:
+        if item["source_year"] and item["source_semester"]:
+            n = min(order.index((item["source_year"], item["source_semester"])), 7)
+            item["term"] = f"{n // 2 + 1}-{n % 2 + 1}"
+    return items
+
+
+def credit_check(text: str, items: list[dict]) -> dict | None:
+    """읽은 과목 학점 합과 증명서 총계 취득학점. 다르면 누락·오독이 있다는 뜻."""
+    stated = STATED_CREDITS.search(text)
+    if not stated:
+        return None
+    read = sum(i["credits"] or 0 for i in items if not i["excluded"] and i["grade"] != "F")
+    return {"read": read, "stated": float(stated.group(1))}
 
 
 def normalized(value):
@@ -97,7 +136,7 @@ def clean_courses(rows: list, admission_year: int | None = None, *, source_text:
         exclusion_reason = "계절학기는 현재 저장 학기에서 지원하지 않아 제외해요." if seasonal else "N/A 등 성적 미반영 표기: 저장·학점·평점 계산에서 제외해요. 과거 성적을 추측하지 않아요." if excluded else ""
         if grade not in GRADES:
             grade = None
-        if credits is None:
+        if credits is None and not excluded:
             issues.append("이수 학점 확인 필요")
         if not area:
             issues.append("이수구분 확인 필요")

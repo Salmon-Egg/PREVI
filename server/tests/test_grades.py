@@ -114,6 +114,9 @@ def test_course_search_is_read_only_and_escapes_wildcards():
     def db(request):
         assert request.url.path == "/rest/v1/courses"
         assert request.method == "GET"
+        if request.url.params["select"] == "term":
+            return httpx.Response(200, json=[{"term": "2026-2"}])
+        assert request.url.params["term"] == "eq.2026-2"  # 가장 최근 학기만
         assert request.url.params["name"] == "ilike.%A\\_\\%\\*%"
         return httpx.Response(200, json=[])
     with client_for(db) as client:

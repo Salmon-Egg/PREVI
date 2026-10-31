@@ -201,8 +201,8 @@ def test_manual_requirements_match_by_course_name():
         {"name": "필수교양 · 대인관계 (택1)", "manual": True, "details": "교양필수 대인관계역량: 다음 중 1과목 — 홀리스틱리더십 / MZ세대대인관계"},
         {"name": "학과 지정 필수과목 확인", "manual": True}]}
     rows = [{**GRADE, "course_name": "College English 1", "area": "교양 필수"}, {**GRADE, "id": 2, "course_name": "MZ세대 대인관계", "area": "교양 필수"}]
-    assert [r["done"] for r in calculate_graduation(rows, rule)["requirements"][:3]] == [True, True, None]
-    assert [r["done"] for r in calculate_graduation([], rule)["requirements"][:3]] == [None, None, None]
+    assert [r["done"] for r in calculate_graduation(rows, rule)["requirements"][1:4]] == [True, True, None]
+    assert [r["done"] for r in calculate_graduation([], rule)["requirements"][1:4]] == [None, None, None]
 
 
 def test_area_lists_courses_and_taking_shows_without_counting():

@@ -62,6 +62,11 @@ def test_judge_uses_values_the_student_gave():
     assert judge({}, {"unknown": ["토익 700점 또는 토플 80점"]}, {**STUDENT, "toeic_score": 600}, None, 0)[0] == "check"
 
 
+def test_credit_exception_for_a_grade_needs_check():
+    source = "대학생은 장학금 지급 직전학기 12학점(4학년의 경우 9학점) 이상 이수자"
+    assert judge({}, {"min_credits": 12}, STUDENT, 4.0, 9, source_text=source)[0] == "check"
+
+
 def test_judge_residence_fails_only_when_clearly_elsewhere():
     me = {**STUDENT, "residence": "서울시 성북구"}
     assert judge({}, {"unknown": ["안산시 1년 이상 거주"]}, me, None, 0)[0] == "ineligible"
@@ -121,7 +126,7 @@ def test_transcript_upload_previews_without_saving(monkeypatch):
     monkeypatch.setattr(grades_route.tasks, "read_transcript", lambda text: [{"year": 2024, "semester": 1, "name": "자료구조", "credits": 3, "grade": "A+", "area": "전필"}])
     with client_for([{"admission_year": 2024}]) as client:
         res = client.post("/grades/from-file", headers=HEADERS, json={"content_base64": PNG, "preview_version": 2})
-    assert res.status_code == 200 and res.json()["items"][0]["term"] is None
+    assert res.status_code == 200 and res.json()["items"][0]["term"] == "1-1"
     assert res.json()['items'][0]['source_year'] == 2024
 
 

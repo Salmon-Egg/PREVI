@@ -44,6 +44,9 @@ def calculate_graduation(rows: list[dict], rules: dict, taking: list[dict] = ())
                                  for t in taking if t.get("area") and normalized_name(t["area"]) in aliases]})
 
     requirements = []
+    # 요람에 이름이 없는 학과는 교양만 보여 전공 필수가 없는 것처럼 읽힘
+    if not any(not course.get("manual") for course in rules["required_courses"]):
+        requirements.append({"name": "전공 필수 과목은 요람에 목록이 없어요. 학과에 확인해 주세요", "done": None})
     for course in rules["required_courses"]:
         options = [normalized_name(o) for o in manual_options(course)] if course.get("manual") else [normalized_name(course["name"])]
         # 과목명으로 못 찾는 '확인 필요' 요건은 그대로 None (완료로도 미완료로도 보지 않음)
