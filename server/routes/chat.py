@@ -360,7 +360,8 @@ async def _from_docs(request: Request, question: str, p: dict, extra: list[dict]
     chunks = extra + (await search_chunks(request, asked, k, p) or (asked != question and await search_chunks(request, question, k, p)) or [])
     if not chunks:  # '질문 대상이 문서에 없어 버림'과 구분
         log.info("검색 결과 없음: %s", asked[:30])
-    student = {"학적": STATUS_KO.get(p["status"], p["status"])} if PERSONAL.search(asked) else {}
+    # 복학은 휴학생에게만 학적을 넘김: 넘기면 재학생에게도 "재학 중이시니 복학원을 내 주세요"로 권함(10/31 실측)
+    student = {"학적": STATUS_KO.get(p["status"], p["status"])} if PERSONAL.search(asked) and (p["status"] == "leave" or "복학" not in asked) else {}
     if BY_DEPT.search(asked):
         student |= {"학과": p["department"], "입학년도": p["admission_year"], "학년": p["grade"]}
     answer = await run_in_threadpool(tasks.answer_from_docs, question, chunks, student)

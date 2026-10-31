@@ -21,7 +21,7 @@ CHUNK = {"content": "[학칙] 제 30 조(휴학) 휴학 기간은 통산 6학기
          "document": {"title": "2026 서경대학교 대학요람 · 학칙", "url": None}}
 
 
-def run_chat(monkeypatch, text, chunks, context=None, notices=(), calendar=(), history=None):
+def run_chat(monkeypatch, text, chunks, context=None, notices=(), calendar=(), history=None, status="leave"):
     monkeypatch.setattr(ai_client, "AI_FAKE", True)
     saved = []
 
@@ -31,7 +31,7 @@ def run_chat(monkeypatch, text, chunks, context=None, notices=(), calendar=(), h
             return httpx.Response(200, json={"id": USER_ID, "email": "s@skuniv.ac.kr", "email_confirmed_at": "2026-10-27T00:00:00Z"})
         table = path.removeprefix("/rest/v1/")
         if request.method == "GET":
-            return httpx.Response(200, json={"profiles": [{"nickname": "홍길동", "grade": 4, "semester": 1, "status": "leave",
+            return httpx.Response(200, json={"profiles": [{"nickname": "홍길동", "grade": 4, "semester": 1, "status": status,
                                                            "department": "소프트웨어학과", "admission_year": 2023}],
                                              "doc_chunks": chunks, "notices": list(notices), "academic_calendar": list(calendar),
                                              "conversations": [{"id": 5}], "messages": history or []}.get(table, []))
@@ -46,6 +46,19 @@ def run_chat(monkeypatch, text, chunks, context=None, notices=(), calendar=(), h
         res = client.post("/chat", headers=HEADERS, json={"text": text, "context": context,
                                                           "conversation_id": 5 if history is not None else None})
     return res, saved
+
+
+@pytest.mark.parametrize("status, question, student", [
+    ("enrolled", "복학 신청은 언제 해?", {}),
+    ("returned", "복학 신청은 언제 해?", {}),
+    ("leave", "복학 신청은 언제 해?", {"학적": "휴학"}),
+    ("enrolled", "휴학 신청은 언제 해?", {"학적": "재학"}),
+])
+def test_return_advice_only_for_students_on_leave(monkeypatch, status, question, student):
+    seen = []
+    monkeypatch.setattr(tasks, "answer_from_docs", lambda q, chunks, s: seen.append(s) or "답")
+    assert run_chat(monkeypatch, question, [CHUNK], status=status)[0].status_code == 200
+    assert seen == [student]
 
 
 def test_status_context_from_leave_screen(monkeypatch):
