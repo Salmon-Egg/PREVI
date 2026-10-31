@@ -11,6 +11,7 @@ from starlette.concurrency import run_in_threadpool
 from server.ai import tasks
 from server.config import Settings
 from server.jobs.attachments import MARK, attachment_text
+from server.jobs.image_ocr import REVIEW as IMAGE_REVIEW
 from server.logic.eligibility import judge
 from server.logic.grades import semester_gpa
 from server.logic.schedule import d_day, priority
@@ -49,6 +50,8 @@ def previous_grades(profile, grades):
 
 
 def verdict_for(notice, profile, grades):
+    if IMAGE_REVIEW in (notice.get("body") or ""):
+        return 'check', ['사진 첨부의 금액·날짜·대상 조건은 원문 대조가 필요해요' + CHECK]
     target, conditions = notice_target(notice), dict(notice["conditions"])
     scope = profile.get("assistant_scope") or {}
     hidden = []
