@@ -1,34 +1,125 @@
-"""AI가 성적증명서에서 옮긴 줄을 성적 입력 모양으로 검사한다. 저장은 학생이 미리보기를 확인한 뒤 앱이 한다."""
+"""원문과 추출값을 대조한다. 학년 추정이나 현재 개설 과목 DB로 과거 과목을 거르지 않는다."""
+import math
 import re
+import unicodedata
 
 GRADES = {"A+", "A0", "B+", "B0", "C+", "C0", "D+", "D0", "F", "P"}
 ALIASES = {"A": "A0", "B": "B0", "C": "C0", "D": "D0", "PASS": "P", "합격": "P", "NP": "F"}
-# 앱의 이수 영역 네 가지로. 모르는 구분은 글자 그대로 두고 미리보기에서 학생이 봄
-AREAS = {"전필": "전공 필수", "전공필수": "전공 필수", "전핵": "전공 필수", "전공핵심": "전공 필수",
-         "전선": "전공 선택", "전공선택": "전공 선택", "전심": "전공 선택", "전공심화": "전공 선택", "전공": "전공 선택", "전기": "전공 선택",
-         "교필": "교양 필수", "교양필수": "교양 필수", "핵심역량교양필수": "교양 필수",
-         "교선": "교양 선택", "교양선택": "교양 선택", "기초학문교양선택": "교양 선택", "자유선택": "교양 선택", "일선": "교양 선택"}
+EXCLUDED = {"N/A", "NA"}
+# 약어만 풀어 쓰고 전공심화·자유선택을 다른 영역으로 바꾸지 않는다.
+AREAS = {"전필": "전공 필수", "전공필수": "전공 필수", "전핵": "전공 핵심", "전공핵심": "전공 핵심",
+         "전선": "전공 선택", "전공선택": "전공 선택", "전심": "전공 심화", "전공심화": "전공 심화",
+         "전공": "전공", "전기": "전공 기초", "전공기초": "전공 기초",
+         "교필": "교양 필수", "교양필수": "교양 필수", "핵심역량교양필수": "핵심역량교양필수",
+         "교선": "교양 선택", "교양선택": "교양 선택", "기초학문교양선택": "기초학문교양선택",
+         "자선": "자유 선택", "자유선택": "자유 선택", "일선": "일반 선택", "일반선택": "일반 선택"}
+GRADE_TOKEN = re.compile(r"(?<![A-Za-z0-9])(?:N\s*/\s*A|NA|PASS|NP|[ABCD][+0]?|F|P)(?![A-Za-z0-9+])", re.I)
 
 
-def clean_courses(rows: list, admission_year: int) -> tuple[list[dict], int]:
-    """(넣을 수 있는 과목, 버린 줄 수). 수강 연도 - 입학년도로 학년을 정함.
-    shortcut: 휴학하면 학년이 실제보다 높게 나옴. 미리보기에서 학생이 고칠 수 있어야 정확해짐."""
-    items, dropped = {}, 0
+def normalized(value):
+    return re.sub(r"\s+", "", unicodedata.normalize("NFKC", str(value or ""))).casefold()
+
+
+def _grade(value):
+    value = re.sub(r"\s+", "", unicodedata.normalize("NFKC", str(value or ""))).upper()
+    return ALIASES.get(value, value)
+
+
+def _integer(value):
+    try:
+        number = float(value)
+        return int(number) if math.isfinite(number) and number.is_integer() else None
+    except (TypeError, ValueError):
+        return None
+
+
+def clean_courses(rows: list, admission_year: int | None = None, *, source_text: str = "") -> tuple[list[dict], int]:
+    """입학연도는 호환 인자일 뿐 계산에 쓰지 않는다. 학생이 원문 학기를 앱 학기에 연결한 뒤 저장한다."""
+    items, seen, dropped = [], set(), 0
+    lines = [line.strip() for line in source_text.splitlines() if line.strip()]
     for row in rows:
+        if not isinstance(row, dict) or not isinstance(row.get("name"), str) or not 1 <= len(row["name"].strip()) <= 200:
+            dropped += 1
+            continue
+        name, issues = row["name"].strip(), []
+        year, semester = _integer(row.get("year")), _integer(row.get("semester"))
+        year = year if year is not None and 1900 <= year <= 2100 else None
+        semester = semester if semester in (1, 2) else None
+        if year is None or semester is None:
+            issues.append("원문 수강 연도·학기 확인 필요(계절학기 포함)")
+        seasonal = any(word in str(row.get("semester") or "") for word in ("계절", "하계", "동계", "여름", "겨울"))
         try:
-            year, semester = int(row["year"]), int(row["semester"])  # 계절학기("계절")는 여기서 걸러짐: 학기 칸이 없음
-            credits = float(row["credits"])
-            name = str(row["name"]).strip()
-            grade = str(row["grade"]).strip().upper()
-        except (KeyError, TypeError, ValueError):
-            dropped += 1
-            continue
-        grade = ALIASES.get(grade, grade)
-        level = year - admission_year + 1
-        if grade not in GRADES or not 1 <= level <= 6 or semester not in (1, 2) or not 0 < credits <= 30 or not 1 <= len(name) <= 200:
-            dropped += 1
-            continue
-        area = re.sub(r"\s+", "", str(row.get("area") or ""))
-        items[(level, semester, name)] = {"term": f"{level}-{semester}", "course_name": name, "credits": credits, "grade": grade,
-                                          "area": AREAS.get(area, area) or "교양 선택"}
-    return list(items.values()), dropped
+            credits = float(row.get("credits"))
+            if not math.isfinite(credits) or not 0 < credits <= 30:
+                credits = None
+        except (TypeError, ValueError):
+            credits = None
+        grade = _grade(row.get("grade"))
+        raw_grade = str(row.get("grade") or "")
+        area_raw = re.sub(r"\s+", "", str(row.get("area") or ""))
+        area = AREAS.get(area_raw, area_raw)
+        quoted = normalized(row.get("source_line"))
+        name_pattern = r"\s*".join(re.escape(c) for c in unicodedata.normalize("NFKC", name).casefold() if not c.isspace())
+        matches = [line for line in lines if re.search(r"(?<![A-Za-z가-힣0-9])" + name_pattern + r"(?![A-Za-z가-힣0-9])", unicodedata.normalize("NFKC", line).casefold())]
+        exact = [line for line in matches if quoted and normalized(line) == quoted]
+        source = exact[0] if len(exact) == 1 else matches[0] if len(matches) == 1 else ""
+        if source_text:
+            if not source:
+                grade = ""
+                issues.append("과목의 원문 행을 특정하지 못함: 성적 직접 확인 필요")
+            else:
+                tokens = {_grade(token) for token in GRADE_TOKEN.findall(source)}
+                if len(tokens) == 1:
+                    source_grade = next(iter(tokens))
+                    if source_grade != grade:
+                        issues.append("AI 성적과 원문이 달라 원문 성적을 적용함")
+                    grade, raw_grade = source_grade, source_grade
+                else:
+                    grade = ""
+                    issues.append("원문 행의 성적이 없거나 여러 개임: 직접 확인 필요")
+                # shortcut: 한 줄에 두 이수구분이 있으면 추정하지 않는다. 원본 표 형식별 파서는 실제 표본 확보 후 보완.
+                spans = [(m.start(), m.end(), value) for key, value in AREAS.items()
+                         for m in re.finditer(r"(?<![가-힣])" + r"\s*".join(map(re.escape, key)) + r"(?![가-힣])", source)]
+                source_areas = {value for start, end, value in spans
+                                if not any(a <= start and end <= b and (a, b) != (start, end) for a, b, _ in spans)}
+                if len(source_areas) == 1:
+                    area = next(iter(source_areas))
+                elif len(source_areas) > 1:
+                    area = ""
+                    issues.append("원문 행의 이수구분이 여러 개임: 직접 확인 필요")
+                else:
+                    area = ""
+                    issues.append("원문 행에서 이수구분을 확인하지 못함")
+                if credits is not None and not re.search(r"(?<![\d.])" + re.escape(f"{credits:g}") + r"(?![\d.])", source):
+                    credits = None
+                    issues.append("AI 학점이 원문 행에 없어 직접 확인 필요")
+        excluded = grade in EXCLUDED or (not grade and _grade(raw_grade) in EXCLUDED) or seasonal
+        exclusion_reason = "계절학기는 현재 저장 학기에서 지원하지 않아 제외해요." if seasonal else "N/A 등 성적 미반영 표기: 저장·학점·평점 계산에서 제외해요. 과거 성적을 추측하지 않아요." if excluded else ""
+        if grade not in GRADES:
+            grade = None
+        if credits is None:
+            issues.append("이수 학점 확인 필요")
+        if not area:
+            issues.append("이수구분 확인 필요")
+        if grade is None and not excluded:
+            issues.append("성적 확인 필요")
+        item = {"term": None, "source_year": year, "source_semester": semester,
+                "course_name": name, "credits": credits, "grade": grade, "raw_grade": raw_grade,
+                "area": area, "source_line": source[:1600], "issues": issues, "excluded": excluded,
+                "exclusion_reason": exclusion_reason}
+        key = (year, semester, name, credits, grade, raw_grade, area, excluded)
+        if key not in seen:
+            items.append(item)
+            seen.add(key)
+    return items, dropped
+
+
+def unmatched_course_lines(text: str, items: list[dict]) -> list[str]:
+    """AI가 누락했을 수 있는 과목 행을 미리보기에 남긴다. 정규 표 형식의 모든 행을 검출하는 것은 아니다."""
+    names = [normalized(item['course_name']) for item in items]
+    result = []
+    for line in text.splitlines():
+        if (GRADE_TOKEN.search(line) and re.search(r"(?<![가-힣])(?:전필|전선|전핵|전심|전기|교필|교선|자선|일선)(?![가-힣])", line)
+                and not any(name in normalized(line) for name in names)):
+            result.append(line.strip()[:1600])
+    return list(dict.fromkeys(result))[:100]

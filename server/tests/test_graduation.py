@@ -59,6 +59,13 @@ def test_empty_grades_are_not_graduated():
     assert result["requirements"][0]["done"] is False
 
 
+def test_free_electives_count_total_without_becoming_general_education():
+    result = calculate_graduation([{**GRADE, 'area': '자유 선택', 'credits': 3}], RULE)
+    assert result['earned_total'] == 3
+    assert result['areas'][1]['earned'] == 0
+    assert any('자유·일반선택' in item['name'] and item['done'] is None for item in result['requirements'])
+
+
 def client_for(profile=PROFILE, rule=RULE, initial=None, unavailable=False):
     rows = deepcopy(initial if initial is not None else [GRADE])
     def handler(request):

@@ -112,16 +112,25 @@ def clean_conditions(c) -> dict:
 
 def read_transcript(text: str) -> list[dict]:
     """성적증명서 글자 → 과목 줄. 모델 컨텍스트가 작아 나눠서 물음. 이 글자에는 개인정보가 있어 어디에도 남기지 않음."""
-    chunks, cur = [], ""
+    chunks, cur, headers = [], "", []
+    context = []
+    year_header = ""
     for line in text.splitlines():
-        if len(cur) + len(line) > 1500:
-            chunks.append(cur)
+        if cur and len(cur) + len(line) > 1500:
+            chunks.append((cur, context))
             cur = ""
+            context = list(dict.fromkeys(([year_header] if year_header else []) + headers[-2:]))
+        if re.search(r"(?:19|20)\d{2}\s*(?:학년도|년도)", line):
+            year_header = line.strip()
+        if re.search(r"(?:제\s*)?[12]\s*학기|계절학기", line):
+            headers.append(line.strip())
         cur += line + "\n"
     rows = []
-    for chunk in chunks + [cur] if cur.strip() else chunks:
-        courses = (_ask("transcript", {"text": chunk}) or {}).get("courses")
-        rows += [c for c in courses if isinstance(c, dict)] if isinstance(courses, list) else []
+    for chunk, context in chunks + [(cur, context)] if cur.strip() else chunks:
+        courses = (_ask("transcript", {"text": chunk, "previous_semester_headers": context}, strict=True) or {}).get("courses")
+        if not isinstance(courses, list):
+            raise ValueError("성적 추출 목록 형식 오류")
+        rows += [c for c in courses if isinstance(c, dict)]
     return rows
 
 

@@ -97,9 +97,11 @@ def test_transcript_rows_are_checked():
             {"year": 2019, "semester": 1, "name": "입학 전", "credits": 3, "grade": "A0"},
             {"year": 2024, "semester": 1, "name": "이상한 성적", "credits": 3, "grade": "Z"}, {"name": "칸 없음"}]
     items, dropped = clean_courses(rows, 2023)
-    assert items == [{"term": "1-1", "course_name": "자료구조", "credits": 3.0, "grade": "A+", "area": "전공 필수"},
-                     {"term": "2-2", "course_name": "심리학", "credits": 2.0, "grade": "A0", "area": "교양 선택"}]
-    assert dropped == 4
+    assert len(items) == 6 and dropped == 0
+    assert all(item['term'] is None for item in items)
+    assert items[0]['source_year'] == 2023 and items[0]['area'] == '전공 필수'
+    assert items[1]['area'] == ''  # 읽지 못한 영역을 교양 선택으로 바꾸지 않음
+    assert items[2]['excluded']  # 계절학기도 표시하되 저장하지 않음
 
 
 def client_for(rows):
@@ -118,15 +120,16 @@ def test_transcript_upload_previews_without_saving(monkeypatch):
     monkeypatch.setattr(grades_route.ai_client, "read_image", lambda data, mime: "2024 1학기 자료구조 3 A+")
     monkeypatch.setattr(grades_route.tasks, "read_transcript", lambda text: [{"year": 2024, "semester": 1, "name": "자료구조", "credits": 3, "grade": "A+", "area": "전필"}])
     with client_for([{"admission_year": 2024}]) as client:
-        res = client.post("/grades/from-file", headers=HEADERS, json={"content_base64": PNG})
-    assert res.status_code == 200 and res.json()["items"][0]["term"] == "1-1"
+        res = client.post("/grades/from-file", headers=HEADERS, json={"content_base64": PNG, "preview_version": 2})
+    assert res.status_code == 200 and res.json()["items"][0]["term"] is None
+    assert res.json()['items'][0]['source_year'] == 2024
 
 
 def test_photo_transcript_says_unavailable_when_reader_off(monkeypatch):
     monkeypatch.setattr(grades_route.ai_client, "AI_FAKE", False)
     monkeypatch.setattr(grades_route.ai_client, "VISION_MODEL", "")
     with client_for([{"admission_year": 2024}]) as client:
-        res = client.post("/grades/from-file", headers=HEADERS, json={"content_base64": PNG})
+        res = client.post("/grades/from-file", headers=HEADERS, json={"content_base64": PNG, "preview_version": 2})
     assert res.status_code == 503 and res.json()["error"]["code"] == "IMAGE_READER_UNAVAILABLE"
 
 
@@ -158,8 +161,8 @@ def test_transcript_upload_errors(monkeypatch):
     monkeypatch.setattr(grades_route.ai_client, "read_image", lambda data, mime: "")
     monkeypatch.setattr(grades_route.tasks, "read_transcript", lambda text: [])
     with client_for([{"admission_year": 2024}]) as client:
-        assert client.post("/grades/from-file", headers=HEADERS, json={"content_base64": PNG}).json()["error"]["code"] == "TRANSCRIPT_EMPTY"
+        assert client.post("/grades/from-file", headers=HEADERS, json={"content_base64": PNG, "preview_version": 2}).json()["error"]["code"] == "TRANSCRIPT_EMPTY"
         not_image = base64.b64encode(b"hello").decode()
-        assert client.post("/grades/from-file", headers=HEADERS, json={"content_base64": not_image}).status_code == 400
+        assert client.post("/grades/from-file", headers=HEADERS, json={"content_base64": not_image, "preview_version": 2}).status_code == 400
     with client_for([{"admission_year": None}]) as client:
-        assert client.post("/grades/from-file", headers=HEADERS, json={"content_base64": PNG}).json()["error"]["code"] == "PROFILE_INCOMPLETE"
+        assert client.post("/grades/from-file", headers=HEADERS, json={"content_base64": PNG, "preview_version": 2}).json()["error"]["code"] == "TRANSCRIPT_EMPTY"

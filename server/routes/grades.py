@@ -17,7 +17,7 @@ from server.auth import AuthenticatedUser, require_user
 from server.database import all_grade_rows, database_rows
 from server.errors import APIError
 from server.logic.grades import grouped_grades
-from server.logic.transcript import clean_courses
+from server.logic.transcript import clean_courses, unmatched_course_lines
 from server.routes.lost_items import image_type
 from server.routes.graduation import graduation_result
 
@@ -39,12 +39,13 @@ class GradeInput(BaseModel):
 class TranscriptInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     content_base64: str = Field(min_length=1, max_length=14_000_000)  # 파일 10MB
+    preview_version: Literal[1, 2] = 1
 
 
 def _transcript_text(data: bytes) -> str:
     if data.startswith(b"%PDF"):
         try:
-            return "\n".join(p.extract_text() or "" for p in PdfReader(io.BytesIO(data)).pages)
+            return "\n".join(p.extract_text(extraction_mode="layout", layout_mode_space_vertically=False) or "" for p in PdfReader(io.BytesIO(data)).pages)
         except (PdfReadError, ValueError, OSError):
             raise APIError(400, "INVALID_FILE", "파일을 읽을 수 없어요. PDF인지 확인해 주세요.") from None
     mime = image_type(data)  # 사진이 아니면 여기서 400
@@ -59,19 +60,23 @@ def _transcript_text(data: bytes) -> str:
 @router.post("/grades/from-file")
 async def grades_from_file(body: TranscriptInput, request: Request, user: AuthenticatedUser = Depends(require_user)):
     """성적증명서(PDF·사진) → 저장 전 미리보기. 파일과 읽은 글자는 저장하지 않고, 저장은 학생이 확인한 뒤 POST /grades로."""
+    if body.preview_version != 2:
+        raise APIError(409, "TRANSCRIPT_PREVIEW_UPDATE_REQUIRED", "학기·재수강 확인이 가능한 최신 앱으로 업데이트하거나 웹을 새로고침해 주세요.")
     try:
         data = base64.b64decode(body.content_base64, validate=True)
     except (binascii.Error, ValueError):
         raise APIError(400, "INVALID_FILE", "파일을 읽을 수 없어요.") from None
-    rows = await database_rows(request, "GET", "profiles", params={"user_id": f"eq.{user.id}", "select": "admission_year"})
-    if not rows or not rows[0].get("admission_year"):
-        raise APIError(400, "PROFILE_INCOMPLETE", "학기를 맞추려면 내 정보의 입학연도가 필요해요.")
     text = await run_in_threadpool(_transcript_text, data)
-    items, dropped = clean_courses(await run_in_threadpool(tasks.read_transcript, text), rows[0]["admission_year"])
+    try:
+        extracted = await run_in_threadpool(tasks.read_transcript, text)
+    except Exception as exc:
+        logging.getLogger(__name__).warning("성적 추출 실패 type=%s", type(exc).__name__)
+        raise APIError(502, "TRANSCRIPT_PARSE_FAILED", "성적의 일부를 읽지 못해 결과를 확정하지 않았어요. 저장된 성적은 바뀌지 않았어요. 잠시 뒤 다시 시도해 주세요.") from None
+    items, dropped = clean_courses(extracted, source_text=text)
     if not items:
         scanned = " 스캔한 PDF는 사진으로 올려 주세요." if ai_client.VISION_MODEL else " 스캔한 PDF는 읽을 수 없어요."
         raise APIError(400, "TRANSCRIPT_EMPTY", "성적을 찾지 못했어요. 글자가 선명한 파일인지 확인해 주세요." + scanned)
-    return {"items": items, "dropped": dropped}
+    return {"items": items, "dropped": dropped, "unmatched_lines": unmatched_course_lines(text, items)}
 
 
 @router.get("/courses")

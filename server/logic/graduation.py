@@ -10,7 +10,8 @@ def normalized_name(value: str) -> str:
 
 
 MAJOR_AREAS = {normalized_name(name) for name in ("전공", "전공기초", "전공핵심", "전공심화", "전공필수", "전공선택")}
-GENERAL_AREAS = {normalized_name(name) for name in ("교양", "교양필수", "핵심역량교양필수", "교양선택", "기초학문교양선택", "균형교양", "자유선택")}
+GENERAL_AREAS = {normalized_name(name) for name in ("교양", "교양필수", "핵심역량교양필수", "교양선택", "기초학문교양선택", "균형교양")}
+FREE_AREAS = {normalized_name(name) for name in ("자유선택", "일반선택", "자선", "일선")}
 
 
 def manual_options(course: dict) -> list[str]:
@@ -54,6 +55,8 @@ def calculate_graduation(rows: list[dict], rules: dict, taking: list[dict] = ())
     requirements.extend({"name": clean_label(name) or "세부 졸업요건 확인", "done": None} for name in rules["certifications"])
     if ambiguous:
         requirements.append({"name": "재수강·중복 과목의 인정 학점 확인", "done": None})
+    if any(normalized_name(row["area"]) in FREE_AREAS for row in passed):
+        requirements.append({"name": "자유·일반선택의 영역별 인정 기준 확인", "done": None})
     required = Decimal(str(rules["total_credits"]))
     return {"required_total": float(required), "earned_total": None if ambiguous else float(total),
             "remaining_total": None if ambiguous else float(max(required - total, Decimal(0))),

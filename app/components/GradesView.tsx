@@ -12,16 +12,17 @@ import { StyleSheet, View } from 'react-native';
 import { api, ApiError, useApi, useSubmit } from '../lib/api';
 import { overall, termLabel } from '../lib/format';
 import { color, gradient, gradientBg } from '../lib/theme';
+import { transcriptGroup, transcriptPayload } from '../lib/transcript';
 import type { GradeItem, GradeTerm, Graduation, TranscriptItem } from '../lib/types';
 import { Input, Label, Select, Sheet } from './form';
 import { Pressable, Text } from './Text';
 import { Button, confirmAsk, PicText, Screen, showAlert, StateView, Sub } from './ui';
 
-const TERMS = ['1-1', '1-2', '2-1', '2-2', '3-1', '3-2', '4-1', '4-2'];
+const TERMS = Array.from({ length: 6 }, (_, i) => [`${i + 1}-1`, `${i + 1}-2`]).flat();
 const GRADES = ['A+', 'A0', 'B+', 'B0', 'C+', 'C0', 'D+', 'D0', 'F', 'P'];
 const POINT: Record<string, string> = { 'A+': '4.5', A0: '4.0', 'B+': '3.5', B0: '3.0', 'C+': '2.5', C0: '2.0', 'D+': '1.5', D0: '1.0', F: '0', P: '통과' };
-// 졸업 요건 영역과 같은 이름 (내 학업 › 졸업 요건에서 이 영역으로 묶여 보임)
-const AREAS = ['전공 필수', '전공 선택', '교양 필수', '교양 선택'];
+// 원문 이수구분을 보존하고 졸업 요건 계산에서 필요한 영역으로 따로 묶는다.
+const AREAS = ['전공 필수', '전공 핵심', '전공 심화', '전공 기초', '전공 선택', '전공', '교양 필수', '교양 선택', '핵심역량교양필수', '기초학문교양선택', '자유 선택', '일반 선택'];
 
 /** 성적 배지 색: A 초록, B 파랑, 그 밖 회색 (시안) */
 const gradeTone = (g: string) => (g.startsWith('A') ? { bg: '#E1F3E8', fg: color.primary }
@@ -156,15 +157,29 @@ async function fileBase64(uri: string) {
 function TranscriptSheets({ picking, onClose, onSaved }: { picking: boolean; onClose: () => void; onSaved: () => void }) {
   const [items, setItems] = useState<TranscriptItem[] | null>(null);
   const [dropped, setDropped] = useState(0);
+  const [unmatched, setUnmatched] = useState<string[]>([]);
+  const [terms, setTerms] = useState<Record<string, string>>({});
+  const [confirmed, setConfirmed] = useState(false);
   const { busy, run } = useSubmit();
+  const candidates = (items ?? []).filter(g => !g.excluded);
+  const groups = [...new Map((items ?? []).flatMap((g, i) => g.excluded ? [] : [[transcriptGroup(g, i), g] as const])).entries()];
+  const payloads = (items ?? []).flatMap((g, i) => g.excluded ? [] : [transcriptPayload(g, terms[transcriptGroup(g, i)])]);
+  const invalid = payloads.some(g => g === null);
+  function update(index: number, change: Partial<TranscriptItem>) {
+    setItems(current => current?.map((g, i) => i === index ? { ...g, ...change } : g) ?? null);
+    setConfirmed(false);
+  }
 
   const read = (pick: () => Promise<string | null>) => run(async () => {
     try {
       const content = await pick();
       if (!content) return;
-      const res = await api.post<{ items: TranscriptItem[]; dropped: number }>('/grades/from-file', { content_base64: content });
+      const res = await api.post<{ items: TranscriptItem[]; dropped: number; unmatched_lines?: string[] }>('/grades/from-file', { content_base64: content, preview_version: 2 });
       setItems(res.items);
       setDropped(res.dropped);
+      setUnmatched(res.unmatched_lines ?? []);
+      setTerms({});
+      setConfirmed(false);
       onClose();
     } catch (e) {
       showAlert('성적을 읽지 못했어요', (e as ApiError).message);
@@ -180,9 +195,11 @@ function TranscriptSheets({ picking, onClose, onSaved }: { picking: boolean; onC
   });
 
   const save = () => run(async () => {
+    if (!confirmed || invalid || !payloads.length) return;
     let saved = 0;
     const failed: string[] = [];
-    for (const item of items ?? []) {
+    for (const item of payloads) {
+      if (!item) continue;
       try {
         await api.post('/grades', item);
         saved += 1;
@@ -198,20 +215,40 @@ function TranscriptSheets({ picking, onClose, onSaved }: { picking: boolean; onC
   return (
     <>
       <Sheet visible={picking} onClose={onClose} title="성적증명서 올리기" sub="글자가 선명할수록 정확해요. PDF를 권장해요.">
-        <Button label={busy ? '읽는 중… (1분쯤 걸릴 수 있어요)' : 'PDF 파일 고르기'} disabled={busy} onPress={fromPdf} />
+        <Button label={busy ? '읽는 중… 과목 수에 따라 시간이 걸려요' : 'PDF 파일 고르기'} disabled={busy} onPress={fromPdf} />
         <Button kind="ghost" label="사진 고르기" disabled={busy} onPress={fromPhoto} />
       </Sheet>
-      <Sheet visible={!!items} onClose={() => setItems(null)} title="읽은 성적 확인" sub="틀린 줄은 빼고 저장한 뒤 직접 고쳐 주세요. 학기는 입학년도로 계산해서 휴학한 적이 있으면 다를 수 있어요.">
-        {dropped > 0 && <Text style={st.tipText}>⚠️ 읽지 못한 줄 {dropped}개는 빠졌어요 (계절학기 포함). 직접 추가해 주세요.</Text>}
-        {items?.map((g, i) => (
-          <View key={`${g.term}-${g.course_name}`} style={st.item}>
-            <Text style={st.itemName}>{termLabel(g.term)} · {g.course_name} ({g.credits}학점) · {g.area} · {g.grade}</Text>
-            <Pressable accessibilityLabel={`${g.course_name} 빼기`} hitSlop={6} onPress={() => setItems(items.filter((_, k) => k !== i))} style={st.minus}>
-              <View style={st.minusBar} />
-            </Pressable>
+      <Sheet visible={!!items} onClose={() => setItems(null)} title="읽은 성적 확인" sub="원문 연도는 학년이 아니에요. 저장할 학기를 직접 연결하고 과목·성적·구분을 확인해 주세요. N/A는 저장하지 않아요.">
+        {dropped > 0 && <Text style={st.tipText}>과목명을 읽지 못한 항목 {dropped}개가 있어요. AI가 아예 누락한 과목은 이 숫자에 포함되지 않을 수 있으니 원문과 대조해 주세요.</Text>}
+        {!!unmatched.length && <View style={{ gap: 6 }}><Text style={st.tipText}>누락됐을 수 있는 원문 행 {unmatched.length}개: 저장 후 과목 추가에서 직접 입력해 주세요.</Text>{unmatched.map((line, i) => <Sub key={i}>{line}</Sub>)}</View>}
+        {groups.map(([key, g]) => (
+          <View key={key} style={{ gap: 6, marginVertical: 8 }}>
+            <Label>{g.source_year ? `원문 ${g.source_year}년` : '원문 연도 확인 필요'} {g.source_semester ? `${g.source_semester}학기` : '학기 확인 필요'} → 저장할 학기</Label>
+            <Select value={terms[key] ?? ''} items={['', ...TERMS]} label={v => v ? termLabel(v) : '학년·학기를 직접 선택'} onChange={v => { setTerms(t => ({ ...t, [key]: v })); setConfirmed(false); }} />
           </View>
         ))}
-        <Button label={busy ? '저장하는 중…' : `${items?.length ?? 0}과목 저장하기`} disabled={busy || !items?.length} onPress={save} />
+        {items?.map((g, i) => (
+          <View key={`${g.source_year}-${g.source_semester}-${i}`} style={{ borderTopWidth: 1, borderColor: color.line, paddingVertical: 12, gap: 8 }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              <Text style={st.itemName}>{g.course_name} · 원문 성적 {g.raw_grade || '확인 필요'}</Text>
+              <Pressable accessibilityLabel={`${g.course_name} 빼기`} hitSlop={6} onPress={() => { setItems(items.filter((_, k) => k !== i)); setTerms(t => Object.fromEntries(Object.entries(t).filter(([key]) => !key.startsWith('row-')))); setConfirmed(false); }} style={st.minus}><View style={st.minusBar} /></Pressable>
+            </View>
+            {!!g.source_line && <Sub>원문: {g.source_line}</Sub>}
+            {!!g.issues?.length && <Sub>{g.issues.join(' · ')}</Sub>}
+            {g.excluded ? <Text style={st.tipText}>{g.exclusion_reason || '성적 미반영 항목: 저장에서 제외해요.'}</Text> : <>
+              <Input value={g.course_name} onChangeText={v => update(i, { course_name: v })} placeholder="과목명" />
+              <Label>학점</Label>
+              <Input value={g.credits === null ? '' : String(g.credits)} keyboardType="decimal-pad" onChangeText={v => update(i, { credits: v.trim() && Number.isFinite(Number(v)) ? Number(v) : null })} />
+              <Label>취득 성적</Label>
+              <Select value={g.grade ?? ''} items={['', ...GRADES]} label={v => v || '성적 직접 확인'} onChange={v => update(i, { grade: v || null })} />
+              <Label>이수구분</Label>
+              <Select value={g.area} items={[...new Set(['', ...AREAS, ...(g.area ? [g.area] : [])])]} label={v => v || '이수구분 직접 확인'} onChange={v => update(i, { area: v })} />
+            </>}
+          </View>
+        ))}
+        <Button kind="ghost" label={confirmed ? '✓ 원문과 학기·성적·이수구분을 대조했어요' : '원문과 학기·성적·이수구분 대조 완료'} onPress={() => setConfirmed(v => !v)} />
+        {invalid && <Sub>저장할 학기 또는 비어 있는 항목을 확인해 주세요. 잘못 읽은 과목은 수정하거나 빼 주세요.</Sub>}
+        <Button label={busy ? '저장하는 중…' : `${candidates.length}과목 저장하기`} disabled={busy || !confirmed || invalid || !candidates.length} onPress={save} />
       </Sheet>
     </>
   );
@@ -223,7 +260,7 @@ function GradeSheet({ draft, onClose, onSaved }: { draft: Draft; onClose: () => 
   const [name, setName] = useState(draft.course_name ?? '');
   const [credits, setCredits] = useState(draft.credits ?? 3);
   const [grade, setGrade] = useState(draft.grade ?? 'A+');
-  const [area, setArea] = useState(draft.area === '전공' ? '전공 선택' : draft.area ?? '전공 필수'); // 예전 값 '전공'은 전공 선택으로
+  const [area, setArea] = useState(draft.area ?? '전공 필수');
   const { busy, run } = useSubmit(); // 두 번 눌러 같은 과목이 두 번 들어가지 않게
 
   const save = () => run(async () => {
@@ -257,7 +294,7 @@ function GradeSheet({ draft, onClose, onSaved }: { draft: Draft; onClose: () => 
         </View>
       </View>
       <Label>이수 영역</Label>
-      <Select value={area} items={AREAS} onChange={setArea} title="이수 영역" />
+      <Select value={area} items={[...new Set([...AREAS, area])]} onChange={setArea} title="이수 영역" />
       <View style={st.tip}><PicText name="idea" size={18} style={st.tipText}>직접 수정/입력한 성적은 졸업 학점 계산에 반영돼요.</PicText></View>
       <Button label="저장하기" disabled={!name.trim() || busy} onPress={save} />
     </Sheet>
