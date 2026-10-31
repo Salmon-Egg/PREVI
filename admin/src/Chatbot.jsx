@@ -105,7 +105,7 @@ function AnswerModal({ question, ids, onClose, onSaved }) {
   );
 }
 
-const toBase64 = (file) => new Promise((ok, fail) => {
+export const toBase64 = (file) => new Promise((ok, fail) => {
   const r = new FileReader();
   r.onload = () => ok(String(r.result).split(',')[1]);
   r.onerror = fail;
