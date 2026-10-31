@@ -356,12 +356,11 @@ function TodoRow({ t, open }: { t: Todo; open: (href: Href) => void }) {
           {t.d_day === null ? '-' : t.d_day === 0 ? 'D-DAY' : `D-${t.d_day}`}
         </Text>
       </View>
-      {/* minWidth 0: 긴 제목이 줄어들 수 있게 → 오른쪽 › 가 밀려나지 않음 */}
-      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-        <View style={st.row}>
-          <MaterialCommunityIcons name="calendar-check-outline" size={15} color={HOME_INK.muted} />
-          <Text style={[st.todoTitle, { flex: 1 }]} numberOfLines={1}>{oneLine(t.title)}</Text>
-        </View>
+      {/* 달력 아이콘을 제목 줄 안이 아니라 따로 둠: 제목이 칸 폭을 그대로 받아야 안드로이드가 정확히 말줄임(…)하고 › 가 안 밀려남
+          (제목을 줄 속 줄에 flex로 넣으면 안드로이드가 폭을 잘못 재서 끝까지 넘침, 10/31 실기기) */}
+      <MaterialCommunityIcons name="calendar-check-outline" size={15} color={HOME_INK.muted} style={st.todoIcon} />
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={st.todoTitle} numberOfLines={1}>{oneLine(t.title)}</Text>
         <Text style={st.todoDue}>{dueText(t)}</Text>
       </View>
       <Feather name="chevron-right" size={20} color={color.inkSub} />
@@ -450,7 +449,9 @@ const st = StyleSheet.create({
   dday: { borderRadius: 999, paddingVertical: 5, minWidth: 60, paddingHorizontal: 10, alignItems: 'center' },
   ddayText: { fontSize: 13, fontWeight: '800' },
   todoTitle: { fontSize: 16, fontWeight: '700', color: HOME_INK.item },
-  todoDue: { fontSize: 13, fontWeight: '500', color: HOME_INK.muted, marginLeft: 21 }, // 제목 앞 달력 아이콘(15) + 간격(6)만큼 들여씀
+  todoDue: { fontSize: 13, fontWeight: '500', color: HOME_INK.muted },
+  // 제목 첫 줄 높이에 맞추고, 줄 간격(10) 대신 제목과 6만 띄움
+  todoIcon: { alignSelf: 'flex-start', marginTop: 4, marginRight: -4 },
   pageDotHit: { padding: 4 },
   pageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#D5DBD7' },
   pageDotOn: { backgroundColor: color.primary },
