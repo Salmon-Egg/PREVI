@@ -29,6 +29,10 @@ PROCEDURE_WORDS = ("이중수혜", "문의", "접수", "제출", "면접", "방�
 NOT_FOR_STUDENTS = re.compile(r"폐강|교직원|(교수|교원|강사|직원)\s*(초빙|채용|모집|대상|공모)")
 STATUS = {"enrolled": "enrolled", "leave": "leave", "returned": "returned", "재학생": "enrolled", "휴학생": "leave", "복학생": "returned"}
 CONDITION_MAX = {"min_gpa": (4.5, "성적 기준은 원문 확인 필요"), "income_max": (10, "소득 구간 기준은 원문 확인 필요")}
+CONDITION_SOURCE = {  # 원문에 이 표현이 있어야 칸에 둠
+    "income_max": (r"(?<![\d.]){0}\s*(?:구간|분위)\s*(?:이하|이내|까지|미만)|~\s*{0}\s*(?:구간|분위)", CONDITION_MAX["income_max"][1]),  # "8구간 이내", "1~6구간"
+    "min_credits": (r"(?<![\d.]){0}\s*학점", "이수 학점 기준은 원문 확인 필요"),
+}
 
 
 def summarize_notice(title: str, body: str, *, strict=False) -> dict:
@@ -49,6 +53,12 @@ def summarize_notice(title: str, body: str, *, strict=False) -> dict:
         v = conditions.get(key)
         if v is not None and any(re.search(rf"(?<![\d.]){re.escape(n)}(?!\.?\d)", s) for n in {f"{v:g}", f"{v:.1f}"} for s in sentences):
             del conditions[key]
+    # 산출 예시·배점표의 "3구간"을 상한으로 읽거나 원문에 없는 "12학점"을 지어냄(10/31 공지 51 등 9건). 지시문으로 안 막혀 원문 표현과 대조
+    # shortcut: 다른 표현으로 쓴 진짜 기준도 '확인 필요'가 됨. 틀린 탈락보다 나아서 둠
+    for key, (pattern, message) in CONDITION_SOURCE.items():
+        if key in conditions and not re.search(pattern.format(conditions[key]), f"{title}\n{body}"):
+            del conditions[key]
+            conditions["unknown"] = [message] + conditions.get("unknown", [])
     category = out.get("category") or "일반"
     # 장학인데 대상·조건이 하나도 없으면 대개 자격이 첨부에만 있는 공지 → '신청 가능'으로 띄우지 않음
     if (category == "장학" or "장학" in title) and not target["grades"] and not target["departments"] and not conditions:

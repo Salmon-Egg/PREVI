@@ -2,6 +2,7 @@
 import base64
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 
 from server.ai import tasks
@@ -133,6 +134,24 @@ def test_condition_out_of_range_needs_check():
     out = tasks.clean_conditions({"min_gpa": 90, "income_max": 468, "min_credits": 12, "unknown": ["국적"]})
     assert out == {"min_credits": 12, "unknown": ["성적 기준은 원문 확인 필요", "소득 구간 기준은 원문 확인 필요", "국적"]}
     assert tasks.clean_conditions({"min_gpa": 4.5, "income_max": 8}) == {"min_gpa": 4.5, "income_max": 8}
+
+
+@pytest.mark.parametrize("body, kept", [
+    ("[점수 산출 예시] 학자금 지원구간 3구간, 백분위 90점인 경우\n배점표 2구간 3구간 4구간", False),
+    ("저소득층 대상, 13구간 이내", False),
+    ("학자금 지원구간 3구간 이내", True), ("소득분위 3 분위 이하", True), ("소득분위 1~3구간 가정 학생", True),
+])
+def test_income_limit_must_be_stated_as_a_limit(monkeypatch, body, kept):
+    monkeypatch.setattr(tasks, "_ask", lambda *a, **k: {"category": "장학", "summary": ["요약"], "conditions": {"income_max": 3}})
+    conditions = tasks.summarize_notice("장학생 선발", body)["conditions"]
+    assert conditions == ({"income_max": 3} if kept else {"unknown": ["소득 구간 기준은 원문 확인 필요"]})
+
+
+@pytest.mark.parametrize("body, kept", [("직전학기 이수학점이 높은 자", False), ("직전학기 112학점", False), ("직전학기 12 학점 이상", True)])
+def test_credit_condition_must_be_in_notice(monkeypatch, body, kept):
+    monkeypatch.setattr(tasks, "_ask", lambda *a, **k: {"category": "장학", "summary": ["요약"], "conditions": {"min_credits": 12}})
+    conditions = tasks.summarize_notice("장학생 선발", body)["conditions"]
+    assert conditions == ({"min_credits": 12} if kept else {"unknown": ["이수 학점 기준은 원문 확인 필요"]})
 
 
 def test_transcript_upload_errors(monkeypatch):
