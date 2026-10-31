@@ -216,7 +216,7 @@ export default function Home() {
                           <View key={p} style={[st.todoCard, { width: cardWidth || undefined, transform: [{ translateX: edgeDx(dragDx, page, lastPage) }] }]}>
                             {items === 'event'
                               ? <EventCard e={data.next_event!} open={open} />
-                              : items.map((t) => <TodoRow key={t.id} t={t} open={open} />)}
+                              : items.map((t) => <TodoRow key={t.id} t={t} open={open} titleWidth={cardWidth ? cardWidth - TITLE_SPARE : undefined} />)}
                           </View>
                         ))}
                       </ScrollView>
@@ -345,7 +345,7 @@ function ddayTone(d: number | null) {
   return { dot: '#3DB57A', bg: '#E1F3E8', text: '#2E8B5E' };
 }
 
-function TodoRow({ t, open }: { t: Todo; open: (href: Href) => void }) {
+function TodoRow({ t, open, titleWidth }: { t: Todo; open: (href: Href) => void; titleWidth?: number }) {
   const tone = ddayTone(t.d_day);
   return (
     <Pressable style={st.todoRow} onPress={() => open(`/todos/${t.id}`)}>
@@ -356,18 +356,22 @@ function TodoRow({ t, open }: { t: Todo; open: (href: Href) => void }) {
           {t.d_day === null ? '-' : t.d_day === 0 ? 'D-DAY' : `D-${t.d_day}`}
         </Text>
       </View>
-      {/* minWidth 0: 긴 제목이 줄어들 수 있게 → 오른쪽 › 가 밀려나지 않음 */}
-      <View style={{ flex: 1, minWidth: 0, gap: 4 }}>
-        <View style={st.row}>
-          <MaterialCommunityIcons name="calendar-check-outline" size={15} color={HOME_INK.muted} />
-          <Text style={[st.todoTitle, { flex: 1 }]} numberOfLines={1}>{oneLine(t.title)}</Text>
-        </View>
+      {/* 제목 폭을 숫자로 정해 줌(titleWidth): 안드로이드는 줄바꿈 없는 긴 한 줄 제목을 flex로만 두면 글자 전체 길이로 폭을 잡아
+          말줄임(…) 없이 넘치고 › 를 밀어냄 (10/31 실기기 세 번 확인). 폭이 정해지면 그 자리에서 … 로 줄임 */}
+      <MaterialCommunityIcons name="calendar-check-outline" size={15} color={HOME_INK.muted} style={st.todoIcon} />
+      <View style={{ flex: 1, gap: 4 }}>
+        <Text style={[st.todoTitle, titleWidth ? { width: Math.max(40, titleWidth) } : null]} numberOfLines={1}>{oneLine(t.title)}</Text>
         <Text style={st.todoDue}>{dueText(t)}</Text>
       </View>
       <Feather name="chevron-right" size={20} color={color.inkSub} />
     </Pressable>
   );
 }
+
+// 할 일 한 줄에서 제목 말고 나머지가 차지하는 폭: 카드 테두리 2 + 좌우 여백 24 + 색 점 9 + D-day 배지 + 달력 아이콘 15 + › 20
+// + 칸 사이 10×4 − 아이콘 오른쪽 −4. 아래 todoCard·todoRow·ddayDot·todoIcon 크기를 바꾸면 같이 고치기
+const DDAY_W = 70; // 'D-DAY'가 글자 크기 '크게'(×1.12)에서도 들어가는 폭
+const TITLE_SPARE = 2 + 24 + 9 + DDAY_W + 15 + 20 + 10 * 4 - 4;
 
 const shadow = { shadowColor: '#0C6B3F', shadowOpacity: 0.08, shadowRadius: 16, shadowOffset: { width: 0, height: 4 }, elevation: 3 };
 
@@ -447,10 +451,12 @@ const st = StyleSheet.create({
   empty: { padding: 20, textAlign: 'center', color: color.inkSub },
   todoRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 14 },
   ddayDot: { width: 9, height: 9, borderRadius: 5 },
-  dday: { borderRadius: 999, paddingVertical: 5, minWidth: 60, paddingHorizontal: 10, alignItems: 'center' },
+  dday: { borderRadius: 999, paddingVertical: 5, width: DDAY_W, alignItems: 'center' }, // 폭 고정 (제목 폭 계산에 씀)
   ddayText: { fontSize: 13, fontWeight: '800' },
   todoTitle: { fontSize: 16, fontWeight: '700', color: HOME_INK.item },
-  todoDue: { fontSize: 13, fontWeight: '500', color: HOME_INK.muted, marginLeft: 21 }, // 제목 앞 달력 아이콘(15) + 간격(6)만큼 들여씀
+  todoDue: { fontSize: 13, fontWeight: '500', color: HOME_INK.muted },
+  // 제목 첫 줄 높이에 맞추고, 줄 간격(10) 대신 제목과 6만 띄움
+  todoIcon: { alignSelf: 'flex-start', marginTop: 4, marginRight: -4 },
   pageDotHit: { padding: 4 },
   pageDot: { width: 7, height: 7, borderRadius: 4, backgroundColor: '#D5DBD7' },
   pageDotOn: { backgroundColor: color.primary },
