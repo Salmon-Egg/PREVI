@@ -1,7 +1,7 @@
 // 이용약관·개인정보 처리방침 (쿠키, 요금·환불, 운영자 정보 포함). 화면은 components/form.tsx LegalSheet
 // ⚠️ 법률 검토를 받지 않은 초안
 const OPERATOR = { name: 'team ecs', officer: '허성우', email: 'voiceactor@skuniv.ac.kr' };
-const EFFECTIVE = '2026년 10월 30일';
+const EFFECTIVE = '2026년 11월 1일';
 
 const CONTACT = [`운영자: ${OPERATOR.name}`,`개인정보 보호책임자: ${OPERATOR.officer}`, `문의: ${OPERATOR.email}`];
 
@@ -12,7 +12,7 @@ export const LEGAL: Record<LegalDoc, { title: string; sections: Section[] }> = {
   terms: {
     title: '이용약관',
     sections: [
-      { title: '1. 서비스', lines: ['PREVI(서경 AI 비서)는 서경대학교 학생에게 공지·장학금·졸업 요건·학사일정 정보를 정리해 알려 주는 서비스예요.', '서경대학교가 직접 운영하는 공식 서비스가 아니에요.'] },
+      { title: '1. 서비스', lines: ['PREVI(서경 AI 비서)는 서경대학교 학생에게 공지·장학금·졸업 요건·학사일정 정보를 정리해 알려 주는 서비스예요.', '공모전 출품을 위해 만든 서비스이며, 서경대학교가 직접 운영하는 공식 서비스가 아니에요.'] },
       { title: '2. 가입', lines: ['만 14세 이상이고 학교 이메일을 인증한 본인만 가입할 수 있어요.', '이 서비스의 비밀번호는 학교 포털 비밀번호와 다르게 정해 주세요.'] },
       { title: '3. 요금과 환불', lines: ['모든 기능은 무료이며 결제나 자동 청구가 없어요. 그래서 환불할 금액도 없어요.', '유료 기능을 도입하면 요금과 환불 기준을 미리 알리고 따로 동의를 받아요.'] },
       { title: '4. AI 안내의 한계', lines: ['요약·판정·답변은 AI와 입력한 정보를 바탕으로 만들어져 틀릴 수 있어요.', '신청, 졸업, 학적 변경 전에는 학교 공지 원문이나 담당 부서에서 꼭 확인해 주세요.'] },

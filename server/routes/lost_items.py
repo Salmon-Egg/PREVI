@@ -1,6 +1,7 @@
 """분실물(습득물) 게시판. 보관 장소는 습득자가 정한 질문에 맞게 답한 학생과 글쓴이만 (DB 함수 lost_item_place)."""
 import base64
 import binascii
+import io
 import re
 from datetime import date
 from typing import Literal
@@ -8,7 +9,9 @@ from uuid import uuid4
 
 import httpx
 from fastapi import APIRouter, Depends, Path, Query, Request
+from PIL import Image, ImageOps
 from pydantic import BaseModel, ConfigDict, Field
+from starlette.concurrency import run_in_threadpool
 
 from server.auth import AuthenticatedUser, bearer, require_user
 from server.database import database_rows
@@ -60,6 +63,21 @@ def image_type(data: bytes) -> str:
     if data.startswith(b"\x89PNG\r\n\x1a\n"): return "image/png"
     if data[:4] == b"RIFF" and data[8:12] == b"WEBP": return "image/webp"
     raise APIError(400, "INVALID_IMAGE", "JPG, PNG, WEBP 사진만 올릴 수 있어요.")
+
+
+def without_metadata(data: bytes, kind: str) -> bytes:
+    """저장소가 공개라 GPS 등 사진 속 정보를 지운다. 돌려 찍은 사진은 EXIF가 없어져도 바로 보이게 먼저 세운다."""
+    try:
+        with Image.open(io.BytesIO(data)) as image:
+            if image.width * image.height > 40_000_000:  # 5MB 파일도 압축을 풀면 메모리를 크게 쓸 수 있음
+                raise APIError(400, "INVALID_IMAGE", "사진이 너무 커요.")
+            clean = ImageOps.exif_transpose(image)
+    except (OSError, ValueError, Image.DecompressionBombError):
+        raise APIError(400, "INVALID_IMAGE", "사진을 읽을 수 없어요.") from None
+    clean.info.clear()  # 저장할 때 EXIF·XMP가 다시 붙지 않게
+    out = io.BytesIO()
+    clean.save(out, format=kind.split("/")[1].upper(), quality=85)
+    return out.getvalue()
 
 
 async def storage(request: Request, method: str, path: str, **kwargs):
@@ -132,6 +150,7 @@ async def create_lost_item(body: LostItemInput, request: Request, user: Authenti
         except (binascii.Error, ValueError):
             raise APIError(400, "INVALID_IMAGE", "사진을 읽을 수 없어요.") from None
         kind = image_type(data)
+        data = await run_in_threadpool(without_metadata, data, kind)
         values["image_path"] = f"{user.id}/{uuid4().hex}.{kind.split('/')[1]}"
         await storage(request, "POST", values["image_path"], content=data, headers={"Content-Type": kind})
     try:

@@ -1,9 +1,12 @@
 import base64
+import io
 import json
 from uuid import uuid4
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
+from PIL import Image
 
 from server.config import Settings
 from server.main import create_app
@@ -14,7 +17,15 @@ ROW = {"id": 1, "created_at": "2026-10-30T09:00:00+09:00", "user_id": str(uuid4(
        "place": "북악관 3층", "found_on": "2026-10-29", "description": "", "image_path": None, "question": "스티커 색은?", "status": "open"}
 BODY = {"title": "에어팟", "category": "전자기기", "place": "북악관 3층", "found_on": "2026-10-29",
         "question": "스티커 색은?", "answer": "노란색", "storage_place": "학생지원팀"}
-JPEG = base64.b64encode(b"\xff\xd8\xff\xe0" + b"0" * 20).decode()
+
+
+def encoded_photo(format="JPEG", **options):
+    out = io.BytesIO()
+    Image.new("RGB", (4, 2), "red").save(out, format=format, **options)
+    return base64.b64encode(out.getvalue()).decode()
+
+
+JPEG = encoded_photo()
 
 
 def client_for(db):
@@ -68,6 +79,33 @@ def test_create_uploads_photo_to_own_folder_with_sniffed_type():
 def test_create_rejects_non_image_without_calls():
     with client_for(lambda r: (_ for _ in ()).throw(AssertionError("호출되면 안 됨"))) as client:
         res = client.post("/lost-items", headers=HEADERS, json={**BODY, "image_base64": base64.b64encode(b"<html>").decode()})
+    assert res.status_code == 400
+
+
+@pytest.mark.parametrize("format", ["JPEG", "PNG", "WEBP"])
+def test_create_removes_location_and_keeps_orientation(format):
+    exif = Image.Exif()
+    exif[0x0112] = 6  # 90도 돌려 찍음
+    exif.get_ifd(0x8825)[1] = "N"  # GPS
+    photo = encoded_photo(format, exif=exif, **({"xmp": b"<x:gps>secret</x:gps>"} if format != "PNG" else {}))
+    assert base64.b64decode(photo).count(b"secret") == (0 if format == "PNG" else 1)
+    uploads = []
+    def db(request):
+        if request.url.path.startswith("/storage/"):
+            uploads.append(request.content)
+            return httpx.Response(200, json={})
+        return httpx.Response(201, json=[{**ROW, "user_id": USER_ID, "image_path": json.loads(request.content)["image_path"]}])
+    with client_for(db) as client:
+        assert client.post("/lost-items", headers=HEADERS, json={**BODY, "image_base64": photo}).status_code == 200
+    with Image.open(io.BytesIO(uploads[0])) as saved:
+        assert saved.format == format and saved.size == (2, 4) and not saved.getexif()
+        assert "xmp" not in saved.info
+    assert b"secret" not in uploads[0]
+
+
+def test_create_rejects_broken_photo_without_calls():
+    with client_for(lambda r: (_ for _ in ()).throw(AssertionError("호출되면 안 됨"))) as client:
+        res = client.post("/lost-items", headers=HEADERS, json={**BODY, "image_base64": base64.b64encode(b"\xff\xd8\xff\xe0" + b"0" * 20).decode()})
     assert res.status_code == 400
 
 

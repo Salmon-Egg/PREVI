@@ -13,7 +13,9 @@ def render_units(project_root):
     common = f'WorkingDirectory={root}\nEnvironment=PYTHONUTF8=1\n'
     units = {'previ-api.service':
         '[Unit]\nDescription=PREVI API\n\n[Service]\nType=simple\n' + common +
-        f'ExecStart={python} -m uvicorn server.main:app --host 127.0.0.1 --port 8000\n'
+        f'ExecStartPre=/usr/bin/mkdir -p {root}/logs\n'
+        # 접속 기록은 공용 journald가 아니라 30일만 남는 파일로 (처리방침 3조)
+        f'ExecStart={python} -m uvicorn server.main:app --host 127.0.0.1 --port 8000 --log-config server/log_config.json\n'
         'Restart=on-failure\nRestartSec=5\nTimeoutStopSec=30\n\n[Install]\nWantedBy=default.target\n'}
     jobs = {
         'collect': ('server.jobs.collect_notices --save --pages 3 --max-posts 150',
