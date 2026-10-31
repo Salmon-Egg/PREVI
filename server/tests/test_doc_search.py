@@ -90,6 +90,19 @@ def test_absence_not_concluded_from_silence(monkeypatch, question, answer, kept)
     assert (result == answer) if kept else (result is None)
 
 
+@pytest.mark.parametrize("answer, kept", [
+    ("휴학은 총 5년 동안 모두 합쳐 5학기까지 할 수 있어요.", False),
+    ("휴학은 통산 60개월까지 할 수 있어요.", False),
+    ("한 번에 1학기씩, 통산 5 년까지 할 수 있어요.", True),
+    ("2026년 8월 10일까지 신청해요.", True),
+])
+def test_number_with_changed_unit_dropped(monkeypatch, answer, kept):
+    monkeypatch.setattr(tasks, "ask_json", lambda *_: {"subject": None, "answer": answer})
+    doc = "[학칙] 휴학기간은 1회 1학기 이내로 하며 통산 5년을 초과할 수 없다. 마감 2026-8-10, 60"
+    result = tasks.answer_from_docs("휴학 기간 알려줘", [{"content": doc}])
+    assert (result == answer) if kept else (result is None)
+
+
 def test_graduation_answer_written_by_code(monkeypatch):
     async def result(*_):
         return {"remaining_total": 0.0, "earned_total": 120.0, "required_total": 120.0,
