@@ -79,7 +79,6 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
           <View style={st.editBanner}>
             <Text style={st.editTitle}>성적 편집 중</Text>
             <Sub>과목 삭제 또는 항목 추가 후 완료 버튼을 눌러주세요.</Sub>
-            <Button compact kind="ghost" label="📄 성적증명서로 한 번에 입력" onPress={() => confirmAsk('성적증명서 올리기 전 확인', TRANSCRIPT_WARNING, '동의하고 계속', () => setPicking(true))} />
             {(added > 0 || removed > 0) && (
               <Text style={st.changed}>이번에 바뀐 것: {[added && `추가 ${added}`, removed && `삭제 ${removed}`].filter(Boolean).join(' · ')} (총 {sum.earned}학점)</Text>
             )}
@@ -96,6 +95,7 @@ export function GradesScreen({ editing = false }: { editing?: boolean }) {
             </View>
           </View>
         )}
+        <Button compact kind="ghost" label="📄 성적증명서로 한 번에 입력" onPress={() => confirmAsk('성적증명서 올리기 전 확인', TRANSCRIPT_WARNING, '동의하고 계속', () => setPicking(true))} />
         {terms.length === 0 && <Sub>입력한 성적이 없어요</Sub>}
         {terms.map((t) => {
           const isOpen = t.term === openTerm;

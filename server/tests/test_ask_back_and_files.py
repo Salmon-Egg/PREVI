@@ -76,7 +76,7 @@ def test_only_known_attachment_kinds_are_read(monkeypatch):
     monkeypatch.setattr(attachments, "fetch_school", lambda client, url: asked.append(url) or b"x")
     monkeypatch.setattr(attachments.ai_client, "read_image", lambda data, mime: "지원자격  토익" + chr(0) + "700")
     monkeypatch.setattr(attachments, "PdfReader", lambda f: (_ for _ in ()).throw(ValueError("깨진 PDF")))
-    assert attachments.attachment_text(files) == "지원자격 토익 700"  # 깨진 PDF는 건너뛰고, 저장을 막는 널 문자는 지움
+    assert attachments.attachment_text(files) == attachments.image_ocr.REVIEW + "\n지원자격 토익 700"  # 깨진 PDF는 건너뛰고, 저장을 막는 널 문자는 지움
     assert asked == ["https://www.skuniv.ac.kr/wp-content/uploads/2026/10/b.pdf", "https://www.skuniv.ac.kr/wp-content/uploads/2026/10/a.jpg"]
 
 
