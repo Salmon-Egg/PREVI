@@ -5,6 +5,8 @@ import binascii
 import io
 import logging
 import re
+import struct
+import zlib
 from collections import Counter
 from datetime import date, datetime, timedelta, timezone
 from typing import Literal
@@ -20,6 +22,7 @@ from starlette.concurrency import run_in_threadpool
 from server.auth import require_admin
 from server.errors import APIError
 from server.jobs.pipeline import pipeline_client
+from server.logic.course_file import course_key, courses_from_tables, read_tables
 from server.logic.eligibility import matches_target
 from server.routes.lost_items import delete_user_photos
 from server.scripts import load_yoram
@@ -170,12 +173,16 @@ def _text_of(filename: str, data: bytes) -> str:
     raise APIError(400, "INVALID_FILE", "PDF, TXT, MD 파일만 올릴 수 있어요.")
 
 
-@router.post("/documents", status_code=201)
-async def upload_document(body: DocumentIn, request: Request):
+def _file_bytes(content_base64: str) -> bytes:
     try:
-        data = base64.b64decode(body.content_base64, validate=True)
+        return base64.b64decode(content_base64, validate=True)
     except (binascii.Error, ValueError):
         raise APIError(400, "INVALID_FILE", "파일을 읽을 수 없어요.") from None
+
+
+@router.post("/documents", status_code=201)
+async def upload_document(body: DocumentIn, request: Request):
+    data = _file_bytes(body.content_base64)
     text = await run_in_threadpool(_text_of, body.filename, data)
     contents = [f"[{body.title}] " + re.sub(r"[ \t]+", " ", c).strip() for c in load_yoram._pack(text)]
     contents = [c for c in contents if len(c) >= 40]
@@ -387,6 +394,40 @@ def _valid(kind: str, body: dict) -> dict:
         return TABLES[kind][1].model_validate(body).model_dump(mode="json")
     except ValidationError:
         raise APIError(400, "INVALID_REQUEST", "입력 값을 확인해 주세요.") from None
+
+
+class CourseFileIn(BaseModel):
+    filename: str = Field(min_length=1, max_length=200)
+    content_base64: str = Field(min_length=1, max_length=28_000_000)  # 파일 20MB
+
+
+def _courses_in_file(data: bytes) -> tuple[list[dict], list[str]]:
+    try:
+        return courses_from_tables(read_tables(data))
+    except ValueError as e:
+        raise APIError(400, "INVALID_FILE", str(e)) from None
+    except (OSError, KeyError, IndexError, struct.error, zlib.error):  # 망가진 파일
+        raise APIError(400, "INVALID_FILE", "파일을 읽을 수 없어요. 학교 강의시간표 HWP인지 확인해 주세요.") from None
+
+
+@router.post("/courses/import", status_code=201)
+async def import_courses(body: CourseFileIn, request: Request):
+    """강의시간표 HWP → 시간표 검색 과목. 이미 있는 과목(이름+시간)은 그대로 두고 새 것만 더함."""
+    if not body.filename.lower().endswith(".hwp"):
+        raise APIError(400, "INVALID_FILE", "HWP 파일만 올릴 수 있어요. HWPX·PDF는 한글에서 HWP로 저장해 주세요.")
+    courses, skipped = await run_in_threadpool(_courses_in_file, _file_bytes(body.content_base64))
+    if not courses:
+        raise APIError(400, "EMPTY_DOCUMENT", "파일에서 과목 표를 찾지 못했어요.")
+    have, offset = set(), 0
+    while page := await admin_rows(request, "GET", "courses", params={"select": "name,times", "order": "id.asc", "limit": 1000, "offset": offset}):
+        have |= {course_key(c["name"], c["times"]) for c in page}
+        offset += len(page)
+        if len(page) < 1000:
+            break
+    new = [c for c in courses if course_key(c["name"], c["times"]) not in have]
+    if new:
+        await admin_rows(request, "POST", "courses", json=new)
+    return {"added": len(new), "duplicates": len(courses) - len(new), "skipped": skipped}
 
 
 @router.get("/data/{kind}")

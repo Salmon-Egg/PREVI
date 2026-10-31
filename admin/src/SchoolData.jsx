@@ -1,7 +1,8 @@
 // AD-5 학교 자료: 학사일정·과목은 추가/수정/삭제, 졸업 기준은 보기만 (틀리면 학생 졸업 계산이 다 틀어짐)
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 
 import { api, run, useLoad } from './api.js';
+import { toBase64 } from './Chatbot.jsx';
 import { Loaded, Modal, Tabs } from './ui.jsx';
 
 // [칸, 이름, 입력 종류, 화면 → 서버 값, 서버 값 → 화면]
@@ -39,6 +40,35 @@ export default function SchoolData() {
   );
 }
 
+/** 학교 강의시간표 HWP를 올리면 서버가 표를 읽어 시간표 검색 과목을 채움 */
+function CourseFile({ onDone }) {
+  const input = useRef(null);
+  const [busy, setBusy] = useState(false);
+  function upload(e) {
+    const file = e.target.files[0];
+    e.target.value = ''; // 같은 파일을 다시 고를 수 있게
+    if (!file) return;
+    if (file.size > 20 * 1024 * 1024) return alert('20MB 이하 파일만 올릴 수 있어요.');
+    setBusy(true);
+    run(async () => {
+      try {
+        const r = await api('POST', '/admin/courses/import', { filename: file.name, content_base64: await toBase64(file) });
+        const names = r.skipped.slice(0, 20).join(', ') + (r.skipped.length > 20 ? ' 등' : '');
+        alert(`새 과목 ${r.added}개를 넣었어요. 이미 있던 과목 ${r.duplicates}개는 그대로 뒀어요.`
+          + (r.skipped.length ? `\n\n수업 시간·학점을 읽을 수 없어 건너뛴 과목 ${r.skipped.length}개:\n${names}` : ''));
+      } finally {
+        setBusy(false);
+      }
+    }, onDone);
+  }
+  return (
+    <>
+      <input ref={input} type="file" accept=".hwp" hidden aria-label="강의시간표 파일" onChange={upload} />
+      <button className="soft" disabled={busy} onClick={() => input.current.click()}>{busy ? '읽는 중…' : '강의시간표 올리기 (HWP)'}</button>
+    </>
+  );
+}
+
 function Editable({ kind }) {
   const spec = SPECS[kind];
   const [q, setQ] = useState('');
@@ -49,6 +79,7 @@ function Editable({ kind }) {
     <section className="card">
       <div className="row-head">
         <input type="search" placeholder="검색" aria-label={spec.label + ' 검색'} value={q} onChange={(e) => setQ(e.target.value)} />
+        {kind === 'courses' && <CourseFile onDone={load.reload} />}
         <button className="primary" onClick={() => setEditing(spec.blank)}>{spec.label} 추가</button>
       </div>
       <Loaded load={load}>

@@ -39,7 +39,7 @@ def make(email=ADMIN, rows=None, counts=None):
             return httpx.Response(200, json=(rows or {}).get(table, []))
         body = json.loads(request.content or b"null")
         saved.append((request.method, table, dict(request.url.params), body))
-        return httpx.Response(201, json=[{"id": 7, **(body or {})}])
+        return httpx.Response(201, json=[{"id": 7, **(body if isinstance(body, dict) else {})}])
 
     app = create_app(Settings("https://example.supabase.co", "pk", "sk", frozenset({ADMIN})), httpx.MockTransport(handler))
     return TestClient(app), saved
