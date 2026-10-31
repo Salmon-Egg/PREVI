@@ -565,7 +565,8 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
     }
     case 'POST /lost-items': {
       const { image_base64, ...rest } = body;
-      const x = { ...rest, id: Date.now(), created_at: now(), image_url: null, status: 'open', mine: true, solved: false };
+      // 올린 사진(가린 뒤의 사진)을 그대로 보여 줌 (서버 대신 data 주소)
+      const x = { ...rest, id: Date.now(), created_at: now(), image_url: image_base64 ? `data:image/jpeg;base64,${image_base64}` : null, status: 'open', mine: true, solved: false };
       lostItems.unshift(x);
       return { ...x, tries_left: 3 };
     }

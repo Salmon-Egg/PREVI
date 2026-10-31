@@ -1,10 +1,11 @@
-// 주운 물건 올리기 — 사진(선택 1장), 물건 정보, 주인 확인 질문·답, 보관 장소(답을 맞힌 학생에게만 보임)
+// 주운 물건 올리기 — 사진(선택 1장, 고를 때 자르기 + 개인정보 검게 가리기 + 확인 체크), 물건 정보, 주인 확인 질문·답, 보관 장소(답을 맞힌 학생에게만 보임)
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { Image, View } from 'react-native';
+import { useRef, useState, type ComponentRef } from 'react';
+import { View } from 'react-native';
 
-import { Input, Label, NO_GROW, Select } from '../../../components/form';
+import { ConsentCheck, Input, Label, NO_GROW, Select } from '../../../components/form';
+import { maskedBase64, PhotoMask, type Box, type Photo } from '../../../components/PhotoMask';
 import { Pressable, Text } from '../../../components/Text';
 import { Button, Screen, Sub } from '../../../components/ui';
 import { api, attempt, useSubmit } from '../../../lib/api';
@@ -15,32 +16,53 @@ const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 60000
 
 export default function LostNew() {
   const [form, setForm] = useState({ title: '', category: '기타' as LostCategory, place: '', found_on: today(), description: '', question: '', answer: '', storage_place: '' });
-  const [photo, setPhoto] = useState<{ uri: string; base64: string } | null>(null);
+  const [photo, setPhoto] = useState<Photo | null>(null);
+  const [boxes, setBoxes] = useState<Box[]>([]);
+  const [safe, setSafe] = useState(false); // 사진에 개인정보가 안 보인다고 확인함
+  const shot = useRef<ComponentRef<typeof View>>(null);
   const { busy, run } = useSubmit();
   const set = (key: keyof typeof form) => (v: string) => setForm((f) => ({ ...f, [key]: v }));
   const ready = form.title.trim() && form.place.trim() && /^\d{4}-\d{2}-\d{2}$/.test(form.found_on)
-    && form.question.trim() && form.answer.trim() && form.storage_place.trim();
+    && form.question.trim() && form.answer.trim() && form.storage_place.trim() && (!photo || safe);
 
   async function pick() {
-    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.5, base64: true });
+    // allowsEditing: 고른 뒤 자르기 화면 → 개인정보 부분을 잘라낼 수 있음 (휴대폰만, 웹은 무시됨)
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.5, base64: true, allowsEditing: true });
     const a = res.assets?.[0];
-    if (!res.canceled && a?.base64) setPhoto({ uri: a.uri, base64: a.base64 });
+    if (res.canceled || !a?.base64) return;
+    setPhoto({ uri: a.uri, base64: a.base64, width: a.width || 1, height: a.height || 1 });
+    setBoxes([]);
+    setSafe(false);
   }
 
   const submit = () => run(async () => {
     let saved: LostItemDetail | undefined;
-    const ok = await attempt(async () => { saved = await api.post<LostItemDetail>('/lost-items', { ...form, image_base64: photo?.base64 }); });
+    const ok = await attempt(async () => {
+      const image_base64 = photo ? await maskedBase64(photo, boxes, shot) : undefined; // 가린 곳은 검게 칠한 새 사진
+      saved = await api.post<LostItemDetail>('/lost-items', { ...form, image_base64 });
+    });
     if (ok && saved) router.replace(`/lost/${saved.id}`);
   });
 
   return (
     <Screen title="주운 물건 올리기" footer={<Button label={busy ? '올리는 중…' : '올리기'} disabled={!ready || busy} onPress={submit} />}>
       <Label>사진</Label>
-      <Pressable onPress={pick} accessibilityLabel="사진 고르기"
-        style={{ height: 160, borderRadius: 14, borderWidth: 1.5, borderColor: color.field, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-        {photo ? <Image accessibilityLabel="고른 사진" source={{ uri: photo.uri }} style={{ width: '100%', height: '100%' }} resizeMode="cover" /> : <Text style={{ color: color.inkSub }}>눌러서 사진 고르기 (선택)</Text>}
-      </Pressable>
-      {photo && <Pressable onPress={() => setPhoto(null)}><Sub style={{ color: color.primary }}>사진 빼기</Sub></Pressable>}
+      {photo ? (
+        <>
+          <PhotoMask photo={photo} boxes={boxes} onChange={setBoxes} shot={shot} />
+          <ConsentCheck label="이름·학번·얼굴·카드 번호 등 개인정보가 사진에 보이지 않아요 (필수)" checked={safe} onChange={setSafe} />
+          <View style={{ flexDirection: 'row', gap: 16 }}>
+            <Pressable onPress={pick}><Sub style={{ color: color.primary }}>다른 사진 고르기</Sub></Pressable>
+            <Pressable onPress={() => setPhoto(null)}><Sub style={{ color: color.primary }}>사진 빼기</Sub></Pressable>
+          </View>
+        </>
+      ) : (
+        <Pressable onPress={pick} accessibilityLabel="사진 고르기"
+          style={{ height: 160, borderRadius: 14, borderWidth: 1.5, borderColor: color.field, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ color: color.inkSub }}>눌러서 사진 고르기 (선택)</Text>
+          <Text style={{ color: color.inkSub, fontSize: 12, marginTop: 4 }}>고른 뒤 자르고, 개인정보는 검게 가릴 수 있어요</Text>
+        </Pressable>
+      )}
 
       <Label required>물건 이름</Label>
       <Input style={NO_GROW} value={form.title} onChangeText={set('title')} placeholder="예) 검은색 에어팟 케이스" maxLength={100} />
