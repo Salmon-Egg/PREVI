@@ -1,5 +1,6 @@
 """AI를 부르는 곳은 이 파일 하나 (팀 규칙 8번).
 AI_FAKE=1 이면 Ollama 대신 ai/fake.py가 답합니다. 학교 서버가 준비되면 .env에서 0으로 바꾸기만 하면 됩니다."""
+import base64
 import json
 import logging
 import os
@@ -20,6 +21,7 @@ AI_FAKE = os.getenv("AI_FAKE", "0").strip().lower() in ("1", "true", "yes")
 AI_BASE_URL = os.getenv("AI_BASE_URL", "http://127.0.0.1:11434/v1")
 CHAT_MODEL = os.getenv("CHAT_MODEL", "kanana")
 EMBED_MODEL = os.getenv("EMBED_MODEL", "")
+VISION_MODEL = os.getenv("VISION_MODEL", "")  # 사진 읽기. 비우면 사진은 건너뜀
 # 문서 검색: 질문과 문단의 거리가 이 값보다 크면 근거로 안 씀. 비우면 거르지 않음
 DOC_MAX_DISTANCE = float(os.getenv("DOC_MAX_DISTANCE") or "inf")
 # embeddinggemma 권장 머리말. 붙이면 1위 정답이 6→8/15로 늘어남(10/28). 바꾸면 load_yoram으로 문단 임베딩을 다시 넣어야 함
@@ -55,7 +57,7 @@ def _client():
     return OpenAI(base_url=AI_BASE_URL, api_key="ollama", timeout=20, max_retries=0)  # Ollama는 키를 검사하지 않음
 
 
-SLOW = {"notice_summary": 60}  # 밤 작업의 긴 공지 본문. 나머지(챗봇 등)는 20초
+SLOW = {"notice_summary": 60, "transcript": 120}  # 밤 작업의 긴 공지 본문. 나머지(챗봇 등)는 20초
 
 
 def ask_json(prompt_name: str, user: str) -> dict:
@@ -75,6 +77,16 @@ def ask_json(prompt_name: str, user: str) -> dict:
             # 같은 요청을 그대로 다시 보내면 같은 답이 나옴: 깨진 답을 보여 주고 고쳐 달라고 함
             messages += [{"role": "assistant", "content": text or ""}, {"role": "user", "content": "올바른 JSON 하나로만 다시 답해."}]
     raise AiError(f"{prompt_name}: JSON 형식이 두 번 깨짐")
+
+
+def read_image(data: bytes, mime: str) -> str:
+    """사진 속 글자 → 글. 가짜 모드이거나 비전 모델이 없으면 빈 글자."""
+    if AI_FAKE or not VISION_MODEL:
+        return ""
+    url = f"data:{mime};base64,{base64.b64encode(data).decode()}"
+    res = _client().chat.completions.create(model=VISION_MODEL, temperature=0, timeout=120, messages=[{"role": "user", "content": [
+        {"type": "text", "text": _prompt("image_text")}, {"type": "image_url", "image_url": {"url": url}}]}])
+    return (res.choices[0].message.content or "").strip()
 
 
 def warm_up():

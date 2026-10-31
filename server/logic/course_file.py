@@ -51,8 +51,8 @@ def _text(body: bytes) -> str:
     return "".join(out).strip()
 
 
-def read_tables(data: bytes) -> list[dict]:
-    """HWP 안의 표 전부: {"rows": 줄 수, "cells": [{"c","r","cs","rs","text"}]}. 읽을 수 없는 파일이면 ValueError."""
+def _hwp_records(data: bytes):
+    """HWP 본문 레코드를 순서대로. 읽을 수 없는 파일이면 ValueError."""
     if not olefile.isOleFile(data=data):  # 위치 인자로 주면 짧은 내용을 파일 경로로 착각함
         raise ValueError("HWP 파일이 아니에요.")
     with olefile.OleFileIO(io.BytesIO(data)) as ole:
@@ -61,21 +61,31 @@ def read_tables(data: bytes) -> list[dict]:
             raise ValueError("암호가 걸렸거나 배포용으로 저장된 HWP는 읽을 수 없어요.")
         sections = sorted((s for s in ole.listdir() if s[0] == "BodyText"), key=lambda s: int(s[1].removeprefix("Section")))
         streams = [ole.openstream(s).read() for s in sections]
-    tables, table, cell, left = [], None, None, 0
     for raw in streams:
-        for tag, level, body in _records(zlib.decompress(raw, -15) if flags & 1 else raw):
-            if tag == TABLE:
-                rows = struct.unpack_from("<H", body, 4)[0]
-                left = sum(struct.unpack_from(f"<{rows}H", body, 18))  # 줄마다 칸 수
-                table, cell = {"rows": rows, "level": level, "cells": []}, None
-                tables.append(table)
-            elif tag == LIST_HEADER and table and left and level == table["level"]:
-                c, r, cs, rs = struct.unpack_from("<4H", body, 8)
-                cell = {"c": c, "r": r, "cs": cs, "rs": rs, "text": ""}
-                table["cells"].append(cell)
-                left -= 1
-            elif tag == PARA_TEXT and cell and level == table["level"] + 1:
-                cell["text"] = f"{cell['text']} {_text(body)}".strip()
+        yield from _records(zlib.decompress(raw, -15) if flags & 1 else raw)
+
+
+def read_text(data: bytes) -> str:
+    """HWP의 글자 전부 (표 칸 포함, 적힌 순서대로)."""
+    return "\n".join(t for tag, _, body in _hwp_records(data) if tag == PARA_TEXT and (t := _text(body)))
+
+
+def read_tables(data: bytes) -> list[dict]:
+    """HWP 안의 표 전부: {"rows": 줄 수, "cells": [{"c","r","cs","rs","text"}]}. 읽을 수 없는 파일이면 ValueError."""
+    tables, table, cell, left = [], None, None, 0
+    for tag, level, body in _hwp_records(data):
+        if tag == TABLE:
+            rows = struct.unpack_from("<H", body, 4)[0]
+            left = sum(struct.unpack_from(f"<{rows}H", body, 18))  # 줄마다 칸 수
+            table, cell = {"rows": rows, "level": level, "cells": []}, None
+            tables.append(table)
+        elif tag == LIST_HEADER and table and left and level == table["level"]:
+            c, r, cs, rs = struct.unpack_from("<4H", body, 8)
+            cell = {"c": c, "r": r, "cs": cs, "rs": rs, "text": ""}
+            table["cells"].append(cell)
+            left -= 1
+        elif tag == PARA_TEXT and cell and level == table["level"] + 1:
+            cell["text"] = f"{cell['text']} {_text(body)}".strip()
     return tables
 
 

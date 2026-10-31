@@ -1,14 +1,24 @@
+import base64
+import binascii
 from decimal import Decimal
+import io
 import logging
 from typing import Literal
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Path, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
+from pypdf import PdfReader
+from pypdf.errors import PdfReadError
+from starlette.concurrency import run_in_threadpool
 
+from server.ai import client as ai_client
+from server.ai import tasks
 from server.auth import AuthenticatedUser, require_user
 from server.database import all_grade_rows, database_rows
 from server.errors import APIError
 from server.logic.grades import grouped_grades
+from server.logic.transcript import clean_courses
+from server.routes.lost_items import image_type
 from server.routes.graduation import graduation_result
 
 router = APIRouter(tags=["성적·과목"])
@@ -24,6 +34,41 @@ class GradeInput(BaseModel):
 
     def database_value(self):
         return {**self.model_dump(exclude={"credits"}), "credits": float(self.credits)}
+
+
+class TranscriptInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    content_base64: str = Field(min_length=1, max_length=14_000_000)  # 파일 10MB
+
+
+def _transcript_text(data: bytes) -> str:
+    if data.startswith(b"%PDF"):
+        try:
+            return "\n".join(p.extract_text() or "" for p in PdfReader(io.BytesIO(data)).pages)
+        except (PdfReadError, ValueError, OSError):
+            raise APIError(400, "INVALID_FILE", "파일을 읽을 수 없어요. PDF인지 확인해 주세요.") from None
+    mime = image_type(data)  # 사진이 아니면 여기서 400
+    try:
+        return ai_client.read_image(data, mime)
+    except Exception:  # 비전 모델 꺼짐·시간 초과 등. 파일 내용이 로그에 남지 않게 종류만 묶어 안내
+        raise APIError(503, "IMAGE_READER_UNAVAILABLE", "지금은 사진을 읽을 수 없어요. PDF로 올리거나 잠시 뒤 다시 해 주세요.") from None
+
+
+@router.post("/grades/from-file")
+async def grades_from_file(body: TranscriptInput, request: Request, user: AuthenticatedUser = Depends(require_user)):
+    """성적증명서(PDF·사진) → 저장 전 미리보기. 파일과 읽은 글자는 저장하지 않고, 저장은 학생이 확인한 뒤 POST /grades로."""
+    try:
+        data = base64.b64decode(body.content_base64, validate=True)
+    except (binascii.Error, ValueError):
+        raise APIError(400, "INVALID_FILE", "파일을 읽을 수 없어요.") from None
+    rows = await database_rows(request, "GET", "profiles", params={"user_id": f"eq.{user.id}", "select": "admission_year"})
+    if not rows or not rows[0].get("admission_year"):
+        raise APIError(400, "PROFILE_INCOMPLETE", "학기를 맞추려면 내 정보의 입학연도가 필요해요.")
+    text = await run_in_threadpool(_transcript_text, data)
+    items, dropped = clean_courses(await run_in_threadpool(tasks.read_transcript, text), rows[0]["admission_year"])
+    if not items:
+        raise APIError(400, "TRANSCRIPT_EMPTY", "성적을 찾지 못했어요. 글자가 선명한 파일인지 확인해 주세요. 스캔한 PDF는 사진으로 올려 주세요.")
+    return {"items": items, "dropped": dropped}
 
 
 @router.get("/courses")

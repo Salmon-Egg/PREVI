@@ -59,6 +59,10 @@ class ProfileInput(InputModel):
     notify: NotifyInput | None = None
     push_token: str | None = Field(default=None, min_length=1, max_length=4096)
     assistant_scope: ScopeInput | None = None
+    # 장학 판정용 선택 정보. null이면 지움
+    toeic_score: int | None = Field(default=None, ge=10, le=990)
+    income_bracket: int | None = Field(default=None, ge=0, le=10)
+    residence: str | None = Field(default=None, min_length=1, max_length=50)
 
     @model_validator(mode="after")
     def reject_required_nulls(self):
@@ -76,6 +80,8 @@ def profile_output(row: dict):
         "notify": {**{key: row[f"notify_{key}"] for key in ("notice", "deadline", "calendar", "chat")}, "time": row["notify_time"][:5],
                    "quiet": row.get("notify_quiet", "")},
         "assistant_scope": row.get("assistant_scope"),
+        # .get: 마이그레이션 014 적용 전에도 내 정보가 깨지지 않게
+        **{key: row.get(key) for key in ("toeic_score", "income_bracket", "residence")},
     }
 
 

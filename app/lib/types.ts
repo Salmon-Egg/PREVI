@@ -25,6 +25,10 @@ export type Me = {
   notify: { notice: boolean; deadline: boolean; calendar: boolean; chat: boolean; time: string; quiet?: string };
   // ▶ FE 11번에 해당하는 부분: M-5 '비서가 볼 정보'. API 명세에 없는 새 필드라 조장 확인 필요 (없으면 전부 켠 것으로 봄)
   assistant_scope?: AssistantScope;
+  // 장학 판정용 선택 정보 (챗봇이 되물어 저장하거나 학적 정보 변경에서 입력)
+  toeic_score?: number | null;
+  income_bracket?: number | null;
+  residence?: string | null;
 };
 
 /** FE 11번: 비서가 판단할 때 쓸 수 있는 내 정보 */
@@ -113,6 +117,7 @@ export type Graduation = {
 export type AreaCourse = { term: string; course_name: string; credits: number; grade: string };
 
 export type GradeItem = { id: number; term: string; course_name: string; credits: number; grade: string; area: string };
+export type TranscriptItem = Omit<GradeItem, 'id'>;
 export type GradeTerm = { term: string; gpa: number | null; items: GradeItem[] };
 
 export type ClassTime = { day: string; start: string; end: string };
@@ -130,7 +135,8 @@ export type ChatAction =
   | { type: 'add_todo'; label: string; payload: { title: string; due_date: string | null } }
   | { type: 'open_link'; label: string; payload: { url: string } }
   | { type: 'open_screen'; label: string; payload: { screen: string; id?: number } }
-  | { type: 'ask'; label: string; payload: { text: string } };
+  | { type: 'ask'; label: string; payload: { text: string } }
+  | { type: 'save_profile'; label: string; payload: Record<string, string | number> };
 export type Message = {
   id: number;
   role: 'user' | 'assistant';

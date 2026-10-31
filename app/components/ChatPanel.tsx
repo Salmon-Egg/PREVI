@@ -38,6 +38,7 @@ const SCREENS: Record<string, (id?: number) => Href> = {
   'A-1': () => '/office',
   'A-2': () => '/office/calendar',
   'A-3': () => '/office/leave',
+  'M-4': () => '/me/status',
 };
 
 /** 서버가 빈 칸(cards·sources·actions)을 빼고 줘도 그리다 멈추지 않게 */
@@ -94,6 +95,19 @@ export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) 
           return next;
         });
         showAlert('할 일에 등록하지 못했어요', (e as ApiError).message);
+      }
+    } else if (a.type === 'save_profile') {
+      if (added.has(key)) return;
+      setAdded((s) => new Set(s).add(key));
+      try {
+        await api.put('/me', a.payload); // 서버가 장학금·할 일을 다시 계산함
+      } catch (e) {
+        setAdded((s) => {
+          const next = new Set(s);
+          next.delete(key);
+          return next;
+        });
+        showAlert('저장하지 못했어요', (e as ApiError).message);
       }
     } else if (a.type === 'open_link') {
       openLink(a.payload.url);
@@ -166,7 +180,7 @@ export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) 
                       const done = added.has(key);
                       return (
                         <Pressable key={a.label} style={[st.action, a === m.actions[0] && st.actionMain, done && { opacity: 0.5 }]} disabled={done} onPress={() => act(a, key)}>
-                          <Text style={{ color: a === m.actions[0] ? '#fff' : color.primary, fontWeight: '700' }}>{done ? '✓ 할 일에 등록됨' : a.type === 'add_todo' ? `${a.label} · ${a.payload.title}` : a.label}</Text>
+                          <Text style={{ color: a === m.actions[0] ? '#fff' : color.primary, fontWeight: '700' }}>{done ? (a.type === 'save_profile' ? '✓ 저장했어요' : '✓ 할 일에 등록됨') : a.type === 'add_todo' ? `${a.label} · ${a.payload.title}` : a.label}</Text>
                         </Pressable>
                       );
                     })}
