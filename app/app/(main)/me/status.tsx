@@ -6,11 +6,11 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { DeptPicker, MinorPicker } from '../../../components/DeptPicker';
-import { Confirm, Input, Label, Segmented, Select } from '../../../components/form';
+import { Confirm, Input, Label, NO_GROW, Segmented, Select } from '../../../components/form';
 import { Text } from '../../../components/Text';
 import { Button, Character, Screen, showAlert, StateView } from '../../../components/ui';
 import { api, ApiError, useApi, useSubmit } from '../../../lib/api';
-import { STATUSES } from '../../../lib/constants';
+import { ADMISSION_YEARS, STATUSES } from '../../../lib/constants';
 import { color } from '../../../lib/theme';
 import { STATUS_KO, type Me, type Status } from '../../../lib/types';
 
@@ -18,7 +18,6 @@ type Form = {
   department: string; minor: string; status: Status; grade: number; semester: number; admission_year: number | null;
   toeic: string; income: number; residence: string; // 선택 정보. 빈 값(소득은 -1)이면 지움
 };
-const YEARS = Array.from({ length: new Date().getFullYear() - 2015 + 1 }, (_, i) => 2015 + i);
 
 const formOf = (me: Me): Form => ({
   department: me.department ?? '', minor: me.minor ?? '없음', status: me.status, grade: me.grade ?? 1, semester: me.semester ?? 1,
@@ -61,7 +60,7 @@ export default function StatusEdit() {
         {form && (
           <>
             <Label required>입학연도</Label>
-            <Select value={form.admission_year ?? 0} items={form.admission_year && !YEARS.includes(form.admission_year) ? [...YEARS, form.admission_year] : YEARS}
+            <Select value={form.admission_year ?? 0} items={form.admission_year && !ADMISSION_YEARS.includes(form.admission_year) ? [...ADMISSION_YEARS, form.admission_year] : ADMISSION_YEARS}
               label={(year) => year ? `${year}년` : '입학연도를 선택하세요'} onChange={(admission_year) => set({ admission_year })} />
             <Label required>주전공</Label>
             {/* 입학연도(내 정보)에 맞는 학과를 위로 올려 보여 줌 */}
@@ -76,10 +75,10 @@ export default function StatusEdit() {
               <View style={{ flex: 1 }}><Select value={form.semester} items={[1, 2]} label={(v) => `${v}학기`} onChange={(semester) => set({ semester })} /></View>
             </View>
             <Label>장학금 판정용 정보 (선택)</Label>
-            <Text style={st.hint2}>입력하면 장학금 조건을 바로 비교해 드려요. 비워 두면 '확인 필요'로 보여요.</Text>
-            <Input value={form.toeic} onChangeText={(toeic) => set({ toeic: toeic.replace(/\D/g, '').slice(0, 3) })} placeholder="토익 점수 (예: 800)" keyboardType="number-pad" accessibilityLabel="토익 점수" />
+            <Text style={st.hint2}>입력하면 장학금 조건을 바로 비교해 드려요. 비워 두면 ‘확인 필요’로 보여요.</Text>
+            <Input style={NO_GROW} value={form.toeic} onChangeText={(toeic) => set({ toeic: toeic.replace(/\D/g, '').slice(0, 3) })} placeholder="토익 점수 (예: 800)" keyboardType="number-pad" accessibilityLabel="토익 점수" />
             <Select value={form.income} items={[-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]} label={(v) => (v < 0 ? '소득구간 입력 안 함' : `소득 ${v}구간`)} onChange={(income) => set({ income })} title="소득구간" />
-            <Input value={form.residence} onChangeText={(residence) => set({ residence })} placeholder="거주 시·군·구 (예: 안산시)" maxLength={50} accessibilityLabel="거주 지역" />
+            <Input style={NO_GROW} value={form.residence} onChangeText={(residence) => set({ residence })} placeholder="거주 시·군·구 (예: 안산시)" maxLength={50} accessibilityLabel="거주 지역" />
             {/* 시안: 아래 빈 곳의 마스코트 + 안내 */}
             <View style={st.mascot}>
               <Character size={130} />
@@ -111,7 +110,8 @@ export default function StatusEdit() {
 }
 
 const st = StyleSheet.create({
-  mascot: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 10, paddingTop: 28 },
+  // flexGrow만(줄어들지 않음): 화면이 짧아도 위 입력칸을 덮지 않고 아래로 밀려나 스크롤로 보임
+  mascot: { flexGrow: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 10, paddingTop: 28 },
   hint2: { fontSize: 12, color: color.inkSub },
   hint: { fontSize: 13, color: color.inkSub, textAlign: 'center', lineHeight: 19 },
   box: { alignSelf: 'stretch', backgroundColor: '#E6F4EC', borderWidth: 1, borderColor: color.field, borderRadius: 16, padding: 16, alignItems: 'center', gap: 6 },

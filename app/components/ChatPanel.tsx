@@ -79,36 +79,32 @@ export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) 
     sendChat(question);
   }
 
+  /** 한 번만 누르는 버튼(할 일 등록·정보 저장): 누르자마자 막고, 실패하면 알리고 다시 누를 수 있게 */
+  async function once(key: string, run: () => Promise<void>, failTitle: string) {
+    if (added.has(key)) return;
+    setAdded((s) => new Set(s).add(key));
+    try {
+      await run();
+    } catch (e) {
+      setAdded((s) => {
+        const next = new Set(s);
+        next.delete(key);
+        return next;
+      });
+      showAlert(failTitle, (e as ApiError).message);
+    }
+  }
+
   async function act(a: ChatAction, key: string) {
     if (a.type === 'add_todo') {
-      if (added.has(key)) return;
-      setAdded((s) => new Set(s).add(key));
-      try {
+      await once(key, async () => {
         // 서버(POST /todos)는 source로 공지(notice)만 받아서, 채팅에서 만든 할 일은 source 없이 보냄
         await api.post('/todos', { ...a.payload, type: 'deadline' });
         const due = a.payload.due_date ? ` (${a.payload.due_date.slice(5).replace('-', '/')}까지)` : '';
         showAlert('할 일에 등록했어요', `'${a.payload.title}'${due}\n마감 전날과 당일에 알려 드릴게요.`);
-      } catch (e) {
-        setAdded((s) => {
-          const next = new Set(s);
-          next.delete(key);
-          return next;
-        });
-        showAlert('할 일에 등록하지 못했어요', (e as ApiError).message);
-      }
+      }, '할 일에 등록하지 못했어요');
     } else if (a.type === 'save_profile') {
-      if (added.has(key)) return;
-      setAdded((s) => new Set(s).add(key));
-      try {
-        await api.put('/me', a.payload); // 서버가 장학금·할 일을 다시 계산함
-      } catch (e) {
-        setAdded((s) => {
-          const next = new Set(s);
-          next.delete(key);
-          return next;
-        });
-        showAlert('저장하지 못했어요', (e as ApiError).message);
-      }
+      await once(key, () => api.put('/me', a.payload).then(() => undefined), '저장하지 못했어요'); // 서버가 장학금·할 일을 다시 계산함
     } else if (a.type === 'open_link') {
       openLink(a.payload.url);
     } else if (a.type === 'ask') {
@@ -133,7 +129,8 @@ export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) 
   return (
     // 안드로이드도 padding: Expo SDK 58은 화면이 하단 바·키보드 밑까지 그려져(edge-to-edge) 창이 저절로 줄지 않음 → 키보드가 입력창을 가림
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: color.homeBg }} behavior={Platform.OS === 'web' ? undefined : 'padding'} keyboardVerticalOffset={keyboardOffset}>
-      <ScrollView ref={scroll} contentContainerStyle={{ padding: 16, gap: 14, flexGrow: 1 }} onContentSizeChange={() => scroll.current?.scrollToEnd()}>
+      {/* handled: 입력창에 커서가 남아 있어도 답변 버튼(저장하기 등)이 첫 누름에 바로 눌림. 기본값이면 첫 누름은 키보드 닫기로만 쓰임 (10/31 실기기) */}
+      <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, gap: 14, flexGrow: 1 }} onContentSizeChange={() => scroll.current?.scrollToEnd()}>
         {messages.length === 0 && !waiting && (
           // H-1 시작 화면 (시안 ①)
           <View style={st.start}>
@@ -167,7 +164,7 @@ export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) 
                 <View style={[st.bubble, st.ai]}><AnswerText text={m.text} /></View>
               </View>
               {m.cards.length > 0 && (
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingLeft: 42 }}>
+                <ScrollView horizontal keyboardShouldPersistTaps="handled" showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingLeft: 42 }}>
                   {m.cards.map((c, i) => <InfoCard key={i} card={c} />)}
                 </ScrollView>
               )}

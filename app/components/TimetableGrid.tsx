@@ -2,15 +2,12 @@
 import { StyleSheet, View } from 'react-native';
 
 import { CLASS_DAYS } from '../lib/constants';
+import { toMin } from '../lib/format';
 import { color } from '../lib/theme';
 import type { TimetableEntry } from '../lib/types';
 import { Text } from './Text';
 
 const ROW = 80; // 한 시간 높이
-const toMin = (hhmm: string) => {
-  const [h, m] = hhmm.split(':').map(Number);
-  return h * 60 + m;
-};
 
 // 과목 칸 색 (바탕, 글자). 목록 순서대로 돌아가며 씀
 const TONES = [

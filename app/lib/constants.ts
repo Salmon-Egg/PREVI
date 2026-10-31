@@ -8,6 +8,8 @@ export const CLASS_DAYS = ['월', '화', '수', '목', '금'];
 
 // 처음 설정(M-2, onboarding.tsx)과 학적 정보 변경(M-4, me/status.tsx). 학과·전공 목록은 lib/departments.ts
 export const STATUSES: Status[] = ['enrolled', 'leave', 'returned'];
+/** 입학연도 고르기: 2015년부터 올해까지 (해가 바뀌면 자동으로 늘어남) */
+export const ADMISSION_YEARS = Array.from({ length: new Date().getFullYear() - 2015 + 1 }, (_, i) => 2015 + i);
 
 /** 브리핑 받을 시각 (마이, 비서 설정) */
 export const BRIEF_TIMES = ['07:00', '08:00', '09:00', '12:00', '18:00', '21:00'];
