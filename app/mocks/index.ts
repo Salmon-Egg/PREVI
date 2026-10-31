@@ -9,7 +9,7 @@ import { checkAdd } from '../lib/schedule';
 import { getToken } from '../lib/session';
 import type {
   Application, AreaCourse, CalendarEvent, ChatCard, Course, GradeItem, Graduation, ChatReply, Conversation, GradeTerm, Home, Me, Message,
-  NoticeDetail, Notification, Scholarship, TimetableEntry, TodoDetail,
+  NoticeDetail, Notification, Scholarship, SupportTicket, TimetableEntry, TodoDetail,
 } from '../lib/types';
 
 const d = (days: number) => new Date(Date.now() + days * 864e5).toISOString().slice(0, 10);
@@ -287,6 +287,12 @@ const notifications: Notification[] = [
   { id: 503, type: 'calendar', title: '3일 뒤 중간고사 성적 확인이 시작돼요', target_id: 2, read: false, sent_at: `${d(0)}T09:00:00+09:00` },
   { id: 502, type: 'notice', title: '서경 AI 마일리지 장학금 신청 안내 공지가 올라왔어요', target_id: 104, read: true, sent_at: `${d(-1)}T09:05:00+09:00` },
   { id: 504, type: 'chat', title: '"휴학하면 장학금은 어떻게 돼?" 답변이 도착했어요', target_id: 2, read: true, sent_at: `${d(-2)}T15:30:00+09:00` },
+  { id: 505, type: 'support', title: '문의하신 내용에 답변이 도착했어요', target_id: 1, read: true, sent_at: `${d(-3)}T11:00:00+09:00` },
+];
+
+const supportTickets: SupportTicket[] = [
+  { id: 1, created_at: `${d(-4)}T10:00:00+09:00`, category: '앱 오류', title: '시간표 글자가 잘려 보여요', body: '글자 크기를 크게로 바꾸면 과목 이름이 잘려요.',
+    answer: '확인했어요. 다음 업데이트에서 고칠게요. 그동안은 글자 크기를 표준으로 써 주세요.', answered_at: `${d(-3)}T11:00:00+09:00` },
 ];
 
 /** 졸업 관련 할 일은 4학년에게만 (가상 학생마다 다르게 보이게) */
@@ -558,6 +564,12 @@ export async function mockFetch(method: string, path: string, body?: any): Promi
     case 'PATCH /messages/:id/feedback': return { id, feedback: body.feedback };
     case 'GET /notifications': return notifications;
     case 'PATCH /notifications/:id': return Object.assign(notifications.find((n) => n.id === id)!, body);
+    case 'GET /support': return supportTickets;
+    case 'POST /support': {
+      const t: SupportTicket = { ...body, id: Date.now(), created_at: now(), answer: null, answered_at: null };
+      supportTickets.unshift(t);
+      return t;
+    }
     // 분실물: 서버처럼 보관 장소는 내 글이거나 답을 맞혔을 때만 (예시라 남은 기회는 안 셈)
     case 'GET /lost-items':
       return lostItems.filter((x) => x.status === (q.get('status') ?? 'open') && (!q.get('category') || x.category === q.get('category'))

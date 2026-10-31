@@ -57,6 +57,7 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 | `POST /chat` | 챗봇에게 질문 | H-1, H-2 |
 | `GET /conversations` · `GET /conversations/{id}` | 대화 목록·내용 | H-3 |
 | `GET /notifications` · `PATCH /notifications/{id}` | 받은 알림·읽음 처리 | T-4 |
+| `GET` · `POST /support` | 고객센터: 내 문의 목록(최근 100건, 답변 포함) · 보내기 `{category: "앱 오류"\|"계정"\|"기타", title, body}` | 마이페이지 › 고객센터 |
 | `DELETE /me` | 계정 삭제 (성적 포함 모든 데이터) | M-3 |
 | `PATCH /conversations/{id}` | 대화 고정 `{ "pinned": true }` | H-3 |
 | `PATCH /messages/{id}/feedback` | 챗봇 답 평가 `{ "feedback": "up" \| "down" \| null }` (관리자 '아쉬워요') | H-2 |
@@ -77,6 +78,7 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 | `POST /admin/broadcast/preview` · `POST /admin/broadcast` | 대상 `{grades, departments, statuses}` 인원 · 발송 (notices에 '학생지원팀' 공지로 넣고 아침 파이프라인 함수로 판정·할 일·푸시) |
 | `GET` · `POST /admin/data/{calendar\|courses}` · `PUT` · `DELETE /admin/data/{kind}/{id}` | 학사일정·과목 고치기 |
 | `GET /admin/graduation` | 졸업 기준 보기 (수정 없음) |
+| `GET /admin/support?status=open\|done` · `PUT /admin/support/{id}` | 고객센터 문의 (누가 보냈는지는 안 줌) · 답변·수정 `{answer}` → 학생에게 `support` 알림 (수정해도 한 번만) |
 | `GET /admin/users` · `DELETE /admin/users/{user_id}` | 가입 계정 목록 (메일·학과·학년·학적·가입·마지막 로그인, 최근 가입 먼저) · 계정 삭제 (탈퇴와 같이 개인 데이터 cascade, ADMIN_EMAILS 계정은 400) |
 
 > MVP 뼈대(10/23)에서 더한 것: `DELETE /me`, `PATCH /conversations/{id}`, `GET /conversations?q=` 검색,
@@ -339,3 +341,4 @@ FE와 BE의 **약속**입니다. FE는 서버가 완성되기 전까지 이 문�
 | `deadline` | T-2 할 일 상세 | 할 일 번호 |
 | `calendar` | A-2 학사 일정 | 일정 번호 |
 | `chat` | H-2 채팅 | 대화 번호 |
+| `support` | 마이페이지 › 고객센터 | 문의 번호 (알림 설정은 `chat`을 따름) |

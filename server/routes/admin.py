@@ -14,7 +14,7 @@ from uuid import UUID, uuid4
 
 import httpx
 from fastapi import APIRouter, BackgroundTasks, Body, Depends, Request
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 from starlette.concurrency import run_in_threadpool
@@ -24,6 +24,7 @@ from server.errors import APIError
 from server.jobs.pipeline import pipeline_client
 from server.logic.course_file import course_key, courses_from_tables, read_tables
 from server.logic.eligibility import matches_target
+from server.notify import send_notification
 from server.routes.lost_items import delete_user_photos
 from server.scripts import load_yoram
 
@@ -78,6 +79,7 @@ async def summary(request: Request):
         "feedback_down_week": await n("messages", feedback="eq.down", created_at=week),
         "notice_failed": await n("notices", extraction_status="eq.failed"),
         "push_failed_week": await n("notifications", delivery_status="in.(failed,unknown)", sent_at=week),
+        "support_open": await n("support_tickets", answer="is.null"),
         "students": await n("profiles"),
         "documents": await n("documents"),
     }
@@ -481,6 +483,39 @@ async def delete_lost_item(item_id: int, request: Request):
                             params={"id": f"eq.{item_id}", "select": "image_path"})
     if rows and rows[0]["image_path"]:
         await admin_rows(request, "DELETE", f"lost-items/{rows[0]['image_path']}", api="storage/v1/object")
+
+
+# ── 고객센터: 학생 문의 보기·답변. 누가 보냈는지는 안 보여 줌 ──
+class SupportAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    answer: str = Field(min_length=1, max_length=2000)
+
+
+@router.get("/support")
+async def support_tickets(request: Request, status: Literal["open", "done"] = "open"):
+    # shortcut: 최근 500건만. 답변 완료가 쌓이면 페이지 넘김 추가
+    return await admin_rows(request, "GET", "support_tickets", params={
+        "answer": "is.null" if status == "open" else "not.is.null",
+        "select": "id,created_at,category,title,body,answer,answered_at", "order": "id.desc", "limit": 500})
+
+
+async def _notify_answer(user_id: UUID, ticket_id: int):
+    try:
+        # event_key가 같아 답변을 고쳐도 알림은 한 번만
+        await send_notification(user_id, "support", "문의하신 내용에 답변이 도착했어요", ticket_id)
+    except Exception as exc:  # 답변은 이미 저장됨. 학생은 앱 문의 목록에서 볼 수 있음
+        log.warning("support notify failed ticket=%s type=%s", ticket_id, type(exc).__name__)
+
+
+@router.put("/support/{ticket_id}")
+async def answer_support(ticket_id: int, body: SupportAnswer, request: Request, tasks: BackgroundTasks):
+    rows = await admin_rows(request, "PATCH", "support_tickets", headers={"Prefer": "return=representation"},
+                            params={"id": f"eq.{ticket_id}", "select": "id,user_id"},
+                            json={"answer": body.answer, "answered_at": datetime.now(timezone.utc).isoformat()})
+    if not rows:
+        raise APIError(404, "NOT_FOUND", "문의를 찾을 수 없어요.")
+    tasks.add_task(_notify_answer, UUID(rows[0]["user_id"]), ticket_id)
+    return {"id": ticket_id}
 
 
 @router.get("/graduation")

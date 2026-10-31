@@ -9,8 +9,8 @@ import { openNotification } from '../../lib/push';
 import { color } from '../../lib/theme';
 import type { Notification, NotifyType } from '../../lib/types';
 
-const ICON: Record<NotifyType, keyof typeof Feather.glyphMap> = { notice: 'file-text', deadline: 'clock', calendar: 'calendar', chat: 'message-circle' };
-const TYPE_KO: Record<NotifyType, string> = { notice: '새 공지', deadline: '마감', calendar: '학사일정', chat: '답변 도착' };
+const ICON: Record<NotifyType, keyof typeof Feather.glyphMap> = { notice: 'file-text', deadline: 'clock', calendar: 'calendar', chat: 'message-circle', support: 'help-circle' };
+const TYPE_KO: Record<NotifyType, string> = { notice: '새 공지', deadline: '마감', calendar: '학사일정', chat: '답변 도착', support: '문의 답변' };
 
 export default function Notifications() {
   const { data, error, loading, reload, setData } = useApi<Notification[]>('/notifications');
