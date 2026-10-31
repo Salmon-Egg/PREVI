@@ -225,7 +225,16 @@ export function VerdictBadge({ verdict }: { verdict: Verdict }) {
 
 export function Sources({ items }: { items: { title: string; url: string | null }[] }) {
   if (!items.length) return null;
-  return <Text style={s.source}>출처 · {items.map((i) => i.title).join(', ')}</Text>;
+  return (
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, rowGap: 2 }}>
+      <Text style={s.source}>출처</Text>
+      {items.map((i) => isSafeUrl(i.url) ? (
+        <Pressable key={i.title} accessibilityRole="link" onPress={() => openLink(i.url)}>
+          <Text style={[s.source, { color: color.primary, textDecorationLine: 'underline' }]}>{i.title} ›</Text>
+        </Pressable>
+      ) : <Text key={i.title} style={s.source}>{i.title}</Text>)}
+    </View>
+  );
 }
 
 /** "121 / 130" 같은 줄이면 [121, 130] */

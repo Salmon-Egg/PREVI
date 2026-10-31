@@ -48,7 +48,9 @@ export default function TodoDetailScreen() {
                 <View style={st.rule} />
                 <View style={st.ai}>
                   <Text style={st.aiHead}>✨ 왜 나에게 해당하나요?</Text>
-                  <Text style={st.aiLine}>{t.reason ?? '비서가 정리한 근거가 아직 없어요.'}</Text>
+                  {(t.reason ?? '비서가 정리한 근거가 아직 없어요.').split('\n').map((l) => (
+                    <Text key={l} style={l === '직접 확인이 필요해요' ? st.verdict : st.aiLine}>{l}</Text>
+                  ))}
                 </View>
                 {t.link && <Button compact kind="ghost" icon="link" label="신청 페이지 열기" onPress={() => openLink(t.link)} />}
                 <Button compact kind="ghost" icon="chat" label="프리비에게 묻기"

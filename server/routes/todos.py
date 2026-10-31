@@ -7,10 +7,12 @@ from pydantic import BaseModel, ConfigDict, Field
 from server.auth import AuthenticatedUser, require_user
 from server.database import database_rows
 from server.errors import APIError
+from server.jobs.pipeline import AUTO_REASON, CHECK
 from server.routes.notices import notice_by_id
 
 router = APIRouter(tags=["할 일"])
 KST = timezone(timedelta(hours=9))
+CHECK_HEAD = "직접 확인이 필요해요"
 TodoType = Literal["deadline", "scholarship", "graduation", "status"]
 
 
@@ -33,12 +35,23 @@ class TodoDone(BaseModel):
     done: bool
 
 
+def shown_reason(reason: str | None) -> str | None:
+    """DB의 '[자동] 문장\n근거: a · b — 직접 확인이 필요해요'를 학생에게 보일 줄로. 표시는 파이프라인이 자동 할 일을 가리는 데 쓰니 DB엔 둠."""
+    if not reason or not reason.startswith(AUTO_REASON):
+        return reason
+    said, _, facts = reason.removeprefix(AUTO_REASON).rpartition("근거: ")
+    items = facts.split(" · ")
+    checks = [f"· {i.removesuffix(CHECK)}" for i in items if i.endswith(CHECK)]
+    lines = ([said.strip()] if said.strip() else []) + [i for i in items if not i.endswith(CHECK)]
+    return "\n".join(lines + ([CHECK_HEAD] + checks if checks else []))
+
+
 def todo_output(row: dict, detail=False, today: date | None = None):
     due = date.fromisoformat(row["due_date"]) if row["due_date"] else None
     result = {key: row[key] for key in ("id", "type", "title", "due_date", "done")}
     result["d_day"] = (due - (today or datetime.now(KST).date())).days if due else None
     if detail:
-        result.update({"reason": row["reason"], "link": row["link"], "done_at": row["done_at"],
+        result.update({"reason": shown_reason(row["reason"]), "link": row["link"], "done_at": row["done_at"],
             "source": {"kind": row["source_kind"], "id": row["source_id"]} if row["source_id"] is not None else None})
     return result
 

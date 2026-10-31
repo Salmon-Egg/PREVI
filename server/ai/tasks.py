@@ -192,7 +192,9 @@ def answer_from_docs(question: str, chunks: list[dict], student: dict | None = N
         return None
     docs = [c["content"] for c in chunks]
     out = _ask("chat_answer", {"question": question, "student": student or {}, "documents": docs}) or {}
-    answer = _short(out.get("answer"), 150)
+    # 결론 + 요점 목록이라 문장 수는 넉넉히. 지시문을 어겨 "-"·"•"로 쓴 목록은 앱이 그리는 "· "로
+    raw = out.get("answer")
+    answer = _short(re.sub(r"(?m)^\s*[-•*]\s+", "· ", raw) if isinstance(raw, str) else raw, 220, sentences=4)
     if answer and NO_ANSWER.search(answer):  # 지시문으로 막아도 "문서에 명시되어 있지 않아요"를 씀: 코드의 '모른다' 문장으로
         return None
     # 없는 제도를 물어도 비슷한 문단으로 절차를 지어냄(10/31 실측): 숫자 검사로는 못 막아서 대상 이름을 대조
@@ -217,9 +219,9 @@ FORMAL = {"합니다": "해요", "됩니다": "돼요", "있습니다": "있어�
 
 
 def _polite(text: str) -> str:
-    text = re.sub("(?:" + "|".join(FORMAL) + r")(?=[.!]|$)",lambda m: FORMAL[m.group()], text)
+    text = re.sub("(?m)(?:" + "|".join(FORMAL) + r")(?=[.!]|$)",lambda m: FORMAL[m.group()], text)
     # "입니다": 앞 글자에 받침이 있으면 "이에요"(학점이에요), 없으면 "예요"(까지예요)
-    return re.sub(r"(.)입니다(?=[.!]|$)", lambda m: m[1] + ("이에요" if "가" <= m[1] <= "힣" and (ord(m[1]) - 0xAC00) % 28 else "예요"), text)
+    return re.sub(r"(?m)(.)입니다(?=[.!]|$)", lambda m: m[1] + ("이에요" if "가" <= m[1] <= "힣" and (ord(m[1]) - 0xAC00) % 28 else "예요"), text)
 
 
 def _short(text, limit: int, sentences: int = 2):

@@ -161,6 +161,11 @@ def test_answer_on_unknown_subject_is_recorded(monkeypatch):
     assert any(t == "unanswered_questions" and b["question"] == q for _, t, b in saved)
 
 
+def test_answer_keeps_points_and_normalizes_bullets(monkeypatch):
+    monkeypatch.setattr(tasks, "_ask", lambda *_: {"answer": "휴학은 5년까지 가능합니다.\n- 한 번에 1학기입니다\n• 휴학원 제출\n· 기간 안에 합니다."})
+    assert tasks.answer_from_docs("휴학", [{"content": "휴학 5년 1학기"}]) == "휴학은 5년까지 가능해요.\n· 한 번에 1학기예요\n· 휴학원 제출\n· 기간 안에 해요."
+
+
 def test_system_word_is_not_me():
     assert tasks._route_by_rule("학점 제도 알려줘") is None  # "제도"의 '제'를 나로 읽어 내 졸업 정보로 답하던 문제
 

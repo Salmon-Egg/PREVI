@@ -18,6 +18,7 @@ from server.errors import APIError
 from server.logic.student_context import calendar_applies
 from server.routes.graduation import graduation_result
 from server.routes.scholarships import scholarship_rows
+from server.routes.todos import shown_reason
 
 router = APIRouter(tags=["챗봇"])
 log = logging.getLogger("chat")
@@ -246,7 +247,7 @@ async def _from_docs(request: Request, question: str, p: dict, extra: list[dict]
     actions = [{"type": "add_todo", "label": "마감 알림 받기",
                 "payload": {"title": event["title"], "due_date": event["end_date"]}}] if event else []
     if actions:  # 버튼 안내는 코드가 씀 (AI에게 맡기면 없는 버튼을 말할 수 있음)
-        answer += " 아래 버튼으로 마감 알림을 받아 둘 수 있어요."
+        answer += "\n아래 버튼으로 마감 알림을 받아 둘 수 있어요."
     return {"text": answer, "cards": [], "sources": sources, "actions": actions}
 
 
@@ -324,7 +325,7 @@ async def chat(body: ChatIn, request: Request, user: AuthenticatedUser = Depends
             if ctx:
                 ctx = {"title": ctx["title"], "reason": " ".join(ctx["summary"] or [])}
         if ctx:
-            lines.append(f"[{ctx['title']}] {ctx['reason'] or ''}")
+            lines.append(f"[{ctx['title']}] {shown_reason(ctx['reason']) or ''}")
     def ask(text):
         return "\n".join(lines + [f"질문: {text}"]) if lines else text
     extra = [_notice_chunk(notice)] if notice else []

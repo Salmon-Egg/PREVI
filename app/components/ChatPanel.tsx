@@ -43,6 +43,26 @@ const SCREENS: Record<string, (id?: number) => Href> = {
 /** 서버가 빈 칸(cards·sources·actions)을 빼고 줘도 그리다 멈추지 않게 */
 const filled = (m: Message): Message => ({ ...m, cards: m.cards ?? [], sources: m.sources ?? [], actions: m.actions ?? [] });
 
+/** 답변: 첫 문장(결론)은 굵게, "· " 줄은 요점 목록, 여러 질문의 ①②③ 줄은 소제목. 서버 형식은 글자 그대로라 예전 대화도 같이 보임 */
+function AnswerText({ text }: { text: string }) {
+  const lines = text.split('\n').filter((l) => l.trim());
+  const multi = /^[①②③]/.test(lines[0] ?? '');
+  const first = multi ? null : lines[0]?.match(/^(.+?[.!?])\s+(.+)$/); // "3.5"의 점은 뒤에 빈칸이 없어 안 걸림
+  const rows = first ? [first[1], first[2], ...lines.slice(1)] : lines;
+  return (
+    <View style={{ gap: 4 }}>
+      {rows.map((l, i) => l.startsWith('· ') ? (
+        <View key={i} style={{ flexDirection: 'row', gap: 6 }}>
+          <Text style={st.answer}>·</Text>
+          <Text style={[st.answer, { flex: 1 }]}>{l.slice(2)}</Text>
+        </View>
+      ) : (
+        <Text key={i} style={[st.answer, (multi ? /^[①②③]/.test(l) : i === 0) && { fontWeight: '700' }]}>{l}</Text>
+      ))}
+    </View>
+  );
+}
+
 /** keyboardOffset: 위에 머리줄이 있으면 그 높이 (iOS 키보드가 입력창을 가리지 않게).
  *  대화 내용은 lib/chatStore.ts에 있어서, 답을 기다리다 창을 내렸다 올려도 그대로 보임 */
 export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) {
@@ -130,7 +150,7 @@ export function ChatPanel({ keyboardOffset = 90 }: { keyboardOffset?: number }) 
             <View key={m.id} style={{ gap: 8 }}>
               <View style={st.aiRow}>
                 <View style={st.avatar}><Character face size={34} /></View>
-                <View style={[st.bubble, st.ai]}><Text style={{ fontSize: 15, color: color.ink, lineHeight: 22 }}>{m.text}</Text></View>
+                <View style={[st.bubble, st.ai]}><AnswerText text={m.text} /></View>
               </View>
               {m.cards.length > 0 && (
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingLeft: 42 }}>
@@ -197,6 +217,7 @@ const st = StyleSheet.create({
   bubble: { borderRadius: 16, padding: 12, maxWidth: '85%' },
   mine: { backgroundColor: color.primarySoft, borderBottomRightRadius: 4 },
   ai: { backgroundColor: '#fff', borderTopLeftRadius: 4, flexShrink: 1 },
+  answer: { fontSize: 15, color: color.ink, lineHeight: 22 },
   time: { fontSize: 11, color: color.inkSub },
   action: { borderWidth: 1, borderColor: color.primary, borderRadius: 16, paddingVertical: 7, paddingHorizontal: 12, backgroundColor: '#fff' },
   actionMain: { backgroundColor: color.primary },

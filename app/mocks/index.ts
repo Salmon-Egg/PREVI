@@ -133,7 +133,7 @@ const todos: TodoDetail[] = [
   { id: 35, type: 'graduation', title: '졸업 논문(보고서) 최종본 제출', due_date: d(20), d_day: 20, done: false,
     reason: '졸업 요건 중 남은 항목이에요. 졸업작품 심사를 신청한 뒤 최종본을 내야 해요.', link: null, source: { kind: 'notice', id: 103 }, done_at: null },
   { id: 36, type: 'scholarship', title: '국가장학금 2차 신청 (소득분위 확인)', due_date: d(0), d_day: 0, done: false,
-    reason: '소득분위는 앱이 알 수 없어서 직접 확인이 필요해요. 오늘 23:59 마감이에요.', link: 'https://www.kosaf.go.kr',
+    reason: '오늘 23:59 마감이에요.\n재학생 ✓\n직접 확인이 필요해요\n· 소득분위\n· 가구원 정보제공 동의', link: 'https://www.kosaf.go.kr',
     source: { kind: 'notice', id: 102 }, done_at: null },
   { id: 37, type: 'status', title: '2027-1학기 복학 신청 기간 확인', due_date: d(9), d_day: 9, done: false,
     reason: '학사일정에 복학 신청 기간이 있어요. 휴학 중이면 기간 안에 신청해야 해요.', link: null, source: { kind: 'calendar', id: 4 }, done_at: null },
@@ -322,7 +322,7 @@ function answer(q: string, ctx: { kind: string; id: number } | null): Reply {
   if (ctx?.kind === 'todo') {
     const t = todos.find((x) => x.id === ctx.id);
     if (t) return {
-      text: `'${t.title}'은(는) ${t.due_date ?? '마감 없음'}까지예요. ${t.reason ?? ''} 아래 버튼으로 바로 처리할 수 있어요.`,
+      text: `'${t.title}'은(는) ${t.due_date ?? '마감 없음'}까지예요.\n${t.reason ?? ''}\n아래 버튼으로 바로 처리할 수 있어요.`,
       cards: [], sources: [HAKSA],
       actions: [
         ...(t.link ? [{ type: 'open_link' as const, label: '신청 페이지', payload: { url: t.link } }] : []),
@@ -334,9 +334,9 @@ function answer(q: string, ctx: { kind: string; id: number } | null): Reply {
     const e = calendar()[/복학/.test(q) ? 3 : 4]; // 묻는 쪽(휴학·복학)의 신청 기간
     const title = e.title.replace(/ 기간$/, '');
     return {
-      text: '학칙에 따르면 일반휴학은 한 번에 최대 2학기, 통산 6학기까지 할 수 있어요. 휴학 중에는 재학생 대상 교내 장학금을 신청할 수 없고, 복학한 학기부터 다시 판정해요. 휴·복학 신청은 학사일정의 신청 기간에 해야 해요.',
+      text: '일반휴학은 한 번에 최대 2학기, 통산 6학기까지 할 수 있어요.\n· 휴학 중에는 재학생 대상 교내 장학금 신청 불가\n· 복학한 학기부터 장학금 다시 판정\n· 신청은 학사일정의 신청 기간에',
       cards: [{ image_url: null, title: e.title, lines: [e.start_date, `${e.end_date}까지`], link: null }],
-      sources: [HAKSA, { title: '2027-1학기 휴·복학 신청 안내', url: null }],
+      sources: [HAKSA, { title: '2027-1학기 휴·복학 신청 안내', url: 'https://www.skuniv.ac.kr' }],
       actions: [
         { type: 'add_todo', label: '마감 알림 받기', payload: { title, due_date: e.end_date } },
         { type: 'open_screen', label: '휴·복학 안내', payload: { screen: 'A-3' } },
