@@ -94,6 +94,21 @@ def clean_conditions(c) -> dict:
     return out
 
 
+def read_transcript(text: str) -> list[dict]:
+    """성적증명서 글자 → 과목 줄. 모델 컨텍스트가 작아 나눠서 물음. 이 글자에는 개인정보가 있어 어디에도 남기지 않음."""
+    chunks, cur = [], ""
+    for line in text.splitlines():
+        if len(cur) + len(line) > 1500:
+            chunks.append(cur)
+            cur = ""
+        cur += line + "\n"
+    rows = []
+    for chunk in chunks + [cur] if cur.strip() else chunks:
+        courses = (_ask("transcript", {"text": chunk}) or {}).get("courses")
+        rows += [c for c in courses if isinstance(c, dict)] if isinstance(courses, list) else []
+    return rows
+
+
 def severity(todo_type: str, title: str) -> int:
     """④ 놓쳤을 때 피해 크기 1~3."""
     out = _ask("severity", {"type": todo_type, "title": title}) or {}
@@ -193,6 +208,11 @@ def _subject_in_docs(subject, docs: list[str]) -> bool:
     return all(w in text for w in words if w and w not in SUBJECT_GENERIC)
 
 
+def _amounts(text: str) -> set[str]:
+    """숫자+단위 묶음. 네 자리 연도·날짜는 공지 표기("2026-11-03")와 답 표기("2026년")가 달라 뺌."""
+    return {re.sub(r"\s", "", m) for m in re.findall(r"(?<![\d.])\d{1,3}\s*(?:년|학기|학점|개월)", text)}
+
+
 def answer_from_docs(question: str, chunks: list[dict], student: dict | None = None) -> str | None:
     """⑪ 문서 근거 답변. 근거로 답할 수 없으면 None → '모른다' 처리."""
     if not chunks:
@@ -216,6 +236,10 @@ def answer_from_docs(question: str, chunks: list[dict], student: dict | None = N
     # 문서·질문·학생 정보에 없는 숫자가 답에 있으면 지어낸 것으로 보고 '모른다'로
     if answer and not set(re.findall(r"\d+", answer)) <= set(re.findall(r"\d+", f"{question} {student} {' '.join(docs)}")):
         log.warning("근거에 없는 숫자라 버림: %s", answer)
+        return None
+    # "통산 5년"을 "5학기"로 바꿔 답함(10/31 실측): 숫자만 보면 통과하므로 기간·학점은 단위까지 대조
+    if answer and not _amounts(answer) <= _amounts(f"{question} {student} {' '.join(docs)}"):
+        log.warning("근거에 없는 단위라 버림: %s", answer)
         return None
     return answer or None
 
